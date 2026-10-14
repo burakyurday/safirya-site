@@ -1,69 +1,550 @@
-import Image from "next/image";
+'use client';
 
-export default function Home() {
+import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
+import {
+  ShieldCheck,
+  Truck,
+  Lock,
+  ChevronLeft,
+  ChevronRight,
+  ArrowRight,
+  Sparkles,
+} from 'lucide-react';
+import { ProductCard } from '@/components/catalog/ProductCard';
+import { JsonLd, getFaqSchema } from '@/components/seo/JsonLd';
+import { initialConceptBanners } from '@/context/AdminContext';
+import { ConceptBannersMap, ConceptBannerItem } from '@/types/admin';
+import { getClientCatalogProducts, CatalogProductItem } from '@/lib/catalog';
+
+// ── SSS (FAQ) Verileri ──
+const HOME_FAQS = [
+  {
+    question: 'Soya mumu ile geleneksel parafin mumu arasındaki fark nedir?',
+    answer:
+      'Soya mumları %100 doğal soya fasulyesi yağından elde edilir. Petrol türevi olan parafin mumlarının aksine toksik madde, siyah is veya kanserojen kurum yaymaz. %30 ila %50 daha uzun süre temiz yanar ve evcil hayvan dostudur.',
+  },
+  {
+    question: 'Söz, nişan ve nikah için toplu siparişlerde hazırlık süreci nasıldır?',
+    answer:
+      '10 adetten 500+ adede kadar toplu siparişlerinizde atölyemiz 1-3 iş günü içerisinde numune ve üretim sürecini tamamlar. Kişiye özel isim etiketi, koku seçimi ve kraft hediye kutulaması tamamen ücretsiz olarak sunulur.',
+  },
+  {
+    question: 'Kırılabilir ürünlerde kargo hasar garantiniz var mı?',
+    answer:
+      'Evet. Tüm siparişlerimiz darbe emici hava yastıklı ambalajlarla paketlenir. Kargo sürecinde ezilme veya kırılma olması halinde, hiçbir ek ücret talep edilmeksizin hasarlı ürünün yerine yenisi 24 saat içinde kargoya verilir.',
+  },
+  {
+    question: 'Kadıköy atölyenizden siparişleri elden teslim alabilir miyiz?',
+    answer:
+      'Evet, atölyemiz Caferağa Mahallesi, Şair Nefi Sokak No:18 Kadıköy/İstanbul adresindedir. Çalışma saatlerimiz Pazartesi – Cumartesi 10:00 – 19:00 arasındadır. Dilerseniz siparişinizi atölyemizden elden teslim alabilirsiniz.',
+  },
+];
+
+const faqSchemaData = getFaqSchema(HOME_FAQS);
+
+export default function HomePage() {
+  const [banners, setBanners] = useState<ConceptBannersMap>(initialConceptBanners);
+  const [carouselIndex, setCarouselIndex] = useState(0);
+  const [products, setProducts] = useState<CatalogProductItem[]>([]);
+
+  // Dinamik Katalog & LocalStorage Senkronizasyonu
+  useEffect(() => {
+    setProducts(getClientCatalogProducts());
+
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('safirya_concept_banners');
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          setBanners({ ...initialConceptBanners, ...parsed });
+        } catch {}
+      }
+
+      const handleUpdate = (e: Event) => {
+        const customEvent = e as CustomEvent<ConceptBannersMap>;
+        if (customEvent.detail) {
+          setBanners(customEvent.detail);
+        }
+      };
+
+      const handleProductsUpdate = () => {
+        setProducts(getClientCatalogProducts());
+      };
+
+      window.addEventListener('safirya_concept_banners_updated', handleUpdate);
+      window.addEventListener('safirya_products_updated', handleProductsUpdate);
+      return () => {
+        window.removeEventListener('safirya_concept_banners_updated', handleUpdate);
+        window.removeEventListener('safirya_products_updated', handleProductsUpdate);
+      };
+    }
+  }, []);
+
+  const hero = banners.hero || initialConceptBanners.hero;
+  const cat1 = banners.category_1 || initialConceptBanners.category_1;
+  const cat2 = banners.category_2 || initialConceptBanners.category_2;
+  const cat3 = banners.category_3 || initialConceptBanners.category_3;
+  const show1 = banners.showcase_1 || initialConceptBanners.showcase_1;
+  const show2 = banners.showcase_2 || initialConceptBanners.showcase_2;
+
+  // Seçilmiş ve Vitrin Ürünleri
+  const selectedProducts = products.length > 0 ? products : [];
+  const showcase1Products = products
+    .filter((p) => p.categorySlug === 'dogal-mumlar' || p.categoryName?.includes('Mum'))
+    .slice(0, 3);
+  const showcase2Products = products
+    .filter(
+      (p) =>
+        p.categorySlug === 'epoksi-tasarimlar' ||
+        p.categorySlug === 'kokulu-tas' ||
+        p.categorySlug === 'miyuki-taki'
+    )
+    .slice(0, 3);
+
+  // Carousel kontrol fonksiyonları
+  const nextSlide = () => {
+    if (selectedProducts.length <= 4) return;
+    setCarouselIndex((prev) => (prev + 1 >= selectedProducts.length - 3 ? 0 : prev + 1));
+  };
+  const prevSlide = () => {
+    if (selectedProducts.length <= 4) return;
+    setCarouselIndex((prev) => (prev - 1 < 0 ? Math.max(0, selectedProducts.length - 4) : prev - 1));
+  };
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <div className="bg-white text-[#231B18] pb-20 space-y-12 sm:space-y-16">
+
+      {/* ════════════════════════════════════════════════════════════════
+          1. KONSEPT ALANI 1: ANA HERO BANNER
+      ════════════════════════════════════════════════════════════════ */}
+      <section className="w-full">
+        <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 pt-4">
+          
+          {hero.imageUrl ? (
+            /* Görsel Yüklüyse: Tam Ekran Konsept Banner */
+            <div className="relative w-full overflow-hidden rounded-xs bg-stone-100 min-h-[360px] sm:min-h-[480px] lg:min-h-[540px] flex items-center group">
+              <img
+                src={hero.imageUrl}
+                alt={hero.title || 'Safirya Banner'}
+                className="absolute inset-0 w-full h-full object-cover group-hover:scale-101 transition-transform duration-700"
+              />
+              <div className="absolute inset-0 bg-gradient-to-r from-white/70 via-white/40 to-transparent sm:w-2/3" />
+              
+              <div className="relative z-10 p-8 sm:p-14 max-w-xl space-y-4">
+                {hero.tag && (
+                  <span className="inline-block bg-[#C85A32] text-white text-[10px] sm:text-xs font-semibold tracking-widest uppercase px-3 py-1">
+                    {hero.tag}
+                  </span>
+                )}
+                <h1 className="font-serif text-3xl sm:text-5xl text-[#231B18] font-normal leading-tight">
+                  {hero.title || 'SAFİRYA ATÖLYE'}
+                </h1>
+                {hero.subtitle && (
+                  <p className="text-xs sm:text-sm text-[#54473F] max-w-md">
+                    {hero.subtitle}
+                  </p>
+                )}
+                <div className="pt-2">
+                  <Link
+                    href={hero.buttonLink || '/kategoriler'}
+                    className="inline-block bg-[#231B18] hover:bg-[#C85A32] text-white text-xs uppercase tracking-widest font-medium px-8 py-3.5 rounded-none transition shadow-sm"
+                  >
+                    {hero.buttonText || 'ALIŞVERİŞE BAŞLA'}
+                  </Link>
+                </div>
+              </div>
+            </div>
+          ) : (
+            /* Görsel Henüz Boşken: Sıcak ve Estetik Atölye Vitrin Alanı */
+            <div className="w-full bg-gradient-to-br from-[#FAF8F5] via-[#F4EFE6] to-[#EDE7DC] border border-[#E2DCD3] rounded-xs p-8 sm:p-16 flex flex-col items-center justify-center text-center min-h-[340px] sm:min-h-[460px] relative overflow-hidden">
+              <div className="relative z-10 max-w-2xl space-y-4">
+                <span className="inline-block bg-[#C85A32] text-white text-[10px] sm:text-xs font-semibold tracking-widest uppercase px-3.5 py-1 rounded-xs">
+                  {hero.tag || 'SAFİRYA ATÖLYESİ'}
+                </span>
+                <h1 className="font-serif text-3xl sm:text-5xl text-[#231B18] font-normal leading-tight">
+                  {hero.title || 'El Emeği Zanaatkar Tasarımlar & Doğal Mumlar'}
+                </h1>
+                <p className="text-xs sm:text-sm text-[#7A7067] max-w-lg mx-auto leading-relaxed">
+                  {hero.subtitle || 'Kadıköy atölyemizde özenle hazırlanan %100 doğal soya mumları, kokulu taşlar, epoksi sunumluklar ve Miyuki takılar.'}
+                </p>
+                <div className="pt-3">
+                  <Link
+                    href={hero.buttonLink || '/kategoriler'}
+                    className="inline-block bg-[#231B18] hover:bg-[#C85A32] text-white text-xs uppercase tracking-widest font-medium px-8 py-3.5 rounded-xs transition shadow-sm"
+                  >
+                    {hero.buttonText || 'KOLEKSİYONU KEŞFET'}
+                  </Link>
+                </div>
+              </div>
+            </div>
+          )}
+
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+      </section>
+
+      {/* ════════════════════════════════════════════════════════════════
+          2. GÜVEN ROZETLERİ (Garanti, Kargo, Güvenli - 3 Sütun)
+      ════════════════════════════════════════════════════════════════ */}
+      <section className="border-y border-stone-200/80 bg-[#FAF8F5]/60 py-6">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8 divide-y md:divide-y-0 md:divide-x divide-stone-200">
+            
+            {/* 1. Kargo Hasar Garantisi */}
+            <div className="flex items-center gap-4 pt-3 md:pt-0 md:px-4">
+              <div className="w-11 h-11 rounded-full bg-white border border-stone-200 flex items-center justify-center text-[#C85A32] shrink-0 shadow-2xs">
+                <ShieldCheck className="w-5 h-5 stroke-[1.8]" />
+              </div>
+              <div>
+                <h2 className="text-xs sm:text-sm font-semibold uppercase tracking-wider text-[#231B18]">
+                  Kargo Hasar Garantisi
+                </h2>
+                <p className="text-xs text-[#7A7067] mt-0.5">
+                  Özel korumalı ambalaj. Hasarlı gelen ürün anında yenisiyle değiştirilir.
+                </p>
+              </div>
+            </div>
+
+            {/* 2. ₺500 Üzeri Ücretsiz Kargo */}
+            <div className="flex items-center gap-4 pt-3 md:pt-0 md:px-4">
+              <div className="w-11 h-11 rounded-full bg-white border border-stone-200 flex items-center justify-center text-[#5F6F52] shrink-0 shadow-2xs">
+                <Truck className="w-5 h-5 stroke-[1.8]" />
+              </div>
+              <div>
+                <h2 className="text-xs sm:text-sm font-semibold uppercase tracking-wider text-[#231B18]">
+                  ₺500 Üzeri Ücretsiz Kargo
+                </h2>
+                <p className="text-xs text-[#7A7067] mt-0.5">
+                  Atölye tazeliğinde 1-3 iş gününde özenle kargoya teslimat.
+                </p>
+              </div>
+            </div>
+
+            {/* 3. Güvenli Ödeme */}
+            <div className="flex items-center gap-4 pt-3 md:pt-0 md:px-4">
+              <div className="w-11 h-11 rounded-full bg-white border border-stone-200 flex items-center justify-center text-[#231B18] shrink-0 shadow-2xs">
+                <Lock className="w-5 h-5 stroke-[1.8]" />
+              </div>
+              <div>
+                <h2 className="text-xs sm:text-sm font-semibold uppercase tracking-wider text-[#231B18]">
+                  Güvenli Ödeme Altyapısı
+                </h2>
+                <p className="text-xs text-[#7A7067] mt-0.5">
+                  256-Bit SSL şifreleme ve 3D Secure ile güvenli kartlı ödeme.
+                </p>
+              </div>
+            </div>
+
+          </div>
         </div>
-      </main>
+      </section>
+
+      {/* ════════════════════════════════════════════════════════════════
+          3. KONSEPT ALANI 2: 3'LÜ KATEGORİ VİTRİNİ
+      ════════════════════════════════════════════════════════════════ */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4">
+        <div className="text-center mb-8">
+          <span className="text-[11px] font-sans uppercase tracking-[0.2em] text-[#C85A32] font-semibold block mb-1">
+            ÖZEL ATÖLYE SEÇKİSİ
+          </span>
+          <h2 className="font-serif text-2xl sm:text-3xl text-[#231B18] font-normal tracking-tight">
+            Kategorilerimize Göz Atın
+          </h2>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8">
+          {[
+            { banner: cat1, fallbackTitle: 'Doğal Mumlar', defaultLink: '/kategoriler/dogal-mumlar' },
+            { banner: cat2, fallbackTitle: 'Kokulu Taş & Seramik', defaultLink: '/kategoriler/kokulu-tas' },
+            { banner: cat3, fallbackTitle: 'Epoksi & Takı', defaultLink: '/kategoriler/epoksi-tasarimlar' },
+          ].map(({ banner, fallbackTitle, defaultLink }, idx) => (
+            <div key={idx} className="group">
+              
+              {/* Kart Görsel Alanı (1:1 Kare) */}
+              <div className="relative aspect-square w-full overflow-hidden rounded-xs bg-[#FAF8F5] border border-stone-200/80 flex items-center justify-center">
+                {banner.imageUrl ? (
+                  <>
+                    <img
+                      src={banner.imageUrl}
+                      alt={banner.title || fallbackTitle}
+                      className="w-full h-full object-cover group-hover:scale-103 transition-transform duration-700"
+                    />
+                    <div className="absolute inset-0 bg-black/15 group-hover:bg-black/25 transition-colors" />
+                    
+                    {/* Görsel Üstü Buton */}
+                    <div className="absolute inset-x-0 bottom-6 flex justify-center">
+                      <Link
+                        href={banner.buttonLink || defaultLink}
+                        className="bg-white/95 text-[#231B18] hover:bg-white text-[11px] uppercase tracking-widest font-medium px-5 py-2.5 rounded-none shadow-sm transition"
+                      >
+                        {banner.buttonText || 'KOLEKSİYONU KEŞFET'}
+                      </Link>
+                    </div>
+                  </>
+                ) : (
+                  <div className="p-8 text-center space-y-3 flex flex-col items-center justify-center h-full">
+                    <div className="w-12 h-12 rounded-full bg-[#C85A32]/10 border border-[#C85A32]/20 flex items-center justify-center text-[#C85A32] mb-1">
+                      <Sparkles className="w-5 h-5" />
+                    </div>
+                    <h3 className="font-serif text-lg text-[#231B18]">
+                      {banner.title || fallbackTitle}
+                    </h3>
+                    <Link
+                      href={banner.buttonLink || defaultLink}
+                      className="bg-[#231B18] hover:bg-[#C85A32] text-white text-[11px] uppercase tracking-widest font-medium px-5 py-2.5 rounded-xs shadow-xs transition"
+                    >
+                      {banner.buttonText || 'İNCELE'}
+                    </Link>
+                  </div>
+                )}
+              </div>
+
+              {/* Başlık (Kartın Altında) */}
+              <div className="pt-3.5 text-center">
+                <Link
+                  href={banner.buttonLink || defaultLink}
+                  className="font-serif text-sm sm:text-base text-[#231B18] hover:text-[#C85A32] transition-colors"
+                >
+                  {banner.title || fallbackTitle}
+                </Link>
+              </div>
+
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ════════════════════════════════════════════════════════════════
+          4. "SİZİN İÇİN SEÇTİKLERİMİZ" (Ürün Sliderı / Grid)
+      ════════════════════════════════════════════════════════════════ */}
+      {selectedProducts.length > 0 && (
+        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
+          <div className="text-center mb-8">
+            <h2 className="font-serif text-2xl sm:text-3xl text-[#231B18] font-normal tracking-tight">
+              Sizin İçin Seçtiklerimiz
+            </h2>
+            <div className="w-12 h-0.5 bg-[#C85A32] mx-auto mt-2" />
+          </div>
+
+          <div className="relative">
+            {/* Desktop Oklar */}
+            {selectedProducts.length > 4 && (
+              <>
+                <button
+                  onClick={prevSlide}
+                  className="hidden md:flex absolute -left-4 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full bg-white border border-stone-200 shadow-md items-center justify-center text-[#231B18] hover:text-[#C85A32] transition cursor-pointer"
+                  aria-label="Önceki Ürünler"
+                >
+                  <ChevronLeft className="w-5 h-5" />
+                </button>
+                <button
+                  onClick={nextSlide}
+                  className="hidden md:flex absolute -right-4 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full bg-white border border-stone-200 shadow-md items-center justify-center text-[#231B18] hover:text-[#C85A32] transition cursor-pointer"
+                  aria-label="Sonraki Ürünler"
+                >
+                  <ChevronRight className="w-5 h-5" />
+                </button>
+              </>
+            )}
+
+            {/* Ürün Listesi */}
+            <div className="overflow-x-auto md:overflow-hidden pb-4 md:pb-0 scrollbar-none">
+              <div
+                className="flex md:grid md:grid-cols-4 lg:grid-cols-5 gap-4 transition-transform duration-500 ease-out"
+                style={{
+                  transform:
+                    typeof window !== 'undefined' && window.innerWidth >= 768 && selectedProducts.length > 4
+                      ? `translateX(-${carouselIndex * 20}%)`
+                      : 'none',
+                }}
+              >
+                {selectedProducts.map((prod) => (
+                  <div key={prod.id} className="min-w-[200px] sm:min-w-[220px] md:min-w-0 shrink-0">
+                    <ProductCard product={prod} variant="simple" />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* ════════════════════════════════════════════════════════════════
+          5. KONSEPT ALANI 3: VİTRİN 1 (Mum & Doğal Koleksiyon)
+      ════════════════════════════════════════════════════════════════ */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 items-center">
+          
+          {/* Sol: Büyük Konsept Afişi (%50 Genişlik) */}
+          <div className="lg:col-span-6">
+            <div className="relative aspect-[4/3] w-full overflow-hidden rounded-xs bg-[#FAF8F5] border border-stone-200/80 flex items-center justify-center group">
+              {show1.imageUrl ? (
+                <>
+                  <img
+                    src={show1.imageUrl}
+                    alt={show1.title}
+                    className="w-full h-full object-cover group-hover:scale-102 transition-transform duration-700"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent flex flex-col justify-end p-8 text-white">
+                    <span className="text-[11px] font-sans uppercase tracking-[0.2em] text-white/90 font-medium">
+                      {show1.subtitle || 'DÜZENLİ VE ŞIK MUTFAKLAR'}
+                    </span>
+                    <h3 className="font-serif text-3xl font-normal text-white mt-1">
+                      {show1.title || 'Doğal Mum Koleksiyonu'}
+                    </h3>
+                    <div className="pt-3">
+                      <Link
+                        href={show1.buttonLink || '/kategoriler/dogal-mumlar'}
+                        className="inline-block bg-white text-[#231B18] hover:bg-stone-100 text-xs uppercase tracking-widest font-medium px-6 py-2.5 transition"
+                      >
+                        {show1.buttonText || 'KEŞFEDİN'}
+                      </Link>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div className="p-8 text-center space-y-3 max-w-sm">
+                  <div className="w-12 h-12 rounded-full bg-[#C85A32]/10 border border-[#C85A32]/20 mx-auto flex items-center justify-center text-[#C85A32]">
+                    <Sparkles className="w-6 h-6" />
+                  </div>
+                  <h3 className="font-serif text-2xl font-normal text-[#231B18]">
+                    {show1.title || 'Doğal Mum Koleksiyonu'}
+                  </h3>
+                  <p className="text-xs text-[#7A7067]">
+                    %100 soya vaksı, ahşap fitil ve saf esans yağlarıyla dökülen atölye serisi.
+                  </p>
+                  <div className="pt-2">
+                    <Link
+                      href={show1.buttonLink || '/kategoriler/dogal-mumlar'}
+                      className="inline-block bg-[#231B18] hover:bg-[#C85A32] text-white text-xs uppercase tracking-widest font-medium px-6 py-2.5 rounded-xs transition"
+                    >
+                      {show1.buttonText || 'KOLEKSİYONU İNCELE'}
+                    </Link>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Sağ: 3 Adet Ürün Kartı (%50 Genişlik) */}
+          <div className="lg:col-span-6">
+            <div className="grid grid-cols-3 gap-3 sm:gap-4">
+              {showcase1Products.map((prod) => (
+                <ProductCard key={prod.id} product={prod} variant="simple" />
+              ))}
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      {/* ════════════════════════════════════════════════════════════════
+          6. KONSEPT ALANI 4: VİTRİN 2 (Epoksi & Taş Koleksiyonu)
+      ════════════════════════════════════════════════════════════════ */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 items-center">
+          
+          {/* Sol: Büyük Konsept Afişi (%50 Genişlik) */}
+          <div className="lg:col-span-6">
+            <div className="relative aspect-[4/3] w-full overflow-hidden rounded-xs bg-[#FAF8F5] border border-stone-200/80 flex items-center justify-center group">
+              {show2.imageUrl ? (
+                <>
+                  <img
+                    src={show2.imageUrl}
+                    alt={show2.title}
+                    className="w-full h-full object-cover group-hover:scale-102 transition-transform duration-700"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent flex flex-col justify-end p-8 text-white">
+                    <span className="text-[11px] font-sans uppercase tracking-[0.2em] text-white/90 font-medium">
+                      {show2.subtitle || 'GÜNÜN EN GÜZEL BAŞLANGICI'}
+                    </span>
+                    <h3 className="font-serif text-3xl font-normal text-white mt-1">
+                      {show2.title || 'Epoksi & Zanaat Objeleri'}
+                    </h3>
+                    <div className="pt-3">
+                      <Link
+                        href={show2.buttonLink || '/kategoriler/epoksi-tasarimlar'}
+                        className="inline-block bg-white text-[#231B18] hover:bg-stone-100 text-xs uppercase tracking-widest font-medium px-6 py-2.5 transition"
+                      >
+                        {show2.buttonText || 'KEŞFEDİN'}
+                      </Link>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div className="p-8 text-center space-y-3 max-w-sm">
+                  <div className="w-12 h-12 rounded-full bg-[#5F6F52]/10 border border-[#5F6F52]/20 mx-auto flex items-center justify-center text-[#5F6F52]">
+                    <Sparkles className="w-6 h-6" />
+                  </div>
+                  <h3 className="font-serif text-2xl font-normal text-[#231B18]">
+                    {show2.title || 'Epoksi & Zanaat Objeleri'}
+                  </h3>
+                  <p className="text-xs text-[#7A7067]">
+                    Doğal fırınlanmış ahşap ve ultra şeffaf epoksi reçine ile elde üretilen dekoratif sunumluklar.
+                  </p>
+                  <div className="pt-2">
+                    <Link
+                      href={show2.buttonLink || '/kategoriler/epoksi-tasarimlar'}
+                      className="inline-block bg-[#231B18] hover:bg-[#5F6F52] text-white text-xs uppercase tracking-widest font-medium px-6 py-2.5 rounded-xs transition"
+                    >
+                      {show2.buttonText || 'KOLEKSİYONU İNCELE'}
+                    </Link>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Sağ: 3 Adet Ürün Kartı (%50 Genişlik) */}
+          <div className="lg:col-span-6">
+            <div className="grid grid-cols-3 gap-3 sm:gap-4">
+              {showcase2Products.map((prod) => (
+                <ProductCard key={prod.id} product={prod} variant="simple" />
+              ))}
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      {/* ════════════════════════════════════════════════════════════════
+          7. SIKÇA SORULAN SORULAR (SEO & Yapısal Bilgilendirme)
+      ════════════════════════════════════════════════════════════════ */}
+      <section className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 pt-12 pb-8">
+        <JsonLd data={faqSchemaData} />
+
+        <div className="text-center mb-8">
+          <span className="text-[11px] font-sans uppercase tracking-[0.2em] text-[#C85A32] font-semibold block mb-1">
+            MERAK EDİLENLER
+          </span>
+          <h2 className="font-serif text-2xl sm:text-3xl text-[#231B18] font-normal tracking-tight">
+            Sıkça Sorulan Sorular
+          </h2>
+          <div className="w-12 h-0.5 bg-[#C85A32] mx-auto mt-2" />
+        </div>
+
+        <div className="space-y-4">
+          {HOME_FAQS.map((faq, i) => (
+            <details
+              key={i}
+              className="group border border-stone-200 rounded-xs bg-[#FAF8F5]/40 transition-colors [&_summary::-webkit-details-marker]:hidden"
+            >
+              <summary className="flex cursor-pointer items-center justify-between p-4 sm:p-5 text-sm sm:text-base font-medium text-[#231B18]">
+                <h3 className="font-serif text-sm sm:text-base text-[#231B18] pr-4">
+                  {faq.question}
+                </h3>
+                <span className="shrink-0 transition duration-300 group-open:-rotate-180 text-[#7A7067]">
+                  <ChevronRight className="w-4 h-4 rotate-90" />
+                </span>
+              </summary>
+              <div className="px-4 sm:px-5 pb-5 pt-1 text-xs sm:text-sm text-[#7A7067] leading-relaxed border-t border-stone-100">
+                <p>{faq.answer}</p>
+              </div>
+            </details>
+          ))}
+        </div>
+      </section>
+
     </div>
   );
 }

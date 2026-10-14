@@ -1,0 +1,581 @@
+// Safirya Atölye E-Ticaret ve ERP/Üretim Yönetim Platformu
+// Prisma Şeması (PostgreSQL)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ==========================================
+// 1. KULLANICI & KİMLİK DOĞRULAMA MODÜLÜ
+// ==========================================
+
+enum UserRole {
+  CUSTOMER
+  ATELIER_STAFF
+  ADMIN
+}
+
+model User {
+  id            String         @id @default(cuid())
+  name          String?
+  email         String         @unique
+  emailVerified DateTime?
+  passwordHash  String?
+  phone         String?
+  role          UserRole       @default(CUSTOMER)
+  avatar        String?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  orders        Order[]
+  favorites     Favorite[]
+  reviews       ProductReview[]
+  quotes        CustomQuoteRequest[]
+
+  @@map("users")
+}
+
+// ==========================================
+// 2. ÜRÜNLER & KATEGORİLER MODÜLÜ
+// ==========================================
+
+model Category {
+  id          String     @id @default(cuid())
+  name        String     @unique // Mum, Kokulu Taş, Epoksi, Miyuki Takı vb.
+  slug        String     @unique
+  description String?
+  imageUrl    String?
+  icon        String?
+  sortOrder   Int        @default(0)
+  isActive    Boolean    @default(true)
+  parentId    String?
+  parent      Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children    Category[] @relation("CategoryHierarchy")
+  products    Product[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@map("categories")
+}
+
+model Product {
+  id              String           @id @default(cuid())
+  name            String
+  slug            String           @unique
+  shortDesc       String?
+  description     String           @db.Text
+  images          String[]         // Ürün görsel URL dizisi
+  sku             String           @unique
+  barcode         String?
+  netPrice        Decimal          @db.Decimal(10, 2) // Başlangıç taban fiyatı
+  discountRate    Float            @default(0)        // İndirim oranı (örn: 15.0 => %15)
+  preparationDays Int              @default(3)        // Atölye hazırlanma süresi (gün)
+  isCustomizable  Boolean          @default(false)    // Kişiselleştirilebilir mi?
+  inStock         Boolean          @default(true)
+  stockQuantity   Int              @default(100)
+  isFeatured      Boolean          @default(false)
+  isBestSeller    Boolean          @default(false)
+  isActive        Boolean          @default(true)
+  
+  // Mum ve Kokulu taş için koku notaları (örn: ["Vanilya", "Lavanta", "Sandal Ağacı", "Amber"])
+  scentNotes      String[]
+  // Epoksi ve Miyuki takı için renk varyasyonları (örn: ["Safir Mavisi", "Kehribar Sarısı", "Zümrüt Yeşili"])
+  colorOptions    String[]
+
+  categoryId      String
+  category        Category         @relation(fields: [categoryId], references: [id])
+
+  variants        ProductVariant[]
+  bulkTiers       BulkPricingTier[]
+  orderItems      OrderItem[]
+  favorites       Favorite[]
+  reviews         ProductReview[]
+  
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  @@map("products")
+}
+
+model ProductVariant {
+  id            String       @id @default(cuid())
+  productId     String
+  product       Product      @relation(fields: [productId], references: [id], onDelete: Cascade)
+  title         String       // Örn: "200ml Cam Kavanoz - Vanilya", "Miyuki Bileklik - Safir Mavi"
+  sku           String       @unique
+  price         Decimal      @db.Decimal(10, 2)
+  stockQuantity Int          @default(50)
+  colorName     String?
+  scentName     String?
+  sizeOrVolume  String?      // Örn: "250g", "15-18cm Ayarlanabilir"
+  imageUrl      String?
+  isActive      Boolean      @default(true)
+  
+  orderItems    OrderItem[]
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  @@map("product_variants")
+}
+
+// ==========================================
+// 3. KİŞİSELLEŞTİRME & TOPLU SİPARİŞ MODÜLÜ
+// ==========================================
+
+// Söz, nişan, kurumsal etkinlik için baremli toplu fiyatlandırma
+model BulkPricingTier {
+  id                 String   @id @default(cuid())
+  productId          String
+  product            Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  minQuantity        Int      // Örn: 25
+  maxQuantity        Int?     // Örn: 50 (null ise 50+ üzeri)
+  discountPercentage Float?   // Örn: 15 (%15 indirim)
+  unitPrice          Decimal? @db.Decimal(10, 2) // İndirimli birim fiyat
+  description        String?  // Örn: "25-50 Adet Nişan Hediyeliği Baremi"
+
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@map("bulk_pricing_tiers")
+}
+
+// Sipariş anında girilen kişiselleştirme detayları
+model OrderCustomization {
+  id             String      @id @default(cuid())
+  orderItemId    String      @unique
+  orderItem      OrderItem   @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+  
+  customText     String?     // Ürüne yazılacak isim / tarih / metin (örn: "Selin & Emre 18.06.2026")
+  selectedColor  String?     // Seçilen renk paleti
+  selectedScent  String?     // Seçilen koku esansı
+  extraNote      String?     @db.Text // Müşteri özel notu
+  tagDesignType  String?     // Etiket tasarım şablon kodu (örn: "KRAFT-KALP-01")
+
+  createdAt      DateTime    @default(now())
+
+  @@map("order_customizations")
+}
+
+enum QuoteStatus {
+  BEKLEMEDE
+  INCELENIYOR
+  FIYAT_TEKLIFI_VERILDI
+  ONAYLANDI
+  IPTAL_EDILDI
+}
+
+// Özel Tasarım & Kurumsal / Etkinlik Toplu Sipariş Talepleri
+model CustomQuoteRequest {
+  id                String      @id @default(cuid())
+  userId            String?
+  user              User?       @relation(fields: [userId], references: [id])
+  customerName      String
+  customerEmail     String
+  customerPhone     String
+  eventType         String      // "Söz/Nişan", "Kına", "Düğün", "Baby Shower", "Kurumsal Hediye"
+  productType       String      // "Mum", "Kokulu Taş", "Epoksi Obje", "Miyuki Takı Seti"
+  requestedQuantity Int         // İstenen adet (örn: 150)
+  targetBudget      Decimal?    @db.Decimal(10, 2)
+  eventDate         DateTime?   // Etkinlik tarihi
+  customDetails     String      @db.Text // Talep edilen detaylar, renk, koku, etiket istekleri
+  referenceImages   String[]    // Müşterinin yüklediği ilham görselleri
+  
+  status            QuoteStatus @default(BEKLEMEDE)
+  quotedUnitPrice   Decimal?    @db.Decimal(10, 2)
+  quotedTotalPrice  Decimal?    @db.Decimal(10, 2)
+  adminNote         String?     @db.Text
+  
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+
+  @@map("custom_quote_requests")
+}
+
+// ==========================================
+// 4. SİPARİŞLER & KANBAN ÜRETİM MODÜLÜ
+// ==========================================
+
+// Atölye 5 Aşamalı Üretim ve Kargo Durumu
+enum OrderStage {
+  SIPARIS_ALINDI
+  ATOLYEDE_URETIMDE
+  KALITE_KONTROL_PAKETLEME
+  KARGOYA_VERILDI
+  TESLIM_EDILDI
+}
+
+enum PaymentStatus {
+  BEKLIYOR
+  ODENDI
+  BASARISIZ
+  IADE_EDILDI
+}
+
+model Order {
+  id               String              @id @default(cuid())
+  orderNumber      String              @unique // Örn: "SFR-2026-8921"
+  userId           String?
+  user             User?               @relation(fields: [userId], references: [id])
+  
+  // Üyeliksiz sipariş desteği
+  guestEmail       String?
+  guestPhone       String?
+  guestName        String?
+
+  // Adres bilgileri (JSON & Alanlar)
+  shippingAddress  Json                // Teslimat adresi (ad, soyad, şehir, ilçe, açık adres, posta kodu)
+  billingAddress   Json?               // Fatura adresi
+
+  subtotal         Decimal             @db.Decimal(10, 2)
+  discountTotal    Decimal             @default(0) @db.Decimal(10, 2)
+  shippingFee      Decimal             @default(0) @db.Decimal(10, 2)
+  
+  // Hediye paketi opsiyonu
+  isGiftWrapped    Boolean             @default(false)
+  giftWrapFee      Decimal             @default(0) @db.Decimal(10, 2)
+  giftNote         String?             @db.Text
+
+  totalAmount      Decimal             @db.Decimal(10, 2)
+
+  // Durumlar
+  stage            OrderStage          @default(SIPARIS_ALINDI)
+  paymentStatus    PaymentStatus       @default(BEKLIYOR)
+  paymentMethod    String              @default("KREDI_KARTI") // "KREDI_KARTI", "HAVALE_EFT"
+  
+  // Kargo Takip
+  cargoCompany     String?             // "Yurtiçi Kargo", "MNG", "Aras"
+  trackingCode     String?
+  trackingUrl      String?
+
+  // Atölye Kanban üretim sırası
+  kanbanColumnId   String?             @default("queue") // "queue", "prep", "crafting", "curing", "qc_packing"
+  sortOrder        Int                 @default(0)       // Kanban panosundaki dikey sıra
+
+  items            OrderItem[]
+  stagePhotos      OrderStagePhoto[]   // Atölye üretim aşama fotoğrafları
+  invoices         Invoice[]
+  transactions     Transaction[]
+  
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+
+  @@map("orders")
+}
+
+model OrderItem {
+  id              String              @id @default(cuid())
+  orderId         String
+  order           Order               @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId       String
+  product         Product             @relation(fields: [productId], references: [id])
+  variantId       String?
+  variant         ProductVariant?     @relation(fields: [variantId], references: [id])
+  
+  productName     String
+  variantName     String?
+  unitPrice       Decimal             @db.Decimal(10, 2)
+  quantity        Int                 @default(1)
+  totalAmount     Decimal             @db.Decimal(10, 2)
+  
+  customization   OrderCustomization?
+
+  createdAt       DateTime            @default(now())
+
+  @@map("order_items")
+}
+
+// Atölye üretim aşaması fotoğrafları (Müşteriye şeffaf üretim deneyimi sunmak için)
+model OrderStagePhoto {
+  id          String     @id @default(cuid())
+  orderId     String
+  order       Order      @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  stage       OrderStage
+  photoUrl    String
+  caption     String?    // Örn: "Mumlarınız döküldü, kuruma aşamasında."
+  takenAt     DateTime   @default(now())
+
+  @@map("order_stage_photos")
+}
+
+// ==========================================
+// 5. ERP, ENVANTER & FİNANS MODÜLÜ
+// ==========================================
+
+enum AccountType {
+  MUSTERI
+  TEDARIKCI
+  ATOLYE_PARTNER
+}
+
+// Cari Hesaplar (Müşteri & Tedarikçi bakiye takibi)
+model Account {
+  id           String        @id @default(cuid())
+  code         String        @unique // Örn: "TED-001", "MUS-102"
+  name         String
+  type         AccountType   @default(TEDARIKCI)
+  taxId        String?       // VKN / TCKN
+  taxOffice    String?       // Vergi Dairesi
+  email        String?
+  phone        String?
+  address      String?       @db.Text
+  balance      Decimal       @default(0) @db.Decimal(12, 2) // Borç / Alacak bakiyesi
+  notes        String?       @db.Text
+  
+  transactions Transaction[]
+  invoices     Invoice[]
+  rawMaterials RawMaterial[]
+
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  @@map("accounts")
+}
+
+// Hammadde ve Envanter Modeli (Soya mumu, esans, epoksi reçine, boncuk, ambalaj)
+model RawMaterial {
+  id           String             @id @default(cuid())
+  code         String             @unique // Örn: "HAM-SOYA-01", "HAM-ESANS-LAV"
+  name         String             // Örn: "Saf Soya Vaksı %100 Doğal", "Miyuki Delica 11/0 Altın Yaldız"
+  category     String             // "Mum Hammaddesi", "Epoksi Kimyasalları", "Miyuki Boncuk", "Ambalaj"
+  unit         String             // "kg", "gram", "litre", "adet", "metre"
+  currentStock Float              @default(0) // Mevcut miktar
+  minThreshold Float              @default(10) // Kritik stok alt limiti uyarısı
+  unitCost     Decimal            @default(0) @db.Decimal(10, 2)
+  
+  supplierId   String?
+  supplier     Account?           @relation(fields: [supplierId], references: [id])
+  
+  stockLogs    InventoryStockLog[]
+
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+
+  @@map("raw_materials")
+}
+
+enum StockLogType {
+  GIRIS_SATIN_ALMA
+  URETIMDE_KULLANIM
+  FIRE_KAYIP
+  SAYIM_DUZELTME
+}
+
+model InventoryStockLog {
+  id            String       @id @default(cuid())
+  rawMaterialId String
+  rawMaterial   RawMaterial  @relation(fields: [rawMaterialId], references: [id], onDelete: Cascade)
+  type          StockLogType
+  quantityDelta Float        // Pozitif veya negatif değişim
+  unitPrice     Decimal?     @db.Decimal(10, 2)
+  reason        String?
+  referenceId   String?      // Sipariş ID veya Alış Faturası ID
+  createdAt     DateTime     @default(now())
+
+  @@map("inventory_stock_logs")
+}
+
+enum TransactionType {
+  GELIR
+  GIDER
+}
+
+enum TransactionCategory {
+  SIPARIS_SATIS
+  HAMMADDE_ALIMI
+  ATOLYE_KIRA_AIDAT
+  ELEKTRIK_SU_GAZ
+  KARGO_LOJISTIK
+  PAZARLAMA_REKLAM
+  MAAS_PERSONEL
+  AMBALAJ_PAKETLEME
+  DIGER
+}
+
+enum PaymentMethod {
+  KREDI_KARTI
+  HAVALE_EFT
+  NAKIT
+}
+
+// Gelir - Gider Kasa/Banka Hareketleri
+model Transaction {
+  id            String              @id @default(cuid())
+  type          TransactionType
+  category      TransactionCategory
+  amount        Decimal             @db.Decimal(12, 2)
+  paymentMethod PaymentMethod       @default(KREDI_KARTI)
+  date          DateTime            @default(now())
+  description   String
+  referenceNo   String?             // Dekont / Fiş No
+  
+  accountId     String?
+  account       Account?            @relation(fields: [accountId], references: [id])
+  orderId       String?
+  order         Order?              @relation(fields: [orderId], references: [id])
+
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+
+  @@map("transactions")
+}
+
+enum InvoiceStatus {
+  BEKLIYOR
+  OLUSTURULDU
+  IPTAL
+}
+
+enum InvoiceType {
+  SATIS
+  ALIS
+  IADE
+}
+
+// E-Fatura ve Fatura Kayıtları
+model Invoice {
+  id          String        @id @default(cuid())
+  invoiceNo   String        @unique // Örn: "SFR20260000001"
+  type        InvoiceType   @default(SATIS)
+  status      InvoiceStatus @default(BEKLIYOR)
+  
+  orderId     String?
+  order       Order?        @relation(fields: [orderId], references: [id])
+  accountId   String?
+  account     Account?      @relation(fields: [accountId], references: [id])
+
+  subtotal    Decimal       @db.Decimal(10, 2)
+  taxRate     Float         @default(20) // KDV %20
+  taxAmount   Decimal       @db.Decimal(10, 2)
+  totalAmount Decimal       @db.Decimal(10, 2)
+  
+  pdfUrl      String?       // E-Fatura PDF linki
+  issueDate   DateTime      @default(now())
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@map("invoices")
+}
+
+// Terkedilen Sepetler ve Yeniden Pazarlama
+model AbandonedCart {
+  id              String    @id @default(cuid())
+  email           String
+  phone           String?
+  cartData        Json      // Sepetteki ürünler, varyantlar, adetler
+  totalAmount     Decimal   @db.Decimal(10, 2)
+  reminderSent    Boolean   @default(false)
+  reminderSentAt  DateTime?
+  isRecovered     Boolean   @default(false)
+  recoveredAt     DateTime?
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@map("abandoned_carts")
+}
+
+// ==========================================
+// 6. DİNAMİK SİSTEM AYARLARI, PAZARLAMA & CMS
+// ==========================================
+
+model SystemSettings {
+  id                     String   @id @default("safirya_config")
+  announcementText       String   @default("₺500 ve Üzeri Siparişlerde Ücretsiz Kargo!")
+  isAnnouncementActive   Boolean  @default(true)
+  freeShippingThreshold  Decimal  @default(500) @db.Decimal(10, 2) // ₺500
+  giftWrapFee            Decimal  @default(30) @db.Decimal(10, 2)  // ₺30
+  
+  // Mağaza İletişim Bilgileri
+  storeName              String   @default("Safirya El Yapımı Tasarım Atölyesi")
+  contactEmail           String   @default("info@safirya.tr")
+  contactPhone           String   @default("+90 (212) 555 7234")
+  whatsappNumber         String   @default("+90 532 555 7234")
+  instagramHandle        String   @default("@safirya.craft")
+  atelierAddress         String   @default("Safirya Atölyesi, Moda Cad. No:42 Kadıköy / İstanbul")
+  
+  // Ziyaretçi Çıkış Teklifi (Exit-Intent Pop-up)
+  exitIntentEnabled      Boolean  @default(true)
+  exitIntentTitle        String   @default("Atölyemizden Ayrılmadan Önce %10 Tanışma İndirimi!")
+  exitIntentSubtitle     String   @default("İlk siparişine özel kehribar sıcaklığında hoş geldin fırsatı.")
+  exitIntentCouponCode   String   @default("SAFIRYA10")
+  exitIntentDiscountRate Float    @default(10) // %10
+
+  // Kampanya Promosyon Pop-up
+  promoPopupEnabled      Boolean  @default(false)
+  promoPopupTitle        String?
+  promoPopupImage        String?
+  promoPopupLink         String?
+
+  updatedAt              DateTime @updatedAt
+
+  @@map("system_settings")
+}
+
+enum MarketingRuleType {
+  CROSS_SELL
+  BUNDLE_INDINIRIM
+  SEPET_KUPON
+  EXIT_INTENT
+}
+
+model MarketingRule {
+  id                   String            @id @default(cuid())
+  title                String            // Örn: "Mum Alanlara Kibrit & Altlık Çapraz Satış"
+  ruleType             MarketingRuleType @default(CROSS_SELL)
+  isActive             Boolean           @default(true)
+  triggerCategory      String?           // Hangi kategoride tetiklenecek?
+  triggerProductId     String?           // Hangi üründe tetiklenecek?
+  recommendedProductIds String[]         // Önerilecek ürün ID'leri
+  couponCode           String?           // Opsiyonel kupon kodu
+  discountPercentage   Float?            // Yüzde indirim
+  bannerText           String?
+  
+  createdAt            DateTime          @default(now())
+  updatedAt            DateTime          @updatedAt
+
+  @@map("marketing_rules")
+}
+
+model CmsPage {
+  id              String   @id @default(cuid())
+  slug            String   @unique // "hakkimizda", "iade-kosullari", "gizlilik-ve-kvkk", "mesafeli-satis-sozlesmesi", "iletisim"
+  title           String
+  metaDescription String?
+  contentHtml     String   @db.Text
+  isActive        Boolean  @default(true)
+  updatedAt       DateTime @updatedAt
+
+  @@map("cms_pages")
+}
+
+model Favorite {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, productId])
+  @@map("favorites")
+}
+
+model ProductReview {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  rating    Int      @default(5) // 1-5 arası yıldız
+  comment   String?  @db.Text
+  isApproved Boolean @default(true)
+  createdAt DateTime @default(now())
+
+  @@map("product_reviews")
+}

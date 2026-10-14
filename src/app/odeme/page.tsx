@@ -1,0 +1,1035 @@
+'use client';
+
+import React, { useState } from 'react';
+import Link from 'next/link';
+import {
+  ShieldCheck,
+  CreditCard,
+  Building2,
+  CheckCircle2,
+  Copy,
+  ArrowRight,
+  Gift,
+  ShoppingBag,
+  ChevronRight,
+  AlertCircle,
+  Check,
+} from 'lucide-react';
+import { useStore, CartItem } from '@/context/StoreContext';
+
+const TURKISH_CITIES = [
+  'İstanbul',
+  'Ankara',
+  'İzmir',
+  'Bursa',
+  'Antalya',
+  'Adana',
+  'Eskişehir',
+  'Gaziantep',
+  'Konya',
+  'Kocaeli',
+  'Muğla',
+  'Aydın',
+  'Trabzon',
+  'Samsun',
+  'Kayseri',
+  'Diğer İl',
+];
+
+export default function CheckoutPage() {
+  const {
+    cartItems,
+    cartTotal,
+    originalCartTotal,
+    isGiftWrapped,
+    giftNote,
+    appliedCoupon,
+    clearCart,
+  } = useStore();
+
+  // Müşteri & Teslimat Bilgileri Form State
+  const [formData, setFormData] = useState({
+    fullName: 'Elif Kaya',
+    email: 'elif.kaya@example.com',
+    phone: '0541 234 5678',
+    city: 'İstanbul',
+    district: 'Kadıköy',
+    neighborhood: 'Moda / Caferağa Mah.',
+    address: 'Şair Nefi Sokak No:18 Daire:4',
+    postalCode: '34710',
+    orderNote: 'Zil çalışmıyor, gelince lütfen arayınız.',
+    // Fatura
+    invoiceType: 'INDIVIDUAL' as 'INDIVIDUAL' | 'CORPORATE',
+    sameAsShipping: true,
+    tckn: '12345678901',
+    companyName: '',
+    taxOffice: '',
+    vkn: '',
+    corporateAddress: '',
+    // Ödeme
+    paymentMethod: 'CREDIT_CARD' as 'CREDIT_CARD' | 'HAVALE_EFT',
+    cardNumber: '5428 •••• •••• 9012',
+    cardHolder: 'ELİF KAYA',
+    expiry: '12/28',
+    cvv: '321',
+  });
+
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [placedOrder, setPlacedOrder] = useState<{
+    orderNumber: string;
+    email: string;
+    totalAmount: number;
+    items: CartItem[];
+    date: string;
+    shippingAddress: string;
+    giftNote?: string;
+  } | null>(null);
+
+  const [copied, setCopied] = useState(false);
+
+  // Fiyat Hesaplamaları
+  const freeShippingThreshold = 500;
+  const giftWrapFee = 30;
+  const isFreeShipping = cartTotal >= freeShippingThreshold;
+  const shippingFee = cartItems.length === 0 ? 0 : isFreeShipping ? 0 : 45.0;
+
+  const bulkSavings = Math.max(0, originalCartTotal - cartTotal);
+
+  let couponDiscount = 0;
+  if (appliedCoupon) {
+    if (appliedCoupon.discountType === 'percentage') {
+      couponDiscount = (cartTotal * appliedCoupon.discountValue) / 100;
+    } else {
+      couponDiscount = Math.min(cartTotal, appliedCoupon.discountValue);
+    }
+  }
+
+  const giftWrapCost = isGiftWrapped ? giftWrapFee : 0;
+  const discountedSubtotal = Math.max(0, cartTotal - couponDiscount);
+  const grandTotal = discountedSubtotal + giftWrapCost + shippingFee;
+  const shippingSavings = isFreeShipping && cartItems.length > 0 ? 45.0 : 0;
+  const totalSavings = bulkSavings + couponDiscount + shippingSavings;
+
+  const handleInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
+  ) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+    if (errors[name]) {
+      setErrors((prev) => {
+        const next = { ...prev };
+        delete next[name];
+        return next;
+      });
+    }
+  };
+
+  const validateCheckout = () => {
+    const newErrors: Record<string, string> = {};
+    if (!formData.fullName.trim()) newErrors.fullName = 'Lütfen adınızı ve soyadınızı giriniz.';
+    if (!formData.email.trim()) {
+      newErrors.email = 'Lütfen e-posta adresinizi giriniz.';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim())) {
+      newErrors.email = 'Lütfen geçerli bir e-posta adresi giriniz.';
+    }
+    if (!formData.phone.trim()) {
+      newErrors.phone = 'Lütfen cep telefonu numaranızı giriniz.';
+    } else if (formData.phone.replace(/[^0-9]/g, '').length < 10) {
+      newErrors.phone = 'Geçerli bir telefon numarası giriniz (en az 10 hane).';
+    }
+    if (!formData.district.trim()) newErrors.district = 'Lütfen ilçe bilgisini giriniz.';
+    if (!formData.neighborhood.trim()) newErrors.neighborhood = 'Lütfen mahalle bilgisini giriniz.';
+    if (!formData.address.trim()) newErrors.address = 'Lütfen açık teslimat adresinizi giriniz.';
+
+    if (formData.invoiceType === 'CORPORATE') {
+      if (!formData.companyName.trim()) newErrors.companyName = 'Şirket ünvanı zorunludur.';
+      if (!formData.taxOffice.trim()) newErrors.taxOffice = 'Vergi dairesi zorunludur.';
+      if (!formData.vkn.trim()) newErrors.vkn = 'VKN bilgisi zorunludur.';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleCompleteOrder = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!validateCheckout()) {
+      window.scrollTo({ top: 220, behavior: 'smooth' });
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    // Benzersiz Sipariş Numarası Üret (Örn: SFR-2026-8921)
+    const randomSuffix = Math.floor(1000 + Math.random() * 9000);
+    const orderNumber = `SFR-2026-${randomSuffix}`;
+
+    setTimeout(() => {
+      const orderPayload = {
+        orderNumber,
+        email: formData.email,
+        customerName: formData.fullName,
+        phone: formData.phone,
+        totalAmount: grandTotal,
+        items: [...cartItems],
+        date: new Date().toLocaleDateString('tr-TR', {
+          day: 'numeric',
+          month: 'long',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+        }),
+        shippingAddress: `${formData.neighborhood} ${formData.address} ${formData.district} / ${formData.city}`,
+        isGiftWrapped,
+        giftNote: isGiftWrapped ? giftNote : undefined,
+        stage: 'SIPARIS_ALINDI',
+        paymentMethod: formData.paymentMethod,
+      };
+
+      // localStorage'a kaydet ki sipariş-takip sorgulayabilsin
+      try {
+        const existingRaw = localStorage.getItem('safirya_orders');
+        const existingList = existingRaw ? JSON.parse(existingRaw) : [];
+        existingList.unshift(orderPayload);
+        localStorage.setItem('safirya_orders', JSON.stringify(existingList));
+      } catch (err) {
+        console.error('Sipariş kaydedilirken hata:', err);
+      }
+
+      setPlacedOrder({
+        orderNumber,
+        email: formData.email,
+        totalAmount: grandTotal,
+        items: [...cartItems],
+        date: orderPayload.date,
+        shippingAddress: orderPayload.shippingAddress,
+        giftNote: isGiftWrapped ? giftNote : undefined,
+      });
+
+      clearCart();
+      setIsSubmitting(false);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }, 800);
+  };
+
+  const copyOrderNumber = (num: string) => {
+    navigator.clipboard.writeText(num);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  // ════════════════════════════════════════════════════════════
+  // SİPARİŞ TAMAMLANDI - BAŞARI EKRANI (Clean Minimalist White)
+  // ════════════════════════════════════════════════════════════
+  if (placedOrder) {
+    return (
+      <div className="min-h-screen bg-white py-12 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-2xl mx-auto space-y-6">
+          <div className="bg-white rounded-xs border border-stone-200 p-8 sm:p-10 text-center space-y-6">
+            <div className="w-16 h-16 bg-[#FEF5C8] text-[#231B18] rounded-full flex items-center justify-center mx-auto">
+              <CheckCircle2 className="w-8 h-8" />
+            </div>
+
+            <div>
+              <span className="text-[11px] uppercase tracking-[0.2em] font-medium text-[#7A7067] block mb-2">
+                Siparişiniz Başarıyla Alındı
+              </span>
+              <h1 className="font-serif text-2xl sm:text-3xl font-normal text-[#231B18]">
+                Teşekkür Ederiz, Siparişiniz Atölyemize Ulaştı
+              </h1>
+              <p className="text-xs sm:text-sm text-[#7A7067] mt-2 max-w-md mx-auto leading-relaxed">
+                Sipariş onayınız ve detaylar <strong className="text-[#231B18]">{placedOrder.email}</strong> adresinize gönderildi. Zanaatkar ustalarımız hazırlığa başladı.
+              </p>
+            </div>
+
+            {/* Sipariş Numarası Vurgusu */}
+            <div className="p-4 rounded-xs bg-[#FAF8F5] border border-stone-200 flex items-center justify-between gap-4 max-w-md mx-auto">
+              <div className="text-left">
+                <span className="text-[10px] uppercase tracking-widest text-[#7A7067] block">
+                  Sipariş Numaranız
+                </span>
+                <span className="text-lg sm:text-xl font-mono font-medium text-[#231B18] tracking-wider">
+                  {placedOrder.orderNumber}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => copyOrderNumber(placedOrder.orderNumber)}
+                className="px-3.5 py-2 rounded-xs bg-white border border-stone-300 hover:border-[#231B18] text-xs uppercase tracking-wider text-[#231B18] flex items-center gap-1.5 transition active:scale-95"
+              >
+                {copied ? <Check className="w-3.5 h-3.5 text-[#C85A32]" /> : <Copy className="w-3.5 h-3.5 text-stone-500" />}
+                <span>{copied ? 'Kopyalandı' : 'Kopyala'}</span>
+              </button>
+            </div>
+
+            {/* Sipariş Özet Bilgileri */}
+            <div className="text-left p-5 rounded-xs bg-[#FAF8F5] border border-stone-200 space-y-3 text-xs text-[#231B18]">
+              <div className="flex justify-between border-b border-stone-200 pb-2">
+                <span className="text-[#7A7067]">Sipariş Tarihi:</span>
+                <span className="font-medium">{placedOrder.date}</span>
+              </div>
+              <div className="flex justify-between border-b border-stone-200 pb-2">
+                <span className="text-[#7A7067]">Teslimat Adresi:</span>
+                <span className="font-medium max-w-[260px] text-right truncate">
+                  {placedOrder.shippingAddress}
+                </span>
+              </div>
+              <div className="flex justify-between border-b border-stone-200 pb-2">
+                <span className="text-[#7A7067]">Toplam Tutar:</span>
+                <span className="font-semibold text-sm text-[#231B18]">
+                  ₺{placedOrder.totalAmount.toFixed(2)}
+                </span>
+              </div>
+              {placedOrder.giftNote && (
+                <div className="pt-1">
+                  <span className="text-[#7A7067] block mb-1">Mühürlü Hediye Notunuz:</span>
+                  <p className="italic text-[#C85A32] bg-white p-2.5 rounded-xs border border-stone-200">
+                    &quot;{placedOrder.giftNote}&quot;
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Aksiyon Butonları */}
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+              <Link
+                href={`/tesekkurler?order=${placedOrder.orderNumber}`}
+                className="w-full sm:w-auto px-6 py-3.5 rounded-xs bg-[#231B18] hover:bg-[#3A2E29] text-white text-xs uppercase tracking-widest font-medium flex items-center justify-center gap-2 transition"
+              >
+                <span>Detaylı Özet Sayfası</span>
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+              <Link
+                href={`/siparis-takip?orderNumber=${placedOrder.orderNumber}&email=${encodeURIComponent(placedOrder.email)}`}
+                className="w-full sm:w-auto px-6 py-3.5 rounded-xs bg-white border border-[#231B18] text-[#231B18] text-xs uppercase tracking-widest font-medium hover:bg-[#231B18] hover:text-white flex items-center justify-center gap-2 transition"
+              >
+                <span>Siparişi Canlı Takip Et</span>
+              </Link>
+              <Link
+                href="/"
+                className="w-full sm:w-auto px-5 py-3.5 rounded-xs text-[#7A7067] hover:text-[#231B18] text-xs uppercase tracking-widest font-medium transition"
+              >
+                Anasayfa
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ════════════════════════════════════════════════════════════
+  // SEPET BOŞ İSE
+  // ════════════════════════════════════════════════════════════
+  if (cartItems.length === 0) {
+    return (
+      <div className="max-w-md mx-auto px-4 py-20 text-center bg-white min-h-[60vh] flex items-center justify-center">
+        <div className="bg-white p-8 rounded-xs border border-stone-200 space-y-4 w-full">
+          <ShoppingBag className="w-12 h-12 text-stone-300 mx-auto stroke-[1.5]" />
+          <h2 className="font-serif text-xl font-normal text-[#231B18]">Ödeme İçin Sepetinizde Ürün Yok</h2>
+          <p className="text-xs text-[#7A7067]">
+            Ödeme ekranına geçmeden önce lütfen beğendiğiniz tasarımları sepetinize ekleyiniz.
+          </p>
+          <Link
+            href="/sepet"
+            className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xs bg-[#231B18] hover:bg-[#3A2E29] text-white text-xs uppercase tracking-widest font-medium transition"
+          >
+            <span>Sepetime Git</span>
+            <ArrowRight className="w-4 h-4" />
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  // ════════════════════════════════════════════════════════════
+  // ÜYELİKSİZ SİPARİŞ & ÖDEME FORMU
+  // ════════════════════════════════════════════════════════════
+  return (
+    <div className="min-h-screen bg-white pb-24 pt-6">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        
+        {/* Breadcrumb Navigasyon */}
+        <nav className="flex items-center gap-2 text-xs text-[#7A7067] mb-6">
+          <Link href="/sepet" className="hover:text-[#231B18] transition">Sepetim</Link>
+          <ChevronRight className="w-3.5 h-3.5" />
+          <span className="text-[#231B18] font-medium">Hızlı & Üyeliksiz Ödeme</span>
+        </nav>
+
+        {/* Üst Bilgilendirme Bandı - Soft Sarı / Minimalist */}
+        <div className="mb-8 p-4 rounded-xs bg-[#FEF5C8] border border-[#F5E898] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h2 className="text-xs font-semibold uppercase tracking-wider text-[#231B18]">
+              Üyeliksiz Hızlı Sipariş Modu Aktif
+            </h2>
+            <p className="text-xs text-[#554D46] mt-0.5">
+              Şifre veya hesap oluşturma zorunluluğu yok. Adres bilgilerinizi girerek doğrudan sipariş verebilirsiniz.
+            </p>
+          </div>
+          <Link
+            href="/hesabim/giris"
+            className="text-xs font-medium text-[#231B18] underline hover:text-[#C85A32] self-start sm:self-auto shrink-0 transition"
+          >
+            Mevcut Hesabın Var mı? Giriş Yap →
+          </Link>
+        </div>
+
+        <form onSubmit={handleCompleteOrder}>
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+            
+            {/* SOL KOLON: ADRES + FATURA + ÖDEME */}
+            <div className="lg:col-span-8 space-y-6">
+              
+              {/* Form Hataları Uyarı Bandı */}
+              {Object.keys(errors).length > 0 && (
+                <div className="p-4 rounded-xs bg-red-50 border border-red-200 text-red-700 text-xs flex items-center gap-3">
+                  <AlertCircle className="w-5 h-5 shrink-0 text-red-600" />
+                  <div>
+                    <span className="font-semibold block text-red-800">Lütfen Eksik Alanları Doldurunuz:</span>
+                    <span>Kırmızı ile vurgulanan zorunlu teslimat alanlarını kontrol edip tekrar deneyiniz.</span>
+                  </div>
+                </div>
+              )}
+
+              {/* ADIM 1: İLETİŞİM & TESLİMAT BİLGİLERİ */}
+              <div className="bg-white rounded-xs border border-stone-200 p-6 sm:p-8 space-y-5">
+                <div className="flex items-center gap-3 pb-3 border-b border-stone-200">
+                  <span className="w-6 h-6 rounded-xs bg-[#231B18] text-white text-xs font-medium flex items-center justify-center">
+                    1
+                  </span>
+                  <div>
+                    <h3 className="font-serif text-lg font-normal text-[#231B18]">
+                      İletişim & Teslimat Bilgileri
+                    </h3>
+                    <p className="text-xs text-[#7A7067]">
+                      Sipariş takip bildirimleri ve atölye kargosu için gereklidir
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                  <div>
+                    <label className="block text-[11px] uppercase tracking-wider font-medium text-[#231B18] mb-1.5">
+                      Adınız Soyadınız *
+                    </label>
+                    <input
+                      type="text"
+                      name="fullName"
+                      placeholder="Örn: Elif Kaya"
+                      value={formData.fullName}
+                      onChange={handleInputChange}
+                      className={`w-full px-3.5 py-2.5 rounded-xs border text-sm text-[#231B18] bg-white focus:outline-none transition ${
+                        errors.fullName
+                          ? 'border-red-400 bg-red-50/20 focus:border-red-500'
+                          : 'border-stone-300 focus:border-[#231B18]'
+                      }`}
+                    />
+                    {errors.fullName && (
+                      <p className="text-red-500 text-[11px] mt-1 flex items-center gap-1">
+                        <AlertCircle className="w-3 h-3" /> {errors.fullName}
+                      </p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] uppercase tracking-wider font-medium text-[#231B18] mb-1.5">
+                      E-posta Adresi (Sipariş Takibi İçin) *
+                    </label>
+                    <input
+                      type="email"
+                      name="email"
+                      placeholder="elif.kaya@example.com"
+                      value={formData.email}
+                      onChange={handleInputChange}
+                      className={`w-full px-3.5 py-2.5 rounded-xs border text-sm text-[#231B18] bg-white focus:outline-none transition ${
+                        errors.email
+                          ? 'border-red-400 bg-red-50/20 focus:border-red-500'
+                          : 'border-stone-300 focus:border-[#231B18]'
+                      }`}
+                    />
+                    {errors.email && (
+                      <p className="text-red-500 text-[11px] mt-1 flex items-center gap-1">
+                        <AlertCircle className="w-3 h-3" /> {errors.email}
+                      </p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] uppercase tracking-wider font-medium text-[#231B18] mb-1.5">
+                      Cep Telefonu (Kargo Teslimat SMS&apos;i) *
+                    </label>
+                    <input
+                      type="tel"
+                      name="phone"
+                      placeholder="05XX XXX XX XX"
+                      value={formData.phone}
+                      onChange={handleInputChange}
+                      className={`w-full px-3.5 py-2.5 rounded-xs border text-sm text-[#231B18] bg-white focus:outline-none transition ${
+                        errors.phone
+                          ? 'border-red-400 bg-red-50/20 focus:border-red-500'
+                          : 'border-stone-300 focus:border-[#231B18]'
+                      }`}
+                    />
+                    {errors.phone && (
+                      <p className="text-red-500 text-[11px] mt-1 flex items-center gap-1">
+                        <AlertCircle className="w-3 h-3" /> {errors.phone}
+                      </p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] uppercase tracking-wider font-medium text-[#231B18] mb-1.5">
+                      İl (Şehir) *
+                    </label>
+                    <select
+                      name="city"
+                      value={formData.city}
+                      onChange={handleInputChange}
+                      className="w-full px-3.5 py-2.5 rounded-xs border border-stone-300 bg-white text-sm text-[#231B18] focus:outline-none focus:border-[#231B18]"
+                    >
+                      {TURKISH_CITIES.map((city) => (
+                        <option key={city} value={city}>
+                          {city}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] uppercase tracking-wider font-medium text-[#231B18] mb-1.5">
+                      İlçe *
+                    </label>
+                    <input
+                      type="text"
+                      name="district"
+                      placeholder="Örn: Kadıköy"
+                      value={formData.district}
+                      onChange={handleInputChange}
+                      className={`w-full px-3.5 py-2.5 rounded-xs border text-sm text-[#231B18] bg-white focus:outline-none transition ${
+                        errors.district
+                          ? 'border-red-400 bg-red-50/20 focus:border-red-500'
+                          : 'border-stone-300 focus:border-[#231B18]'
+                      }`}
+                    />
+                    {errors.district && (
+                      <p className="text-red-500 text-[11px] mt-1 flex items-center gap-1">
+                        <AlertCircle className="w-3 h-3" /> {errors.district}
+                      </p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] uppercase tracking-wider font-medium text-[#231B18] mb-1.5">
+                      Mahalle *
+                    </label>
+                    <input
+                      type="text"
+                      name="neighborhood"
+                      placeholder="Örn: Caferağa Mah."
+                      value={formData.neighborhood}
+                      onChange={handleInputChange}
+                      className={`w-full px-3.5 py-2.5 rounded-xs border text-sm text-[#231B18] bg-white focus:outline-none transition ${
+                        errors.neighborhood
+                          ? 'border-red-400 bg-red-50/20 focus:border-red-500'
+                          : 'border-stone-300 focus:border-[#231B18]'
+                      }`}
+                    />
+                    {errors.neighborhood && (
+                      <p className="text-red-500 text-[11px] mt-1 flex items-center gap-1">
+                        <AlertCircle className="w-3 h-3" /> {errors.neighborhood}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="sm:col-span-2">
+                    <label className="block text-[11px] uppercase tracking-wider font-medium text-[#231B18] mb-1.5">
+                      Açık Teslimat Adresi (Cadde, Sokak, Bina No, Daire) *
+                    </label>
+                    <textarea
+                      name="address"
+                      rows={2}
+                      placeholder="Örn: Şair Nefi Sk. No:18 D:4"
+                      value={formData.address}
+                      onChange={handleInputChange}
+                      className={`w-full px-3.5 py-2.5 rounded-xs border text-sm text-[#231B18] bg-white focus:outline-none transition ${
+                        errors.address
+                          ? 'border-red-400 bg-red-50/20 focus:border-red-500'
+                          : 'border-stone-300 focus:border-[#231B18]'
+                      }`}
+                    />
+                    {errors.address && (
+                      <p className="text-red-500 text-[11px] mt-1 flex items-center gap-1">
+                        <AlertCircle className="w-3 h-3" /> {errors.address}
+                      </p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] uppercase tracking-wider font-medium text-[#231B18] mb-1.5">
+                      Posta Kodu (Opsiyonel)
+                    </label>
+                    <input
+                      type="text"
+                      name="postalCode"
+                      placeholder="34710"
+                      value={formData.postalCode}
+                      onChange={handleInputChange}
+                      className="w-full px-3.5 py-2.5 rounded-xs border border-stone-300 bg-white text-sm text-[#231B18] focus:outline-none focus:border-[#231B18]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] uppercase tracking-wider font-medium text-[#231B18] mb-1.5">
+                      Kurye İçin Sipariş Notu (Opsiyonel)
+                    </label>
+                    <input
+                      type="text"
+                      name="orderNote"
+                      placeholder="Örn: Zili çalmayınız, bebek uyuyor."
+                      value={formData.orderNote}
+                      onChange={handleInputChange}
+                      className="w-full px-3.5 py-2.5 rounded-xs border border-stone-300 bg-white text-sm text-[#231B18] focus:outline-none focus:border-[#231B18]"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* ADIM 2: FATURA BİLGİLERİ */}
+              <div className="bg-white rounded-xs border border-stone-200 p-6 sm:p-8 space-y-5">
+                <div className="flex items-center gap-3 pb-3 border-b border-stone-200">
+                  <span className="w-6 h-6 rounded-xs bg-[#231B18] text-white text-xs font-medium flex items-center justify-center">
+                    2
+                  </span>
+                  <div>
+                    <h3 className="font-serif text-lg font-normal text-[#231B18]">
+                      Fatura Bilgileri
+                    </h3>
+                    <p className="text-xs text-[#7A7067]">
+                      E-Fatura veya E-Arşiv faturanız sistem tarafından otomatik düzenlenir
+                    </p>
+                  </div>
+                </div>
+
+                {/* Bireysel / Kurumsal Seçimi */}
+                <div className="grid grid-cols-2 gap-3 max-w-sm">
+                  <button
+                    type="button"
+                    onClick={() => setFormData((p) => ({ ...p, invoiceType: 'INDIVIDUAL' }))}
+                    className={`py-2.5 px-4 rounded-xs text-xs uppercase tracking-wider font-medium border transition ${
+                      formData.invoiceType === 'INDIVIDUAL'
+                        ? 'bg-[#231B18] text-white border-[#231B18]'
+                        : 'bg-white border-stone-300 text-[#231B18] hover:border-[#231B18]'
+                    }`}
+                  >
+                    Bireysel Fatura
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFormData((p) => ({ ...p, invoiceType: 'CORPORATE' }))}
+                    className={`py-2.5 px-4 rounded-xs text-xs uppercase tracking-wider font-medium border transition ${
+                      formData.invoiceType === 'CORPORATE'
+                        ? 'bg-[#231B18] text-white border-[#231B18]'
+                        : 'bg-white border-stone-300 text-[#231B18] hover:border-[#231B18]'
+                    }`}
+                  >
+                    Kurumsal Fatura
+                  </button>
+                </div>
+
+                {formData.invoiceType === 'INDIVIDUAL' ? (
+                  <div className="space-y-3 text-xs pt-1">
+                    <label className="flex items-center gap-2 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={formData.sameAsShipping}
+                        onChange={(e) =>
+                          setFormData((p) => ({ ...p, sameAsShipping: e.target.checked }))
+                        }
+                        className="w-4 h-4 text-[#231B18] accent-[#231B18] rounded-xs"
+                      />
+                      <span className="font-medium text-[#231B18]">
+                        Fatura adresim teslimat adresim ile aynı
+                      </span>
+                    </label>
+
+                    <div>
+                      <label className="block text-[11px] uppercase tracking-wider font-medium text-[#231B18] mb-1">
+                        T.C. Kimlik Numarası (Opsiyonel / 11111111111 girilebilir)
+                      </label>
+                      <input
+                        type="text"
+                        name="tckn"
+                        maxLength={11}
+                        placeholder="11 Haneli TCKN"
+                        value={formData.tckn}
+                        onChange={handleInputChange}
+                        className="w-full sm:w-72 px-3.5 py-2.5 rounded-xs border border-stone-300 bg-white text-sm text-[#231B18] focus:outline-none focus:border-[#231B18]"
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs pt-1">
+                    <div className="sm:col-span-2">
+                      <label className="block text-[11px] uppercase tracking-wider font-medium text-[#231B18] mb-1">
+                        Şirket Resmi Unvanı *
+                      </label>
+                      <input
+                        type="text"
+                        name="companyName"
+                        required={formData.invoiceType === 'CORPORATE'}
+                        placeholder="Örn: Safir Tasarım Ltd. Şti."
+                        value={formData.companyName}
+                        onChange={handleInputChange}
+                        className="w-full px-3.5 py-2.5 rounded-xs border border-stone-300 bg-white text-sm text-[#231B18] focus:outline-none focus:border-[#231B18]"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] uppercase tracking-wider font-medium text-[#231B18] mb-1">
+                        Vergi Dairesi *
+                      </label>
+                      <input
+                        type="text"
+                        name="taxOffice"
+                        required={formData.invoiceType === 'CORPORATE'}
+                        placeholder="Örn: Kadıköy V.D."
+                        value={formData.taxOffice}
+                        onChange={handleInputChange}
+                        className="w-full px-3.5 py-2.5 rounded-xs border border-stone-300 bg-white text-sm text-[#231B18] focus:outline-none focus:border-[#231B18]"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] uppercase tracking-wider font-medium text-[#231B18] mb-1">
+                        Vergi Kimlik Numarası (VKN) *
+                      </label>
+                      <input
+                        type="text"
+                        name="vkn"
+                        maxLength={10}
+                        required={formData.invoiceType === 'CORPORATE'}
+                        placeholder="10 Haneli VKN"
+                        value={formData.vkn}
+                        onChange={handleInputChange}
+                        className="w-full px-3.5 py-2.5 rounded-xs border border-stone-300 bg-white text-sm text-[#231B18] focus:outline-none focus:border-[#231B18]"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* ADIM 3: ÖDEME YÖNTEMİ */}
+              <div className="bg-white rounded-xs border border-stone-200 p-6 sm:p-8 space-y-5">
+                <div className="flex items-center gap-3 pb-3 border-b border-stone-200">
+                  <span className="w-6 h-6 rounded-xs bg-[#231B18] text-white text-xs font-medium flex items-center justify-center">
+                    3
+                  </span>
+                  <div>
+                    <h3 className="font-serif text-lg font-normal text-[#231B18]">
+                      Ödeme Yöntemi
+                    </h3>
+                    <p className="text-xs text-[#7A7067]">
+                      256-Bit SSL şifreleme ve 3D Secure güvencesiyle koruma altında
+                    </p>
+                  </div>
+                </div>
+
+                {/* Ödeme Türü Seçimi */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <label
+                    onClick={() => setFormData((p) => ({ ...p, paymentMethod: 'CREDIT_CARD' }))}
+                    className={`flex items-center gap-3 p-4 rounded-xs border cursor-pointer transition ${
+                      formData.paymentMethod === 'CREDIT_CARD'
+                        ? 'border-[#231B18] bg-[#FAF8F5]'
+                        : 'border-stone-300 bg-white hover:border-stone-400'
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="paymentMethod"
+                      checked={formData.paymentMethod === 'CREDIT_CARD'}
+                      onChange={() => {}}
+                      className="w-4 h-4 text-[#231B18] accent-[#231B18]"
+                    />
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <CreditCard className="w-4 h-4 text-[#231B18]" />
+                        <span className="text-xs sm:text-sm font-medium text-[#231B18]">
+                          Kredi / Banka Kartı
+                        </span>
+                      </div>
+                      <span className="text-[11px] text-[#7A7067] block mt-0.5">
+                        Tüm banka kartları & 3D Secure
+                      </span>
+                    </div>
+                  </label>
+
+                  <label
+                    onClick={() => setFormData((p) => ({ ...p, paymentMethod: 'HAVALE_EFT' }))}
+                    className={`flex items-center gap-3 p-4 rounded-xs border cursor-pointer transition ${
+                      formData.paymentMethod === 'HAVALE_EFT'
+                        ? 'border-[#231B18] bg-[#FAF8F5]'
+                        : 'border-stone-300 bg-white hover:border-stone-400'
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="paymentMethod"
+                      checked={formData.paymentMethod === 'HAVALE_EFT'}
+                      onChange={() => {}}
+                      className="w-4 h-4 text-[#231B18] accent-[#231B18]"
+                    />
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <Building2 className="w-4 h-4 text-[#231B18]" />
+                        <span className="text-xs sm:text-sm font-medium text-[#231B18]">
+                          Havale / EFT ile Ödeme
+                        </span>
+                      </div>
+                      <span className="text-[11px] text-[#7A7067] block mt-0.5">
+                        Atölye banka hesaplarımıza transfer
+                      </span>
+                    </div>
+                  </label>
+                </div>
+
+                {/* Kredi Kartı Form Alanları */}
+                {formData.paymentMethod === 'CREDIT_CARD' ? (
+                  <div className="p-5 rounded-xs bg-[#FAF8F5] border border-stone-200 space-y-4">
+                    <div>
+                      <label className="block text-[11px] uppercase tracking-wider font-medium text-[#231B18] mb-1.5">
+                        Kart Üzerindeki İsim Soyisim *
+                      </label>
+                      <input
+                        type="text"
+                        name="cardHolder"
+                        required
+                        placeholder="Örn: ELİF KAYA"
+                        value={formData.cardHolder}
+                        onChange={handleInputChange}
+                        className="w-full px-3.5 py-2.5 rounded-xs border border-stone-300 bg-white text-sm text-[#231B18] uppercase focus:outline-none focus:border-[#231B18]"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] uppercase tracking-wider font-medium text-[#231B18] mb-1.5">
+                        Kart Numarası *
+                      </label>
+                      <input
+                        type="text"
+                        name="cardNumber"
+                        required
+                        placeholder="•••• •••• •••• ••••"
+                        value={formData.cardNumber}
+                        onChange={handleInputChange}
+                        className="w-full px-3.5 py-2.5 rounded-xs border border-stone-300 bg-white text-sm text-[#231B18] tracking-wider focus:outline-none focus:border-[#231B18]"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-[11px] uppercase tracking-wider font-medium text-[#231B18] mb-1.5">
+                          Son Kullanma (AA/YY) *
+                        </label>
+                        <input
+                          type="text"
+                          name="expiry"
+                          required
+                          placeholder="12/28"
+                          value={formData.expiry}
+                          onChange={handleInputChange}
+                          className="w-full px-3.5 py-2.5 rounded-xs border border-stone-300 bg-white text-sm text-[#231B18] focus:outline-none focus:border-[#231B18]"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] uppercase tracking-wider font-medium text-[#231B18] mb-1.5">
+                          Güvenlik Kodu (CVV) *
+                        </label>
+                        <input
+                          type="text"
+                          name="cvv"
+                          maxLength={4}
+                          required
+                          placeholder="321"
+                          value={formData.cvv}
+                          onChange={handleInputChange}
+                          className="w-full px-3.5 py-2.5 rounded-xs border border-stone-300 bg-white text-sm text-[#231B18] focus:outline-none focus:border-[#231B18]"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 pt-2 text-[11px] text-[#7A7067]">
+                      <ShieldCheck className="w-4 h-4 text-[#15803D] shrink-0" />
+                      <span>Kart bilgileriniz asla sunucularımızda saklanmaz, 256-Bit SSL ile korunur.</span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="p-5 rounded-xs bg-[#FAF8F5] border border-stone-200 space-y-3 text-xs text-[#231B18]">
+                    <div className="p-3 bg-white rounded-xs border border-stone-200 space-y-1">
+                      <span className="font-medium text-[#231B18] block">Garanti BBVA - Safirya Tasarım Ltd.</span>
+                      <p className="font-mono text-xs text-[#231B18]">TR42 0006 2000 1234 5678 9012 34</p>
+                      <span className="text-[11px] text-[#7A7067] block">Şube: Kadıköy Çarşı / 123</span>
+                    </div>
+                    <div className="p-3 bg-white rounded-xs border border-stone-200 space-y-1">
+                      <span className="font-medium text-[#231B18] block">Türkiye İş Bankası - Safirya Tasarım Ltd.</span>
+                      <p className="font-mono text-xs text-[#231B18]">TR88 0006 4000 9876 5432 1098 76</p>
+                    </div>
+                    <p className="text-[11px] text-[#554D46] bg-[#FEF5C8] p-3 rounded-xs border border-[#F5E898]">
+                      ℹ️ Siparişinizi tamamladıktan sonra banka açıklama alanına üretilecek <strong>Sipariş Numaranızı</strong> yazmanız yeterlidir.
+                    </p>
+                  </div>
+                )}
+              </div>
+
+            </div>
+
+            {/* SAĞ KOLON (4 Kolon - Sticky): SİPARİŞ ÖZETİ */}
+            <div className="lg:col-span-4 lg:sticky lg:top-28 space-y-5">
+              
+              <div className="bg-white rounded-xs border border-stone-200 p-6 sm:p-7 space-y-5">
+                <h3 className="font-serif text-base font-normal text-[#231B18] pb-3 border-b border-stone-200 flex items-center justify-between">
+                  <span>Sipariş Özeti</span>
+                  <Link href="/sepet" className="text-xs text-[#C85A32] font-medium hover:underline">
+                    Sepeti Düzenle
+                  </Link>
+                </h3>
+
+                {/* Sepetteki Ürünlerin Listesi */}
+                <div className="space-y-3 max-h-60 overflow-y-auto pr-1">
+                  {cartItems.map((item) => (
+                    <div key={item.id} className="flex gap-3 text-xs border-b border-stone-100 pb-3 last:border-0 last:pb-0">
+                      {item.image && (
+                        <img
+                          src={item.image}
+                          alt={item.name}
+                          className="w-14 h-14 object-cover rounded-xs border border-stone-200 shrink-0"
+                        />
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <span className="font-medium text-[#231B18] block truncate">
+                          {item.name}
+                        </span>
+                        <div className="flex items-center gap-1.5 text-[10px] text-[#7A7067] mt-0.5">
+                          <span>{item.quantity} Adet</span>
+                          {item.scentNote && <span>• {item.scentNote}</span>}
+                        </div>
+                        {item.customText && (
+                          <span className="text-[10px] text-[#C85A32] font-medium block truncate">
+                            &quot;{item.customText}&quot;
+                          </span>
+                        )}
+                        <span className="font-semibold text-[#231B18] block mt-1">
+                          ₺{(item.price * item.quantity).toFixed(2)}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Hediye Paketi Varsa Not Özeti */}
+                {isGiftWrapped && (
+                  <div className="p-3 rounded-xs bg-[#FAF8F5] border border-stone-200 text-xs text-[#231B18] space-y-1">
+                    <div className="flex items-center gap-1.5 text-[#C85A32] font-medium">
+                      <Gift className="w-3.5 h-3.5" />
+                      <span>Özel Hediye Paketi Dahil (+₺30)</span>
+                    </div>
+                    {giftNote && (
+                      <p className="text-[11px] text-[#7A7067] italic line-clamp-2">
+                        &quot;{giftNote}&quot;
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {/* Fiyat Kırılımı */}
+                <div className="space-y-2 text-xs text-[#7A7067] pt-2 border-t border-stone-200">
+                  <div className="flex justify-between">
+                    <span>Ara Toplam</span>
+                    <span className="font-medium text-[#231B18]">₺{originalCartTotal.toFixed(2)}</span>
+                  </div>
+
+                  {bulkSavings > 0 && (
+                    <div className="flex justify-between text-[#15803D]">
+                      <span>Toplu Alım İndirimi</span>
+                      <span className="font-medium">-₺{bulkSavings.toFixed(2)}</span>
+                    </div>
+                  )}
+
+                  {couponDiscount > 0 && (
+                    <div className="flex justify-between text-[#15803D]">
+                      <span>Kupon İndirimi ({appliedCoupon?.code})</span>
+                      <span className="font-medium">-₺{couponDiscount.toFixed(2)}</span>
+                    </div>
+                  )}
+
+                  {isGiftWrapped && (
+                    <div className="flex justify-between text-[#231B18]">
+                      <span>Hediye Paketi</span>
+                      <span className="font-medium">+₺{giftWrapFee.toFixed(2)}</span>
+                    </div>
+                  )}
+
+                  <div className="flex justify-between items-center">
+                    <span>Kargo Bedeli</span>
+                    {isFreeShipping ? (
+                      <span className="font-medium text-[#15803D] bg-emerald-50 px-2 py-0.5 rounded-xs text-[11px]">
+                        ÜCRETSİZ
+                      </span>
+                    ) : (
+                      <span className="font-medium text-[#231B18]">₺45.00</span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Kazanç Kutusu */}
+                {totalSavings > 0 && (
+                  <div className="p-3 rounded-xs bg-[#FEF5C8] border border-[#F5E898] text-[#231B18]">
+                    <div className="flex items-center justify-between text-xs font-medium">
+                      <span>Bu Siparişten Kazancınız:</span>
+                      <span className="font-semibold text-sm">₺{totalSavings.toFixed(2)}</span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Toplam Tutar */}
+                <div className="pt-3 border-t border-stone-200 flex justify-between items-baseline">
+                  <div>
+                    <span className="text-xs text-[#7A7067] block">Ödenecek Tutar</span>
+                    <span className="text-[10px] uppercase tracking-wider text-stone-400">KDV Dahil</span>
+                  </div>
+                  <span className="text-2xl font-semibold text-[#231B18]">
+                    ₺{grandTotal.toFixed(2)}
+                  </span>
+                </div>
+
+                {/* SİPARİŞİ TAMAMLA BUTONU */}
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="w-full py-4 rounded-xs bg-[#231B18] hover:bg-[#3A2E29] text-white flex items-center justify-center gap-2 text-xs uppercase tracking-widest font-medium transition active:scale-[0.99] disabled:opacity-70 cursor-pointer"
+                >
+                  {isSubmitting ? (
+                    <span className="flex items-center gap-2">
+                      <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      <span>Siparişiniz Oluşturuluyor...</span>
+                    </span>
+                  ) : (
+                    <span>Siparişi Onayla & Güvenle Öde</span>
+                  )}
+                </button>
+
+                <div className="pt-2 text-center text-[10px] text-stone-400">
+                  <p>Siparişi tamamlayarak Mesafeli Satış Sözleşmesi&apos;ni kabul etmiş olursunuz.</p>
+                </div>
+              </div>
+
+            </div>
+
+          </div>
+        </form>
+
+      </div>
+    </div>
+  );
+}

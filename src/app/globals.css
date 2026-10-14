@@ -1,26 +1,137 @@
 @import "tailwindcss";
 
+@theme {
+  --color-safir-bg: #F6F3EC;
+  --color-safir-surface: #FFFFFF;
+  --color-safir-muted: #EFECE6;
+  --color-safir-sand: #E6DFD5;
+  --color-safir-border: #E2DCD3;
+
+  --color-safir-espresso: #231B18;
+  --color-safir-anthracite: #2C221E;
+  --color-safir-navy: #231B18;
+  --color-safir-navy-light: #2C221E;
+  --color-safir-navy-dark: #1C1513;
+  --color-safir-navy-50: #F6F3EC;
+  --color-safir-navy-100: #EFECE6;
+
+  --color-safir-terracotta: #C85A32;
+  --color-safir-terracotta-hover: #B34E29;
+  --color-safir-amber: #C85A32;
+  --color-safir-amber-hover: #B34E29;
+  --color-safir-amber-light: #F8ECE6;
+  --color-safir-amber-50: #FAF2EC;
+
+  --color-safir-sage: #5F6F52;
+  --color-safir-sage-light: #EBF0E6;
+  --color-safir-emerald: #5F6F52;
+  --color-safir-emerald-light: #EBF0E6;
+  --color-safir-emerald-dark: #4C5942;
+}
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --safir-bg: #F6F3EC;
+  --safir-espresso: #231B18;
+  --safir-navy: #231B18;
+  --safir-terracotta: #C85A32;
+  --safir-amber: #C85A32;
+  --safir-sage: #5F6F52;
+  --safir-emerald: #5F6F52;
+  --safir-border: #E2DCD3;
+  --safir-sand: #E6DFD5;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  scroll-behavior: smooth;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: #F6F3EC;
+  color: #231B18;
+  font-family: var(--font-sans), 'Plus Jakarta Sans', system-ui, sans-serif;
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+h1, h2, h3, .font-serif {
+  font-family: var(--font-serif), 'Cormorant Garamond', 'Playfair Display', Georgia, serif;
+}
+
+/* Safirya Butik & Editoryal Tipografi ve Buton Stilleri */
+.safir-heading {
+  font-family: var(--font-serif), 'Cormorant Garamond', Georgia, serif;
+  color: #231B18;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+
+.safir-btn-primary {
+  background-color: #C85A32;
+  color: #FFFFFF;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.safir-btn-primary:hover {
+  background-color: #B34E29;
+  transform: translateY(-1px);
+}
+
+.safir-btn-primary:active {
+  transform: translateY(0);
+}
+
+.safir-btn-secondary {
+  background-color: #231B18;
+  color: #F6F3EC;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.safir-btn-secondary:hover {
+  background-color: #2C221E;
+  transform: translateY(-1px);
+}
+
+.safir-btn-outline {
+  background-color: transparent;
+  color: #231B18;
+  border: 1px solid #231B18;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.safir-btn-outline:hover {
+  background-color: #231B18;
+  color: #F6F3EC;
+}
+
+.safir-badge-discount {
+  background-color: #5F6F52;
+  color: #FFFFFF;
+  font-weight: 600;
+  font-size: 0.7rem;
+  padding: 0.15rem 0.45rem;
+  border-radius: 2px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.safir-card {
+  background-color: #EFECE6;
+  border: 1px solid #E2DCD3;
+  border-radius: 4px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.safir-card:hover {
+  border-color: #C85A32;
 }
