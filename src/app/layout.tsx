@@ -10,6 +10,7 @@ import {
   getLocalBusinessSchema,
   getWebSiteSchema,
 } from '@/components/seo/JsonLd';
+import { SpeedInsights } from '@vercel/speed-insights/next';
 
 const cormorant = Cormorant_Garamond({
   subsets: ['latin'],
@@ -165,6 +166,7 @@ export default async function RootLayout({
             {children}
           </StorefrontShell>
         </StoreProvider>
+        <SpeedInsights />
       </body>
 
     </html>
