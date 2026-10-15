@@ -16,11 +16,19 @@ import {
 } from 'lucide-react';
 import { useStore } from '@/context/StoreContext';
 
+const formatCooldown = (seconds: number) => {
+  const mins = Math.floor(seconds / 60);
+  const secs = seconds % 60;
+  return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+};
+
 export default function LoginPage() {
   const router = useRouter();
   const { currentUser, loginUser, registerUser, resetPasswordUser } = useStore();
 
-  const [mode, setMode] = useState<'login' | 'register' | 'verify_email' | 'forgot_password' | 'verify_reset'>('login');
+  const [mode, setMode] = useState<
+    'login' | 'register' | 'verify_email' | 'forgot_password' | 'verify_reset'
+  >('login');
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -32,7 +40,6 @@ export default function LoginPage() {
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
   const [resendCooldown, setResendCooldown] = useState(0);
-  const [simulatedCode, setSimulatedCode] = useState<string | null>(null);
 
   // Zaten giriş yapmışsa yönlendir
   useEffect(() => {
@@ -41,7 +48,7 @@ export default function LoginPage() {
     }
   }, [currentUser, router]);
 
-  // Sayaç
+  // 2 Dakikalık (120 saniye) sayaç
   useEffect(() => {
     if (resendCooldown <= 0) return;
     const timer = setInterval(() => {
@@ -107,15 +114,14 @@ export default function LoginPage() {
 
       if (data.success) {
         setMode('verify_email');
-        setResendCooldown(60);
-        if (data.code) setSimulatedCode(data.code);
-        setSuccessMsg(`${email} adresinize 6 haneli doğrulama kodu gönderildi.`);
+        setResendCooldown(120); // 2 dakika bekleme süresi
+        setSuccessMsg(`${email} adresinize 6 haneli doğrulama kodu gönderildi. Lütfen gelen kutunuzu kontrol ediniz.`);
       } else {
         setErrorMsg(data.error || 'Kod gönderilemedi.');
       }
     } catch {
       setIsSubmitting(false);
-      setErrorMsg('Sunucu hatası oluştu.');
+      setErrorMsg('Sunucu hatası oluştu. Lütfen tekrar deneyiniz.');
     }
   };
 
@@ -139,7 +145,8 @@ export default function LoginPage() {
         router.push('/hesabim');
       }, 1000);
     } else {
-      setErrorMsg(result.error || 'Doğrulama başarısız.');
+      setErrorMsg(result.error || 'Girdiğiniz doğrulama kodu hatalı. Lütfen kontrol edip tekrar deneyiniz.');
+      setVerificationCode('');
     }
   };
 
@@ -165,15 +172,14 @@ export default function LoginPage() {
 
       if (data.success) {
         setMode('verify_reset');
-        setResendCooldown(60);
-        if (data.code) setSimulatedCode(data.code);
-        setSuccessMsg(`${email} adresinize şifre sıfırlama kodu gönderildi.`);
+        setResendCooldown(120); // 2 dakika bekleme süresi
+        setSuccessMsg(`${email} adresinize şifre sıfırlama kodu gönderildi. Lütfen gelen kutunuzu kontrol ediniz.`);
       } else {
         setErrorMsg(data.error || 'Kod gönderilemedi.');
       }
     } catch {
       setIsSubmitting(false);
-      setErrorMsg('Sunucu hatası oluştu.');
+      setErrorMsg('Sunucu hatası oluştu. Lütfen tekrar deneyiniz.');
     }
   };
 
@@ -187,11 +193,11 @@ export default function LoginPage() {
       return;
     }
     if (!password || password.length < 6) {
-      setErrorMsg('Yeni şifre en az 6 karakter olmalıdır.');
+      setErrorMsg('Yeni şifreniz en az 6 karakter olmalıdır.');
       return;
     }
     if (password !== confirmPassword) {
-      setErrorMsg('Şifreler uyuşmuyor.');
+      setErrorMsg('Yeni şifreler uyuşmuyor.');
       return;
     }
 
@@ -208,7 +214,33 @@ export default function LoginPage() {
         setVerificationCode('');
       }, 1500);
     } else {
-      setErrorMsg(result.error || 'Şifre güncellenemedi.');
+      setErrorMsg(result.error || 'Girdiğiniz sıfırlama kodu hatalı. Lütfen kontrol edip tekrar deneyiniz.');
+      setVerificationCode('');
+    }
+  };
+
+  // Kodu Tekrar Gönderme (2 Dakika Kısıtlamalı)
+  const handleResendCode = async (type: 'register' | 'reset_password') => {
+    if (resendCooldown > 0) return;
+    setErrorMsg('');
+    setIsSubmitting(true);
+    try {
+      const res = await fetch('/api/auth/send-code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.trim(), type }),
+      });
+      const data = await res.json();
+      setIsSubmitting(false);
+      if (data.success) {
+        setResendCooldown(120);
+        setSuccessMsg('Yeni doğrulama kodu e-posta adresinize iletildi.');
+      } else {
+        setErrorMsg(data.error || 'Kod gönderilemedi.');
+      }
+    } catch {
+      setIsSubmitting(false);
+      setErrorMsg('Kod gönderilirken bir hata oluştu.');
     }
   };
 
@@ -240,8 +272,8 @@ export default function LoginPage() {
         {/* Hata & Başarı Mesajları */}
         {errorMsg && (
           <div className="p-3.5 rounded-xs bg-red-50 border border-red-200 text-red-700 text-xs flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 shrink-0" />
-            <span>{errorMsg}</span>
+            <AlertCircle className="w-4 h-4 shrink-0 text-red-600" />
+            <span className="font-medium">{errorMsg}</span>
           </div>
         )}
 
@@ -249,19 +281,6 @@ export default function LoginPage() {
           <div className="p-3.5 rounded-xs bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs flex items-center gap-2">
             <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />
             <span>{successMsg}</span>
-          </div>
-        )}
-
-        {simulatedCode && (
-          <div className="p-2.5 rounded-xs bg-[#FAF8F5] border border-amber-300 text-amber-900 text-[11px] flex items-center justify-between">
-            <span>Doğrulama Kodunuz: <strong className="font-mono text-xs">{simulatedCode}</strong></span>
-            <button
-              type="button"
-              onClick={() => setVerificationCode(simulatedCode)}
-              className="text-[10px] text-[#C85A32] underline font-semibold"
-            >
-              Koda Yapıştır
-            </button>
           </div>
         )}
 
@@ -296,7 +315,7 @@ export default function LoginPage() {
                     setMode('forgot_password');
                     setErrorMsg('');
                   }}
-                  className="text-[11px] text-[#C85A32] hover:underline"
+                  className="text-xs text-[#C85A32] hover:underline"
                 >
                   Şifremi Unuttum?
                 </button>
@@ -342,7 +361,7 @@ export default function LoginPage() {
                 }}
                 className="font-medium text-[#231B18] underline hover:text-[#C85A32]"
               >
-                Hemen Kayıt Olun
+                Kayıt Olun
               </button>
             </div>
           </form>
@@ -355,33 +374,39 @@ export default function LoginPage() {
               <label className="block text-[11px] uppercase tracking-wider font-medium text-[#231B18] mb-1.5">
                 Adınız & Soyadınız *
               </label>
-              <input
-                type="text"
-                required
-                placeholder="Örn: Elif Kaya"
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-xs border border-stone-300 text-sm text-[#231B18] focus:border-[#231B18] focus:outline-none"
-              />
+              <div className="relative">
+                <User className="w-4 h-4 text-stone-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  required
+                  placeholder="Örn: Zeynep Demir"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  className="w-full pl-9 pr-3.5 py-2.5 rounded-xs border border-stone-300 text-sm text-[#231B18] focus:border-[#231B18] focus:outline-none"
+                />
+              </div>
             </div>
 
             <div>
               <label className="block text-[11px] uppercase tracking-wider font-medium text-[#231B18] mb-1.5">
                 E-Posta Adresiniz *
               </label>
-              <input
-                type="email"
-                required
-                placeholder="ornek@domain.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-xs border border-stone-300 text-sm text-[#231B18] focus:border-[#231B18] focus:outline-none"
-              />
+              <div className="relative">
+                <Mail className="w-4 h-4 text-stone-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <input
+                  type="email"
+                  required
+                  placeholder="ornek@domain.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full pl-9 pr-3.5 py-2.5 rounded-xs border border-stone-300 text-sm text-[#231B18] focus:border-[#231B18] focus:outline-none"
+                />
+              </div>
             </div>
 
             <div className="grid grid-cols-2 gap-2">
               <div>
-                <label className="block text-[11px] uppercase tracking-wider font-medium text-[#231B18] mb-1">
+                <label className="block text-[11px] uppercase tracking-wider font-medium text-[#231B18] mb-1.5">
                   Şifre *
                 </label>
                 <input
@@ -394,7 +419,7 @@ export default function LoginPage() {
                 />
               </div>
               <div>
-                <label className="block text-[11px] uppercase tracking-wider font-medium text-[#231B18] mb-1">
+                <label className="block text-[11px] uppercase tracking-wider font-medium text-[#231B18] mb-1.5">
                   Şifre Tekrar *
                 </label>
                 <input
@@ -473,7 +498,7 @@ export default function LoginPage() {
               disabled={isSubmitting || verificationCode.length !== 6}
               className="w-full py-3.5 rounded-xs bg-[#231B18] hover:bg-[#C85A32] text-white flex items-center justify-center gap-2 text-xs uppercase tracking-widest font-medium transition cursor-pointer disabled:opacity-50"
             >
-              {isSubmitting ? 'Doğrulanıyor...' : 'Hesabı Onayla & Giriş Yap'}
+              {isSubmitting ? 'Doğrulanıyor...' : 'Hesabı Onayla & Kaydı Tamamla'}
             </button>
 
             <div className="flex items-center justify-between text-xs text-[#7A7067] pt-2 border-t border-stone-200">
@@ -484,13 +509,26 @@ export default function LoginPage() {
               >
                 ← Geri Dön
               </button>
+              
+              {/* 2 Dakikalık Tekrar Gönder Butonu ve Geri Sayım */}
               <button
                 type="button"
-                disabled={resendCooldown > 0}
-                onClick={handleSendRegisterCode}
-                className="text-[#C85A32] hover:underline disabled:opacity-50"
+                disabled={resendCooldown > 0 || isSubmitting}
+                onClick={() => handleResendCode('register')}
+                className={`text-xs flex items-center gap-1.5 transition font-medium ${
+                  resendCooldown > 0 || isSubmitting
+                    ? 'text-stone-400 cursor-not-allowed opacity-60'
+                    : 'text-[#C85A32] hover:underline cursor-pointer'
+                }`}
               >
-                {resendCooldown > 0 ? `Tekrar Gönder (${resendCooldown}s)` : 'Kodu Tekrar Gönder'}
+                <RefreshCw className={`w-3 h-3 ${isSubmitting ? 'animate-spin' : ''}`} />
+                {resendCooldown > 0 ? (
+                  <span>
+                    Tekrar Kod Gönder <span className="font-mono font-bold">({formatCooldown(resendCooldown)})</span>
+                  </span>
+                ) : (
+                  <span>Kodu Tekrar Gönder</span>
+                )}
               </button>
             </div>
           </form>
@@ -503,14 +541,17 @@ export default function LoginPage() {
               <label className="block text-[11px] uppercase tracking-wider font-medium text-[#231B18] mb-1.5">
                 Kayıtlı E-Posta Adresiniz *
               </label>
-              <input
-                type="email"
-                required
-                placeholder="ornek@domain.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-xs border border-stone-300 text-sm text-[#231B18] focus:border-[#231B18] focus:outline-none"
-              />
+              <div className="relative">
+                <Mail className="w-4 h-4 text-stone-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <input
+                  type="email"
+                  required
+                  placeholder="ornek@domain.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full pl-9 pr-3.5 py-2.5 rounded-xs border border-stone-300 text-sm text-[#231B18] focus:border-[#231B18] focus:outline-none"
+                />
+              </div>
             </div>
 
             <button
@@ -518,16 +559,29 @@ export default function LoginPage() {
               disabled={isSubmitting}
               className="w-full py-3.5 rounded-xs bg-[#231B18] hover:bg-[#C85A32] text-white flex items-center justify-center gap-2 text-xs uppercase tracking-widest font-medium transition cursor-pointer"
             >
-              {isSubmitting ? 'Kod Gönderiliyor...' : 'Sıfırlama Kodu Gönder'}
+              {isSubmitting ? (
+                <span className="flex items-center gap-2">
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                  <span>Kod Gönderiliyor...</span>
+                </span>
+              ) : (
+                <>
+                  <span>Sıfırlama Kodu Gönder</span>
+                  <ArrowRight className="w-4 h-4" />
+                </>
+              )}
             </button>
 
             <div className="pt-2 text-center text-xs text-[#7A7067]">
               <button
                 type="button"
-                onClick={() => setMode('login')}
+                onClick={() => {
+                  setMode('login');
+                  setErrorMsg('');
+                }}
                 className="font-medium text-[#231B18] underline hover:text-[#C85A32]"
               >
-                ← Giriş Ekranına Dön
+                ← Girişe Dön
               </button>
             </div>
           </form>
@@ -538,7 +592,7 @@ export default function LoginPage() {
           <form onSubmit={handleCompleteReset} className="space-y-4">
             <div>
               <label className="block text-[11px] uppercase tracking-wider font-medium text-[#231B18] mb-1">
-                6 Haneli Sıfırlama Kodu *
+                6 Haneli Kod *
               </label>
               <input
                 type="text"
@@ -548,6 +602,7 @@ export default function LoginPage() {
                 value={verificationCode}
                 onChange={(e) => setVerificationCode(e.target.value.replace(/[^0-9]/g, ''))}
                 className="w-full text-center tracking-[0.5em] font-mono text-xl py-2 rounded-xs border-2 border-stone-300 focus:border-[#231B18] focus:outline-none bg-[#FAF8F5]"
+                autoFocus
               />
             </div>
 
@@ -587,13 +642,33 @@ export default function LoginPage() {
               {isSubmitting ? 'Güncelleniyor...' : 'Şifremi Sıfırla & Giriş Yap'}
             </button>
 
-            <div className="pt-2 text-center text-xs text-[#7A7067]">
+            <div className="flex items-center justify-between text-xs text-[#7A7067] pt-2 border-t border-stone-200">
               <button
                 type="button"
                 onClick={() => setMode('login')}
                 className="font-medium text-[#231B18] underline hover:text-[#C85A32]"
               >
                 ← Girişe Dön
+              </button>
+
+              <button
+                type="button"
+                disabled={resendCooldown > 0 || isSubmitting}
+                onClick={() => handleResendCode('reset_password')}
+                className={`text-xs flex items-center gap-1.5 transition font-medium ${
+                  resendCooldown > 0 || isSubmitting
+                    ? 'text-stone-400 cursor-not-allowed opacity-60'
+                    : 'text-[#C85A32] hover:underline cursor-pointer'
+                }`}
+              >
+                <RefreshCw className={`w-3 h-3 ${isSubmitting ? 'animate-spin' : ''}`} />
+                {resendCooldown > 0 ? (
+                  <span>
+                    Tekrar Kod Gönder <span className="font-mono font-bold">({formatCooldown(resendCooldown)})</span>
+                  </span>
+                ) : (
+                  <span>Kodu Tekrar Gönder</span>
+                )}
               </button>
             </div>
           </form>

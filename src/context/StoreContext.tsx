@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { UserProfile, StoreNotification } from '@/types/user';
 
 export interface CartItem {
@@ -109,39 +109,11 @@ const DEFAULT_REGISTERED_USERS: Array<UserProfile & { passwordHash: string }> = 
 ];
 
 export function StoreProvider({ children }: { children: React.ReactNode }) {
-  // Başlangıçta 2 örnek sepet ürünü
-  const [cartItems, setCartItems] = useState<CartItem[]>([
-    {
-      id: 'demo-item-1',
-      name: 'Doğal Mum & Epoksi Kişiselleştirilebilir Hediye Seti',
-      price: 349.0,
-      originalPrice: 429.0,
-      quantity: 1,
-      image: 'https://images.unsplash.com/photo-1603006905003-be475563bc59?auto=format&fit=crop&w=400&q=80',
-      variantTitle: '210g Kehribar Cam Kavanoz',
-      scentNote: 'Vanilya & Karamel',
-      customText: 'Selin & Emre 24.10.2026',
-      colorPalette: 'Gold & Krem',
-      bulkTierLabel: '1 Adet (Standart)',
-      bulkDiscountRate: 0,
-    },
-    {
-      id: 'demo-item-2',
-      name: 'Kişiye Özel İsimli Söz/Nişan Soya Mumu',
-      price: 271.0,
-      originalPrice: 319.0,
-      quantity: 1,
-      image: 'https://images.unsplash.com/photo-1608571423902-eed4a5ad8108?auto=format&fit=crop&w=400&q=80',
-      variantTitle: 'Kraft Kutu & Keten İp Kurdele',
-      scentNote: 'Lavanta & Sandal Ağacı',
-      customText: 'Merve & Kaan Sonsuzluğa...',
-      colorPalette: 'Zümrüt Yeşili',
-      bulkTierLabel: '10+ Adet Baremi (%15 İndirim)',
-      bulkDiscountRate: 15,
-    },
-  ]);
+  // Sepet ve Favoriler (Başlangıçta boş)
+  const [cartItems, setCartItems] = useState<CartItem[]>([]);
+  const [favorites, setFavorites] = useState<string[]>([]);
+  const isLoadedRef = useRef(false);
 
-  const [favorites, setFavorites] = useState<string[]>(['demo-item-1', 'sfr-1']);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
 
@@ -163,6 +135,34 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   // LocalStorage senkronizasyonu
   useEffect(() => {
     if (typeof window === 'undefined') return;
+
+    // 0. Sepet ve Favorileri yükle
+    try {
+      const savedCart = localStorage.getItem('safirya_cart_items');
+      if (savedCart) {
+        const parsed = JSON.parse(savedCart);
+        if (Array.isArray(parsed)) {
+          // Eski demo verileri temizle
+          const cleaned = parsed.filter(
+            (item: any) => item && item.id !== 'demo-item-1' && item.id !== 'demo-item-2'
+          );
+          setCartItems(cleaned);
+        }
+      }
+    } catch {}
+
+    try {
+      const savedFavs = localStorage.getItem('safirya_favorites');
+      if (savedFavs) {
+        const parsed = JSON.parse(savedFavs);
+        if (Array.isArray(parsed)) {
+          const cleaned = parsed.filter((id: string) => id !== 'demo-item-1');
+          setFavorites(cleaned);
+        }
+      }
+    } catch {}
+
+    isLoadedRef.current = true;
 
     // 1. Kullanıcı oturumunu yükle
     try {
@@ -224,6 +224,22 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       window.removeEventListener('safirya_notifications_updated', handleNotificationsUpdated);
     };
   }, []);
+
+  // Sepet güncellendiğinde LocalStorage'a kaydet
+  useEffect(() => {
+    if (!isLoadedRef.current || typeof window === 'undefined') return;
+    try {
+      localStorage.setItem('safirya_cart_items', JSON.stringify(cartItems));
+    } catch {}
+  }, [cartItems]);
+
+  // Favoriler güncellendiğinde LocalStorage'a kaydet
+  useEffect(() => {
+    if (!isLoadedRef.current || typeof window === 'undefined') return;
+    try {
+      localStorage.setItem('safirya_favorites', JSON.stringify(favorites));
+    } catch {}
+  }, [favorites]);
 
   const cartCount = cartItems.reduce((acc, item) => acc + item.quantity, 0);
   const cartTotal = cartItems.reduce((acc, item) => acc + item.price * item.quantity, 0);
@@ -391,13 +407,10 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       });
       const data = await res.json();
       if (!res.ok || !data.success) {
-        return { success: false, error: data.error || 'Doğrulama kodu hatalı.' };
+        return { success: false, error: data.error || 'Girdiğiniz doğrulama kodu hatalı.' };
       }
     } catch {
-      // Çevrimdışı / simülasyon testi: Kod 6 haneli ise geç
-      if (!code || code.trim().length !== 6) {
-        return { success: false, error: 'Lütfen 6 haneli doğrulama kodunu giriniz.' };
-      }
+      return { success: false, error: 'Doğrulama servisine ulaşılamadı. Lütfen tekrar deneyiniz.' };
     }
 
     try {
@@ -467,12 +480,10 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       });
       const data = await res.json();
       if (!res.ok || !data.success) {
-        return { success: false, error: data.error || 'Doğrulama kodu hatalı.' };
+        return { success: false, error: data.error || 'Girdiğiniz sıfırlama kodu hatalı.' };
       }
     } catch {
-      if (!code || code.trim().length !== 6) {
-        return { success: false, error: 'Lütfen 6 haneli doğrulama kodunu giriniz.' };
-      }
+      return { success: false, error: 'Doğrulama servisine ulaşılamadı. Lütfen tekrar deneyiniz.' };
     }
 
     try {

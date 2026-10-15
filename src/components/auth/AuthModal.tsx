@@ -13,7 +13,13 @@ import {
   RefreshCw,
   Sparkles,
 } from 'lucide-react';
-import { useStore, AuthModalView } from '@/context/StoreContext';
+import { useStore } from '@/context/StoreContext';
+
+const formatCooldown = (seconds: number) => {
+  const mins = Math.floor(seconds / 60);
+  const secs = seconds % 60;
+  return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+};
 
 export function AuthModal() {
   const {
@@ -38,7 +44,6 @@ export function AuthModal() {
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
   const [resendCooldown, setResendCooldown] = useState(0);
-  const [simulatedCode, setSimulatedCode] = useState<string | null>(null);
 
   // Modal kapandığında / açıldığında state sıfırlama
   useEffect(() => {
@@ -49,7 +54,7 @@ export function AuthModal() {
     }
   }, [isAuthModalOpen, authModalView]);
 
-  // Geri sayım sayacı
+  // 2 Dakikalık (120 saniye) geri sayım sayacı
   useEffect(() => {
     if (resendCooldown <= 0) return;
     const timer = setInterval(() => {
@@ -125,12 +130,9 @@ export function AuthModal() {
 
       if (data.success) {
         setAuthModalView('verify_email');
-        setResendCooldown(60);
-        if (data.code) {
-          setSimulatedCode(data.code);
-        }
+        setResendCooldown(120); // 2 dakika bekleme süresi
         setSuccessMsg(
-          `${email} adresinize 6 haneli doğrulama kodu gönderildi.`
+          `${email} adresinize 6 haneli doğrulama kodu gönderildi. Lütfen gelen kutunuzu kontrol ediniz.`
         );
       } else {
         setErrorMsg(data.error || 'Kod gönderilemedi.');
@@ -156,7 +158,8 @@ export function AuthModal() {
     setIsSubmitting(false);
 
     if (!result.success) {
-      setErrorMsg(result.error || 'Doğrulama başarısız.');
+      setErrorMsg(result.error || 'Girdiğiniz doğrulama kodu hatalı. Lütfen kontrol edip tekrar deneyiniz.');
+      setVerificationCode('');
     }
   };
 
@@ -185,12 +188,9 @@ export function AuthModal() {
 
       if (data.success) {
         setAuthModalView('verify_reset');
-        setResendCooldown(60);
-        if (data.code) {
-          setSimulatedCode(data.code);
-        }
+        setResendCooldown(120); // 2 dakika bekleme süresi
         setSuccessMsg(
-          `${email} adresinize şifre sıfırlama kodu gönderildi.`
+          `${email} adresinize şifre sıfırlama kodu gönderildi. Lütfen gelen kutunuzu kontrol ediniz.`
         );
       } else {
         setErrorMsg(data.error || 'Sıfırlama kodu gönderilemedi.');
@@ -232,11 +232,12 @@ export function AuthModal() {
         setVerificationCode('');
       }, 1500);
     } else {
-      setErrorMsg(result.error || 'Şifre güncellenemedi.');
+      setErrorMsg(result.error || 'Girdiğiniz sıfırlama kodu hatalı. Lütfen kontrol edip tekrar deneyiniz.');
+      setVerificationCode('');
     }
   };
 
-  // KOD TEKRAR GÖNDERME
+  // KOD TEKRAR GÖNDERME (2 Dakika kısıtlamalı)
   const handleResendCode = async (type: 'register' | 'reset_password') => {
     if (resendCooldown > 0) return;
     setErrorMsg('');
@@ -250,8 +251,7 @@ export function AuthModal() {
       const data = await res.json();
       setIsSubmitting(false);
       if (data.success) {
-        setResendCooldown(60);
-        if (data.code) setSimulatedCode(data.code);
+        setResendCooldown(120); // Tekrar 2 dakika sayaç başlat
         setSuccessMsg('Yeni doğrulama kodu e-posta adresinize iletildi.');
       } else {
         setErrorMsg(data.error || 'Kod gönderilemedi.');
@@ -307,31 +307,17 @@ export function AuthModal() {
         <div className="p-6 space-y-4">
           {/* Hata Bildirimi */}
           {errorMsg && (
-            <div className="p-3 rounded-xs bg-red-50 border border-red-200 text-red-700 text-xs flex items-center gap-2 animate-in fade-in">
-              <AlertCircle className="w-4 h-4 shrink-0" />
-              <span>{errorMsg}</span>
+            <div className="p-3.5 rounded-xs bg-red-50 border border-red-200 text-red-700 text-xs flex items-center gap-2 animate-in fade-in">
+              <AlertCircle className="w-4 h-4 shrink-0 text-red-600" />
+              <span className="font-medium">{errorMsg}</span>
             </div>
           )}
 
           {/* Başarı Bildirimi */}
           {successMsg && (
-            <div className="p-3 rounded-xs bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs flex items-center gap-2 animate-in fade-in">
+            <div className="p-3.5 rounded-xs bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs flex items-center gap-2 animate-in fade-in">
               <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />
               <span>{successMsg}</span>
-            </div>
-          )}
-
-          {/* Test Modunda Kod İpucu */}
-          {simulatedCode && (
-            <div className="p-2.5 rounded-xs bg-[#FAF8F5] border border-amber-300 text-amber-900 text-[11px] flex items-center justify-between">
-              <span>Doğrulama Kodunuz: <strong className="font-mono text-xs">{simulatedCode}</strong></span>
-              <button
-                type="button"
-                onClick={() => setVerificationCode(simulatedCode)}
-                className="text-[10px] text-[#C85A32] underline font-semibold"
-              >
-                Koda Yapıştır
-              </button>
             </div>
           )}
 
@@ -570,7 +556,7 @@ export function AuthModal() {
                     <span>Doğrulanıyor...</span>
                   </span>
                 ) : (
-                  <span>Hesabı Onayla & Giriş Yap</span>
+                  <span>Hesabı Onayla & Kaydı Tamamla</span>
                 )}
               </button>
 
@@ -583,15 +569,25 @@ export function AuthModal() {
                   ← Bilgileri Değiştir
                 </button>
 
+                {/* 2 Dakikalık Tekrar Gönder Butonu ve Geri Sayım */}
                 <button
                   type="button"
                   disabled={resendCooldown > 0 || isSubmitting}
                   onClick={() => handleResendCode('register')}
-                  className="text-[#C85A32] hover:underline disabled:opacity-50 font-medium"
+                  className={`text-xs flex items-center gap-1.5 transition font-medium ${
+                    resendCooldown > 0 || isSubmitting
+                      ? 'text-stone-400 cursor-not-allowed opacity-60'
+                      : 'text-[#C85A32] hover:underline cursor-pointer'
+                  }`}
                 >
-                  {resendCooldown > 0
-                    ? `Tekrar Gönder (${resendCooldown}s)`
-                    : 'Kodu Tekrar Gönder'}
+                  <RefreshCw className={`w-3 h-3 ${isSubmitting ? 'animate-spin' : ''}`} />
+                  {resendCooldown > 0 ? (
+                    <span>
+                      Tekrar Kod Gönder <span className="font-mono font-bold">({formatCooldown(resendCooldown)})</span>
+                    </span>
+                  ) : (
+                    <span>Kodu Tekrar Gönder</span>
+                  )}
                 </button>
               </div>
             </form>
@@ -743,15 +739,25 @@ export function AuthModal() {
                   ← Girişe Dön
                 </button>
 
+                {/* 2 Dakikalık Tekrar Gönder Butonu ve Geri Sayım */}
                 <button
                   type="button"
                   disabled={resendCooldown > 0 || isSubmitting}
                   onClick={() => handleResendCode('reset_password')}
-                  className="text-[#C85A32] hover:underline disabled:opacity-50 font-medium"
+                  className={`text-xs flex items-center gap-1.5 transition font-medium ${
+                    resendCooldown > 0 || isSubmitting
+                      ? 'text-stone-400 cursor-not-allowed opacity-60'
+                      : 'text-[#C85A32] hover:underline cursor-pointer'
+                  }`}
                 >
-                  {resendCooldown > 0
-                    ? `Kodu Tekrar Gönder (${resendCooldown}s)`
-                    : 'Kodu Tekrar Gönder'}
+                  <RefreshCw className={`w-3 h-3 ${isSubmitting ? 'animate-spin' : ''}`} />
+                  {resendCooldown > 0 ? (
+                    <span>
+                      Tekrar Kod Gönder <span className="font-mono font-bold">({formatCooldown(resendCooldown)})</span>
+                    </span>
+                  ) : (
+                    <span>Kodu Tekrar Gönder</span>
+                  )}
                 </button>
               </div>
             </form>

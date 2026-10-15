@@ -20,7 +20,7 @@ export async function POST(req: Request) {
     }
 
     const cleanEmail = email.toLowerCase().trim();
-    // 6 haneli kod üret
+    // 6 haneli kod üret (10 dakika geçerli)
     const code = createVerificationCode(cleanEmail, type);
 
     const emailSubject =
@@ -37,7 +37,9 @@ export async function POST(req: Request) {
       type,
     });
 
-    const resendApiKey = process.env.RESEND_API_KEY;
+    const resendApiKey =
+      process.env.RESEND_API_KEY ||
+      (process.env.SMTP_PASS?.startsWith('re_') ? process.env.SMTP_PASS : undefined);
     const smtpHost = process.env.SMTP_HOST;
     const smtpPort = Number(process.env.SMTP_PORT || 465);
     const smtpUser = process.env.SMTP_USER;
@@ -45,7 +47,9 @@ export async function POST(req: Request) {
     const rawFrom = process.env.SMTP_FROM || 'Safirya Atölyesi <bildirim@safirya.tr>';
     const cleanFrom = rawFrom.replace(/[\r\n\t]+/g, ' ').replace(/\s+/g, ' ').trim();
 
-    // 1. Resend API Entegrasyonu (Varsa)
+    let emailSent = false;
+
+    // 1. Resend API Entegrasyonu (Öncelikli)
     if (resendApiKey) {
       try {
         const sendToResend = async (fromAddress: string) => {
@@ -79,23 +83,17 @@ export async function POST(req: Request) {
           }
         }
 
-        if (resendRes.ok && resendData.id) {
-          console.log(`[Doğrulama Kodu] ${cleanEmail} adresine Resend ile iletildi. Kod: ${code}`);
-          return NextResponse.json({
-            success: true,
-            message: `${cleanEmail} adresine doğrulama kodu gönderildi.`,
-            simulated: false,
-            // Test kolaylığı için geliştirme ortamında debug kodu
-            debugCode: process.env.NODE_ENV !== 'production' ? code : undefined,
-          });
+        if (resendRes.ok && resendData?.id) {
+          console.log(`[Doğrulama Kodu] ${cleanEmail} adresine Resend (${resendData.id}) ile iletildi.`);
+          emailSent = true;
         }
       } catch (err: any) {
         console.warn('Resend API doğrulama kodu hatası:', err.message);
       }
     }
 
-    // 2. SMTP Nodemailer Gönderimi (Varsa)
-    if (smtpHost && smtpUser && smtpPass) {
+    // 2. SMTP Nodemailer Gönderimi (Yedek)
+    if (!emailSent && smtpHost && smtpUser && smtpPass) {
       try {
         const transporter = nodemailer.createTransport({
           host: smtpHost,
@@ -114,26 +112,19 @@ export async function POST(req: Request) {
           html: htmlContent,
         });
 
-        console.log(`[Doğrulama Kodu] ${cleanEmail} adresine SMTP ile iletildi. Kod: ${code}`);
-        return NextResponse.json({
-          success: true,
-          message: `${cleanEmail} adresine doğrulama kodu gönderildi.`,
-          simulated: false,
-          debugCode: process.env.NODE_ENV !== 'production' ? code : undefined,
-        });
+        console.log(`[Doğrulama Kodu] ${cleanEmail} adresine SMTP ile iletildi.`);
+        emailSent = true;
       } catch (err: any) {
-        console.warn('SMTP gönderim hatası, simülasyona dönülüyor:', err.message);
+        console.warn('SMTP gönderim hatası:', err.message);
       }
     }
 
-    // 3. Simülasyon Modu (SMTP / API erişimi yoksa kullanıcıyı engellememek için)
-    console.log(`[Safirya Simülasyon] ${cleanEmail} için Doğrulama Kodu: ${code}`);
+    // Güvenlik: Kod kesinlikle API yanıtında istemciye dönülmez!
+    console.log(`[Safirya Auth] ${cleanEmail} için doğrulama kodu gönderildi (Email Gönderildi: ${emailSent})`);
 
     return NextResponse.json({
       success: true,
-      message: `${cleanEmail} adresine doğrulama kodu iletildi.`,
-      simulated: true,
-      code, // Kullanıcının beklemeden hızlıca test edebilmesi için simülasyonda kodu da döndürürüz
+      message: `${cleanEmail} adresinize 6 haneli doğrulama kodu gönderildi. Lütfen gelen kutunuzu kontrol ediniz.`,
     });
   } catch (error: any) {
     console.error('Doğrulama kodu gönderme hatası:', error);
