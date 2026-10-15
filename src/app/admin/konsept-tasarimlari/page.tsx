@@ -28,12 +28,30 @@ export default function KonseptTasarimlariPage() {
     conceptBanners,
     updateConceptBanner,
     resetConceptBanners,
+    saveConceptBannersToCloud,
     categories,
     showToast,
   } = useAdmin();
 
   const [selectedSlot, setSelectedSlot] = useState<ConceptSlotKey>('hero');
   const [isUploading, setIsUploading] = useState<string | null>(null);
+  const [isSavingCloud, setIsSavingCloud] = useState(false);
+  const [savedAt, setSavedAt] = useState<string | null>(null);
+
+  const handleSaveToCloud = async () => {
+    setIsSavingCloud(true);
+    try {
+      const res = await saveConceptBannersToCloud();
+      if (res.success) {
+        showToast('✓ Tüm vitrin tasarımları buluta kaydedildi (Masaüstü ve Mobil anında aktif).');
+        setSavedAt(new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }));
+      } else {
+        alert(res.error || 'Kaydedilirken hata oluştu.');
+      }
+    } finally {
+      setIsSavingCloud(false);
+    }
+  };
 
   const bannerSlots: {
     key: ConceptSlotKey;
@@ -138,12 +156,14 @@ export default function KonseptTasarimlariPage() {
       const data = await res.json();
       if (res.ok && data.url) {
         updateConceptBanner(slotKey, { imageUrl: data.url });
+        await saveConceptBannersToCloud();
+        setSavedAt(new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }));
         showToast(
           data.provider === 'cloudinary'
-            ? 'Görsel Cloudinary CDN üzerine yüklendi ve vitrinde yayına alındı.'
+            ? '✓ Görsel Cloudinary CDN üzerine yüklendi ve tüm cihazlarda (Masaüstü & Mobil) anında yayına alındı.'
             : data.provider === 'supabase'
-            ? 'Görsel Supabase Storage üzerine yüklendi ve vitrinde yayına alındı.'
-            : 'Görsel başarıyla vitrinde yayına alındı.'
+            ? '✓ Görsel Supabase Storage üzerine yüklendi ve tüm cihazlarda (Masaüstü & Mobil) anında yayına alındı.'
+            : '✓ Görsel başarıyla yüklendi ve tüm cihazlarda (Masaüstü & Mobil) anında yayına alındı.'
         );
       } else {
         alert(data.error || 'Görsel yüklenirken bir hata oluştu.');
@@ -169,11 +189,30 @@ export default function KonseptTasarimlariPage() {
             Konsept Tasarımları & Boyut Rehberi
           </h1>
           <p className="text-xs sm:text-sm text-[#7A7067] mt-1 max-w-2xl">
-            Ana sayfadaki tüm konsept afişlerini, kampanya bannerlarını ve koleksiyon alanlarını buradan yönetebilirsiniz. Boyut rehberine uygun görselleri eklediğinizde mağaza vitrininiz anında güncellenir.
+            Ana sayfadaki tüm konsept afişlerini, kampanya bannerlarını ve koleksiyon alanlarını buradan yönetebilirsiniz. Boyut rehberine uygun görselleri eklediğinizde mağaza vitrininiz hem masaüstü hem mobilde anında güncellenir.
           </p>
+          {savedAt && (
+            <div className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xs bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs">
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+              <span>Bulut Senkronize: Son kayıt {savedAt} (Masaüstü ve Mobil anında aktif)</span>
+            </div>
+          )}
         </div>
 
-        <div className="flex items-center gap-2.5">
+        <div className="flex flex-wrap items-center gap-2.5">
+          <button
+            onClick={handleSaveToCloud}
+            disabled={isSavingCloud}
+            className="px-4 py-2 rounded-xs bg-[#C85A32] hover:bg-[#A04523] text-white text-xs uppercase tracking-wider font-medium transition inline-flex items-center gap-1.5 shadow-sm disabled:opacity-50 cursor-pointer"
+          >
+            {isSavingCloud ? (
+              <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+            ) : (
+              <UploadCloud className="w-3.5 h-3.5" />
+            )}
+            <span>{isSavingCloud ? 'Yayınlanıyor...' : 'Tüm Cihazlara Yayınla'}</span>
+          </button>
+
           <Link
             href="/"
             target="_blank"
@@ -189,7 +228,7 @@ export default function KonseptTasarimlariPage() {
                 resetConceptBanners();
               }
             }}
-            className="px-3 py-2 rounded-xs border border-[#E2DCD3] text-[#7A7067] hover:text-[#C85A32] hover:border-[#C85A32] text-xs font-medium transition inline-flex items-center gap-1.5"
+            className="px-3 py-2 rounded-xs border border-[#E2DCD3] text-[#7A7067] hover:text-[#C85A32] hover:border-[#C85A32] text-xs font-medium transition inline-flex items-center gap-1.5 cursor-pointer"
             title="Tüm alanları sıfırla"
           >
             <RefreshCw className="w-3.5 h-3.5" />
@@ -540,6 +579,25 @@ export default function KonseptTasarimlariPage() {
                 />
                 <div className="w-11 h-6 bg-stone-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-stone-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#C85A32]"></div>
               </label>
+            </div>
+
+            {/* Alt Kaydet Butonu */}
+            <div className="pt-4 border-t border-[#E2DCD3] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="text-[11px] text-[#7A7067]">
+                ✓ Yapılan güncellemeler Supabase buluta aktarılır ve mobil dahil tüm ziyaretçilere görünür.
+              </div>
+              <button
+                onClick={handleSaveToCloud}
+                disabled={isSavingCloud}
+                className="px-6 py-2.5 rounded-xs bg-[#231B18] hover:bg-[#C85A32] text-white text-xs uppercase tracking-wider font-medium transition inline-flex items-center justify-center gap-2 shadow-sm disabled:opacity-50 cursor-pointer"
+              >
+                {isSavingCloud ? (
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <Check className="w-3.5 h-3.5" />
+                )}
+                <span>{isSavingCloud ? 'Buluta Kaydediliyor...' : 'Değişiklikleri Yayınla & Kaydet'}</span>
+              </button>
             </div>
 
           </div>

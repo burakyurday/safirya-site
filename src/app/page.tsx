@@ -48,11 +48,12 @@ export default function HomePage() {
   const [carouselIndex, setCarouselIndex] = useState(0);
   const [products, setProducts] = useState<CatalogProductItem[]>([]);
 
-  // Dinamik Katalog & LocalStorage Senkronizasyonu
+  // Dinamik Katalog & Supabase Bulut / LocalStorage Senkronizasyonu
   useEffect(() => {
     setProducts(getClientCatalogProducts());
 
     if (typeof window !== 'undefined') {
+      // 1. Önce localStorage'dan hızlıca yükle (anlık gösterim)
       const saved = localStorage.getItem('safirya_concept_banners');
       if (saved) {
         try {
@@ -60,6 +61,24 @@ export default function HomePage() {
           setBanners({ ...initialConceptBanners, ...parsed });
         } catch {}
       }
+
+      // 2. Ardından sunucudan / buluttan (Supabase) en güncel bannerları çek (Tüm cihazlar & Mobil eşitlenir)
+      fetch('/api/banners')
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.success && data.banners && Object.keys(data.banners).length > 0) {
+            setBanners((prev) => {
+              const updated = { ...prev, ...data.banners };
+              try {
+                localStorage.setItem('safirya_concept_banners', JSON.stringify(updated));
+              } catch {}
+              return updated;
+            });
+          }
+        })
+        .catch((err) => {
+          console.warn('Bulut banner senkronizasyon hatası:', err);
+        });
 
       const handleUpdate = (e: Event) => {
         const customEvent = e as CustomEvent<ConceptBannersMap>;
@@ -90,17 +109,29 @@ export default function HomePage() {
 
   // Seçilmiş ve Vitrin Ürünleri
   const selectedProducts = products.length > 0 ? products : [];
-  const showcase1Products = products
-    .filter((p) => p.categorySlug === 'dogal-mumlar' || p.categoryName?.includes('Mum'))
+
+  const showcase1CategorySlug = show1.categorySlug || 'dogal-mumlar';
+  let showcase1Products = products
+    .filter((p) => p.categorySlug === showcase1CategorySlug || p.categoryName?.toLowerCase().includes('mum'))
     .slice(0, 3);
-  const showcase2Products = products
+  if (showcase1Products.length === 0) {
+    showcase1Products = products.slice(0, 3);
+  }
+
+  const showcase2CategorySlug = show2.categorySlug || 'epoksi-tasarimlar';
+  let showcase2Products = products
     .filter(
       (p) =>
-        p.categorySlug === 'epoksi-tasarimlar' ||
+        p.categorySlug === showcase2CategorySlug ||
         p.categorySlug === 'kokulu-tas' ||
-        p.categorySlug === 'miyuki-taki'
+        p.categorySlug === 'miyuki-taki' ||
+        p.categoryName?.toLowerCase().includes('epoksi') ||
+        p.categoryName?.toLowerCase().includes('taş')
     )
     .slice(0, 3);
+  if (showcase2Products.length === 0) {
+    showcase2Products = products.slice(3, 6).length > 0 ? products.slice(3, 6) : products.slice(0, 3);
+  }
 
   // Carousel kontrol fonksiyonları
   const nextSlide = () => {
@@ -131,13 +162,13 @@ export default function HomePage() {
               />
               <div className="absolute inset-0 bg-gradient-to-r from-white/70 via-white/40 to-transparent sm:w-2/3" />
               
-              <div className="relative z-10 p-8 sm:p-14 max-w-xl space-y-4">
+              <div className="relative z-10 p-6 sm:p-14 max-w-xl space-y-3 sm:space-y-4">
                 {hero.tag && (
                   <span className="inline-block bg-[#C85A32] text-white text-[10px] sm:text-xs font-semibold tracking-widest uppercase px-3 py-1">
                     {hero.tag}
                   </span>
                 )}
-                <h1 className="font-serif text-3xl sm:text-5xl text-[#231B18] font-normal leading-tight">
+                <h1 className="font-serif text-2xl sm:text-5xl text-[#231B18] font-normal leading-tight">
                   {hero.title || 'SAFİRYA ATÖLYE'}
                 </h1>
                 {hero.subtitle && (
@@ -148,7 +179,7 @@ export default function HomePage() {
                 <div className="pt-2">
                   <Link
                     href={hero.buttonLink || '/kategoriler'}
-                    className="inline-block bg-[#231B18] hover:bg-[#C85A32] text-white text-xs uppercase tracking-widest font-medium px-8 py-3.5 rounded-none transition shadow-sm"
+                    className="inline-block bg-[#231B18] hover:bg-[#C85A32] text-white text-xs uppercase tracking-widest font-medium px-6 sm:px-8 py-3 sm:py-3.5 rounded-none transition shadow-sm"
                   >
                     {hero.buttonText || 'ALIŞVERİŞE BAŞLA'}
                   </Link>
@@ -382,20 +413,24 @@ export default function HomePage() {
                 <>
                   <img
                     src={show1.imageUrl}
-                    alt={show1.title}
+                    alt={show1.title || 'Safirya Vitrin'}
                     className="w-full h-full object-cover group-hover:scale-102 transition-transform duration-700"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent flex flex-col justify-end p-8 text-white">
-                    <span className="text-[11px] font-sans uppercase tracking-[0.2em] text-white/90 font-medium">
-                      {show1.subtitle || 'DÜZENLİ VE ŞIK MUTFAKLAR'}
-                    </span>
-                    <h3 className="font-serif text-3xl font-normal text-white mt-1">
-                      {show1.title || 'Doğal Mum Koleksiyonu'}
-                    </h3>
-                    <div className="pt-3">
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/10 to-transparent flex flex-col justify-end p-5 sm:p-8 text-white">
+                    {show1.subtitle && (
+                      <span className="text-[10px] sm:text-[11px] font-sans uppercase tracking-[0.2em] text-white/90 font-medium">
+                        {show1.subtitle}
+                      </span>
+                    )}
+                    {show1.title && (
+                      <h3 className="font-serif text-2xl sm:text-3xl font-normal text-white mt-1">
+                        {show1.title}
+                      </h3>
+                    )}
+                    <div className="pt-2 sm:pt-3">
                       <Link
                         href={show1.buttonLink || '/kategoriler/dogal-mumlar'}
-                        className="inline-block bg-white text-[#231B18] hover:bg-stone-100 text-xs uppercase tracking-widest font-medium px-6 py-2.5 transition"
+                        className="inline-block bg-white text-[#231B18] hover:bg-stone-100 text-xs uppercase tracking-widest font-medium px-5 sm:px-6 py-2 sm:py-2.5 transition shadow-sm"
                       >
                         {show1.buttonText || 'KEŞFEDİN'}
                       </Link>
@@ -428,7 +463,7 @@ export default function HomePage() {
 
           {/* Sağ: 3 Adet Ürün Kartı (%50 Genişlik) */}
           <div className="lg:col-span-6">
-            <div className="grid grid-cols-3 gap-3 sm:gap-4">
+            <div className="grid grid-cols-3 gap-2 sm:gap-4">
               {showcase1Products.map((prod) => (
                 <ProductCard key={prod.id} product={prod} variant="simple" />
               ))}
@@ -451,20 +486,24 @@ export default function HomePage() {
                 <>
                   <img
                     src={show2.imageUrl}
-                    alt={show2.title}
+                    alt={show2.title || 'Safirya Vitrin'}
                     className="w-full h-full object-cover group-hover:scale-102 transition-transform duration-700"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent flex flex-col justify-end p-8 text-white">
-                    <span className="text-[11px] font-sans uppercase tracking-[0.2em] text-white/90 font-medium">
-                      {show2.subtitle || 'GÜNÜN EN GÜZEL BAŞLANGICI'}
-                    </span>
-                    <h3 className="font-serif text-3xl font-normal text-white mt-1">
-                      {show2.title || 'Epoksi & Zanaat Objeleri'}
-                    </h3>
-                    <div className="pt-3">
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/10 to-transparent flex flex-col justify-end p-5 sm:p-8 text-white">
+                    {show2.subtitle && (
+                      <span className="text-[10px] sm:text-[11px] font-sans uppercase tracking-[0.2em] text-white/90 font-medium">
+                        {show2.subtitle}
+                      </span>
+                    )}
+                    {show2.title && (
+                      <h3 className="font-serif text-2xl sm:text-3xl font-normal text-white mt-1">
+                        {show2.title}
+                      </h3>
+                    )}
+                    <div className="pt-2 sm:pt-3">
                       <Link
                         href={show2.buttonLink || '/kategoriler/epoksi-tasarimlar'}
-                        className="inline-block bg-white text-[#231B18] hover:bg-stone-100 text-xs uppercase tracking-widest font-medium px-6 py-2.5 transition"
+                        className="inline-block bg-white text-[#231B18] hover:bg-stone-100 text-xs uppercase tracking-widest font-medium px-5 sm:px-6 py-2 sm:py-2.5 transition shadow-sm"
                       >
                         {show2.buttonText || 'KEŞFEDİN'}
                       </Link>
@@ -497,7 +536,7 @@ export default function HomePage() {
 
           {/* Sağ: 3 Adet Ürün Kartı (%50 Genişlik) */}
           <div className="lg:col-span-6">
-            <div className="grid grid-cols-3 gap-3 sm:gap-4">
+            <div className="grid grid-cols-3 gap-2 sm:gap-4">
               {showcase2Products.map((prod) => (
                 <ProductCard key={prod.id} product={prod} variant="simple" />
               ))}

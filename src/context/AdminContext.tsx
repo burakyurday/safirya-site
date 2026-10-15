@@ -712,6 +712,7 @@ interface AdminContextType {
   conceptBanners: ConceptBannersMap;
   updateConceptBanner: (slotKey: ConceptSlotKey, data: Partial<ConceptBannerItem>) => void;
   resetConceptBanners: () => void;
+  saveConceptBannersToCloud: (customBanners?: ConceptBannersMap) => Promise<{ success: boolean; message?: string; error?: string }>;
 
   // Demo verileri sıfırlama
   purgeAllDemoData: () => void;
@@ -938,6 +939,55 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
         setCampaigns([]);
       }
     }
+  }, []);
+
+  // Buluttaki (Supabase Storage) Konsept Bannerlarını Çek ve İki Yönlü Eşitle
+  useEffect(() => {
+    let isMounted = true;
+
+    async function syncCloudBanners() {
+      try {
+        const res = await fetch('/api/banners');
+        if (!res.ok) return;
+        const data = await res.json();
+
+        if (data.success && data.banners && Object.keys(data.banners).length > 0) {
+          if (isMounted) {
+            setConceptBanners((prev) => {
+              const merged = { ...prev, ...data.banners };
+              if (typeof window !== 'undefined') {
+                localStorage.setItem('safirya_concept_banners', JSON.stringify(merged));
+              }
+              return merged;
+            });
+          }
+        } else if (data.source === 'empty' && typeof window !== 'undefined') {
+          // Bulutta henüz banner yoksa, bu tarayıcıda önceden eklenmiş görseller varsa buluta otomatik yedekle
+          const localSaved = localStorage.getItem('safirya_concept_banners');
+          if (localSaved) {
+            try {
+              const parsed = JSON.parse(localSaved);
+              const hasImages = Object.values(parsed).some((b: any) => Boolean(b?.imageUrl));
+              if (hasImages) {
+                await fetch('/api/banners', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ banners: parsed }),
+                });
+              }
+            } catch {}
+          }
+        }
+      } catch (err) {
+        console.warn('Bulut banner senkronizasyon uyarısı:', err);
+      }
+    }
+
+    syncCloudBanners();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const purgeAllDemoData = () => {
@@ -1911,7 +1961,25 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
     showToast(`"${slug}" kurumsal sayfası güncellendi ve vitrinde yayına alındı.`);
   };
 
-  // 9. Konsept Tasarımları & Vitrin Bannerları
+  // 9. Konsept Tasarımları & Vitrin Bannerları (Bulut ve Yerel Eşitlemeli)
+  const saveConceptBannersToCloud = async (customBanners?: ConceptBannersMap) => {
+    try {
+      const payload = customBanners || conceptBanners;
+      const res = await fetch('/api/banners', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ banners: payload }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        return { success: true, message: 'Vitrin afişleri buluta kaydedildi (Masaüstü ve Mobil anında aktif).' };
+      }
+      return { success: false, error: data.error || 'Bulut kaydı başarısız.' };
+    } catch (err: any) {
+      return { success: false, error: err.message || 'Bağlantı hatası.' };
+    }
+  };
+
   const updateConceptBanner = (slotKey: ConceptSlotKey, data: Partial<ConceptBannerItem>) => {
     setConceptBanners((prev) => {
       const existing = prev[slotKey] || initialConceptBanners[slotKey];
@@ -1928,6 +1996,8 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
           new CustomEvent('safirya_concept_banners_updated', { detail: updated })
         );
       }
+      // Buluta anında asenkron kaydet
+      saveConceptBannersToCloud(updated).catch(() => {});
       return updated;
     });
     showToast(`"${data.title || slotKey}" konsept tasarımı güncellendi.`);
@@ -1941,6 +2011,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
         new CustomEvent('safirya_concept_banners_updated', { detail: initialConceptBanners })
       );
     }
+    saveConceptBannersToCloud(initialConceptBanners).catch(() => {});
     showToast('Konsept tasarımları boş şablon durumuna sıfırlandı.');
   };
 
@@ -2013,6 +2084,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
         conceptBanners,
         updateConceptBanner,
         resetConceptBanners,
+        saveConceptBannersToCloud,
         toastMessage,
         purgeAllDemoData,
         showToast,
