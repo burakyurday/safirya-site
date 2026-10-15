@@ -39,7 +39,8 @@ export async function dispatchStageNotification({
   settings,
 }: DispatchStageNotificationParams): Promise<DispatchResult> {
   const safeTrackingUrl =
-    trackingUrl || `https://safirya.tr/siparis-takip?orderNumber=${orderNumber}`;
+    trackingUrl ||
+    `https://safirya.tr/siparis-takip?orderNumber=${encodeURIComponent(orderNumber)}${customerEmail ? `&email=${encodeURIComponent(customerEmail)}` : ''}`;
 
   // 1. E-Posta Gönderimi
   const emailPayload: StageEmailPayload = {

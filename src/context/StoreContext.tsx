@@ -101,6 +101,14 @@ const StoreContext = createContext<StoreContextType | undefined>(undefined);
 const GUEST_CART_STORAGE_KEY = 'safirya_guest_cart';
 const SESSION_CART_STORAGE_KEY = 'safirya_session_cart';
 
+function createUniqueUserId(): string {
+  return `usr-${Math.random().toString(36).substring(2, 10)}`;
+}
+
+function createNotificationId(): string {
+  return `notif-${Math.random().toString(36).substring(2, 10)}`;
+}
+
 const mergeCartLists = (target: CartItem[], incoming: CartItem[]): CartItem[] => {
   const result = [...target];
   incoming.forEach((inItem) => {
@@ -117,18 +125,8 @@ const mergeCartLists = (target: CartItem[], incoming: CartItem[]): CartItem[] =>
   return result;
 };
 
-// Başlangıç kayıtlı örnek kullanıcılar (Demo test hesabı dahil)
-const DEFAULT_REGISTERED_USERS: Array<UserProfile & { passwordHash: string }> = [
-  {
-    id: 'usr-1',
-    name: 'Elif Kaya',
-    email: 'elif.kaya@safirya.tr',
-    phone: '+90 (532) 111 2233',
-    isVerified: true,
-    createdAt: new Date().toISOString(),
-    passwordHash: 'Safirya123!',
-  },
-];
+// Başlangıç kayıtlı kullanıcı tablosu
+const DEFAULT_REGISTERED_USERS: Array<UserProfile & { passwordHash: string }> = [];
 
 export function StoreProvider({ children }: { children: React.ReactNode }) {
   // Sepet ve Favoriler (Başlangıçta boş)
@@ -158,13 +156,23 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    // 1. Kullanıcı oturumunu oku
+    // 1. Kullanıcı oturumunu oku (Varsa demo kullanıcıları temizle)
     let activeUser: UserProfile | null = null;
     try {
       const savedUser = localStorage.getItem('safirya_active_user');
       if (savedUser) {
         activeUser = JSON.parse(savedUser);
-        setCurrentUser(activeUser);
+        if (
+          activeUser &&
+          (activeUser.email === 'elif.kaya@safirya.tr' ||
+            activeUser.email === 'elif.kaya@example.com' ||
+            activeUser.id === 'usr-1')
+        ) {
+          localStorage.removeItem('safirya_active_user');
+          activeUser = null;
+        } else {
+          setCurrentUser(activeUser);
+        }
       }
     } catch {}
 
@@ -249,14 +257,48 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
     isLoadedRef.current = true;
 
-    // 4. Kayıtlı kullanıcı tablosunu ilklendir (eğer boşsa)
+    // 4. Kayıtlı kullanıcı tablosunu temizle / ilklendir
     try {
       const storedUsers = localStorage.getItem('safirya_registered_users');
-      if (!storedUsers) {
+      if (storedUsers) {
+        const parsed = JSON.parse(storedUsers);
+        if (Array.isArray(parsed)) {
+          const filtered = parsed.filter(
+            (u: any) =>
+              u &&
+              u.email !== 'elif.kaya@safirya.tr' &&
+              u.email !== 'elif.kaya@example.com' &&
+              u.id !== 'usr-1'
+          );
+          if (filtered.length !== parsed.length) {
+            localStorage.setItem('safirya_registered_users', JSON.stringify(filtered));
+          }
+        }
+      } else {
         localStorage.setItem(
           'safirya_registered_users',
           JSON.stringify(DEFAULT_REGISTERED_USERS)
         );
+      }
+    } catch {}
+
+    // 4.1. Tarayıcıda kalmış eski demo siparişleri temizle
+    try {
+      const savedOrders = localStorage.getItem('safirya_orders');
+      if (savedOrders) {
+        const parsed = JSON.parse(savedOrders);
+        if (Array.isArray(parsed)) {
+          const cleaned = parsed.filter(
+            (o: any) =>
+              o &&
+              !['SFR-2026-1042', 'SFR-2026-1043', 'SFR-2026-8921'].includes(o.orderNumber) &&
+              o.customerName !== 'Elif Kaya' &&
+              !String(o.customerEmail || o.email || '').includes('elif.kaya')
+          );
+          if (cleaned.length !== parsed.length) {
+            localStorage.setItem('safirya_orders', JSON.stringify(cleaned));
+          }
+        }
       }
     } catch {}
 
@@ -577,7 +619,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       }
 
       const newUser: UserProfile & { passwordHash: string } = {
-        id: `usr-${Date.now()}`,
+        id: createUniqueUserId(),
         name: name.trim(),
         email: cleanEmail,
         isVerified: true,
@@ -705,7 +747,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   ): StoreNotification => {
     const newNotif: StoreNotification = {
       ...notif,
-      id: `notif-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+      id: createNotificationId(),
       createdAt: new Date().toISOString(),
       isRead: false,
     };

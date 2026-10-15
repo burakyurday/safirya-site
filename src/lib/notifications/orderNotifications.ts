@@ -108,7 +108,9 @@ export async function triggerOrderStageNotification({
       title: `🎨 ${meta.title}`,
       message: caption ? `${meta.message(order.orderNumber)} Not: "${caption}"` : meta.message(order.orderNumber),
       type: 'order_stage',
-      link: `/siparis-takip?orderNumber=${order.orderNumber}`,
+      link: order.customerEmail
+        ? `/siparis-takip?orderNumber=${encodeURIComponent(order.orderNumber)}&email=${encodeURIComponent(order.customerEmail)}`
+        : `/siparis-takip?orderNumber=${encodeURIComponent(order.orderNumber)}`,
     });
     siteNotified = true;
   }
@@ -125,7 +127,7 @@ export async function triggerOrderStageNotification({
         stageName: meta.title,
         photoUrl,
         caption,
-        trackingUrl: `https://safirya.tr/siparis-takip?orderNumber=${order.orderNumber}`,
+        trackingUrl: `https://safirya.tr/siparis-takip?orderNumber=${encodeURIComponent(order.orderNumber)}&email=${encodeURIComponent(order.customerEmail)}`,
         settings,
       });
       emailSent = true;

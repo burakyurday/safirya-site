@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import nodemailer from 'nodemailer';
 import { generateCampaignEmailHtml, CampaignEmailProps } from '@/lib/marketing/campaignEmail';
+import { getAdminSessionServer } from '@/lib/adminAuth';
 
 // E-posta adresini satır sonu ve boşluklardan arındırır
 function sanitizeFromAddress(from?: string, defaultSenderName = 'Safirya Atölyesi'): string {
@@ -14,6 +15,13 @@ function sanitizeFromAddress(from?: string, defaultSenderName = 'Safirya Atölye
 
 export async function POST(req: Request) {
   try {
+    const session = await getAdminSessionServer();
+    if (!session) {
+      return NextResponse.json(
+        { success: false, error: 'Yetkisiz erişim. Kampanya e-postası göndermek için yönetici girişi gereklidir.' },
+        { status: 401 }
+      );
+    }
     const body = await req.json();
     const {
       recipients,

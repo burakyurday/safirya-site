@@ -496,7 +496,7 @@ model SystemSettings {
   contactEmail           String   @default("info@safirya.tr")
   contactPhone           String   @default("+90 (212) 555 7234")
   whatsappNumber         String   @default("+90 532 555 7234")
-  instagramHandle        String   @default("@safirya.craft")
+  instagramHandle        String   @default("@safirya35353535")
   atelierAddress         String   @default("Safirya Atölyesi, Moda Cad. No:42 Kadıköy / İstanbul")
   
   // Ziyaretçi Çıkış Teklifi (Exit-Intent Pop-up)

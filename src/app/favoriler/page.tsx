@@ -6,45 +6,30 @@ import { Heart, ArrowRight } from 'lucide-react';
 import { useStore } from '@/context/StoreContext';
 import { ProductCard } from '@/components/catalog/ProductCard';
 
-const mockDemoFavorites = [
-  {
-    id: 'demo-1',
-    name: 'Safir Gece Botanik Soya Mumu',
-    slug: 'safir-gece-soya-mumu',
-    categoryName: 'Doğal Mumlar',
-    price: 380.0,
-    discountPrice: 323.0,
-    discountRate: 15,
-    preparationDays: 2,
-    isCustomizable: true,
-    scentNotes: ['Lavanta', 'Sandal Ağacı', 'Vanilya'],
-    rating: 5,
-    reviewCount: 42,
-    image: 'https://images.unsplash.com/photo-1603006905003-be475563bc59?auto=format&fit=crop&w=800&q=80',
-    isBestSeller: true,
-  },
-  {
-    id: 'demo-2',
-    name: 'Safir Okyanus Dalgalı Epoksi Sunumluk & Tepsi',
-    slug: 'safir-okyanus-dalgali-epoksi-sunumluk',
-    categoryName: 'Epoksi Tasarımlar',
-    price: 950.0,
-    discountPrice: 855.0,
-    discountRate: 10,
-    preparationDays: 5,
-    isCustomizable: true,
-    scentNotes: [],
-    rating: 5,
-    reviewCount: 19,
-    image: 'https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?auto=format&fit=crop&w=800&q=80',
-    isBestSeller: true,
-  },
-];
+import { initialProducts } from '@/context/AdminContext';
+
+const catalogProducts = initialProducts.map((p) => ({
+  id: p.id,
+  name: p.name,
+  slug: p.slug,
+  categoryName: p.category,
+  brand: 'SAFİRYA',
+  price: p.price,
+  discountPrice: p.discountPrice,
+  discountRate: p.discountRate,
+  preparationDays: p.preparationDays,
+  isCustomizable: p.isCustomizable,
+  scentNotes: p.scentNotes,
+  rating: 5,
+  reviewCount: 24,
+  image: p.images[0] || 'https://images.unsplash.com/photo-1603006905003-be475563bc59?auto=format&fit=crop&w=800&q=80',
+  isBestSeller: p.isBestSeller,
+}));
 
 export default function FavoritesPage() {
   const { favorites } = useStore();
 
-  const favoriteProducts = mockDemoFavorites.filter((p) =>
+  const favoriteProducts = catalogProducts.filter((p) =>
     favorites.includes(p.id)
   );
 

@@ -18,6 +18,8 @@ import {
   Tag,
   Gift,
   Sparkles,
+  ShieldCheck,
+  AlertCircle,
 } from 'lucide-react';
 
 interface StagePhoto {
@@ -93,324 +95,299 @@ const STAGES_MASTER = [
   },
 ];
 
-// ÖRNEK SİPARİŞ VERİTABANI
-const DEMO_ORDERS: Record<string, OrderTrackingData> = {
-  'SFR-2026-1042': {
-    orderNumber: 'SFR-2026-1042',
-    customerName: 'Elif Kaya',
-    email: 'elif.kaya@example.com',
-    phone: '+90 541 234 5678',
-    orderDate: '14 Ekim 2026 • 10:45',
-    currentStageIndex: 1,
-    totalAmount: 620.0,
-    paymentMethod: 'Kredi Kartı (3D Secure)',
-    shippingAddress: 'Caferağa Mah. Şair Nefi Sk. No:18 D:4 Kadıköy / İstanbul',
-    cargoCompany: 'Yurtiçi Kargo (Hazırlanıyor)',
-    isGiftWrapped: true,
-    giftNote: 'Canım Selin, yeni yuvanız size sonsuz mutluluk ve aydınlık getirsin! Sevgilerimle.',
-    atelierNote:
-      'Ahşap fitiller pirinç tabanla el ile sabitlendi. %100 saf soya vaksı 65°C ısıda doğal "Vanilya & Karamel" esansıyla harmanlandı. Şu an Kadıköy atölyemizin dinlenme odasında 48 saatlik doğal kürlenme sürecindedir.',
-    photos: [
-      {
-        stageKey: 'SIPARIS_ALINDI',
-        stageName: '1. Aşama: Malzeme Hazırlığı',
-        title: 'Doğal Vaks ve Koku Reçetesi',
-        photoUrl:
-          'https://images.unsplash.com/photo-1513519245088-0e12902e5a38?auto=format&fit=crop&w=800&q=80',
-        caption: 'Saf soya vaksı tartıldı ve doğal esanslar hazırlandı.',
-        timestamp: '14 Ekim 10:55',
-      },
-      {
-        stageKey: 'ATOLYEDE_URETIMDE',
-        stageName: '2. Aşama: El ile Sıcak Döküm',
-        title: 'Ahşap Fitil & Dinlenme',
-        photoUrl:
-          'https://images.unsplash.com/photo-1603006905003-be475563bc59?auto=format&fit=crop&w=800&q=80',
-        caption: 'Ahşap fitil yerleştirildi, kehribar kavanoza saf lavanta ve vanilya esansıyla döküldü.',
-        timestamp: '14 Ekim 11:30',
-      },
-    ],
-    items: [
-      {
-        name: 'Doğal Mum & Epoksi Kişiselleştirilebilir Hediye Seti',
-        variantTitle: '210g Kehribar Cam Kavanoz',
-        quantity: 1,
-        price: 349.0,
-        image:
-          'https://images.unsplash.com/photo-1603006905003-be475563bc59?auto=format&fit=crop&w=300&q=80',
-        scentNote: 'Vanilya & Karamel',
-        customText: 'Selin & Emre 24.10.2026',
-        colorPalette: 'Gold & Krem',
-        bulkTierLabel: 'Tekli Alım',
-      },
-      {
-        name: 'Kişiye Özel İsimli Söz/Nişan Soya Mumu',
-        variantTitle: 'Kraft Kutu & Keten İp Kurdele',
-        quantity: 1,
-        price: 271.0,
-        image:
-          'https://images.unsplash.com/photo-1608571423902-eed4a5ad8108?auto=format&fit=crop&w=300&q=80',
-        scentNote: 'Lavanta & Sandal Ağacı',
-        customText: 'Merve & Kaan Sonsuzluğa...',
-        colorPalette: 'Zümrüt Yeşili',
-        bulkTierLabel: '10+ Adet Baremi (%15 İndirim)',
-      },
-    ],
-  },
-  'SFR-2026-1043': {
-    orderNumber: 'SFR-2026-1043',
-    customerName: 'Caner Demir',
-    email: 'caner.demir@example.com',
-    phone: '+90 532 987 6543',
-    orderDate: '13 Ekim 2026 • 15:20',
-    currentStageIndex: 2,
-    totalAmount: 1450.0,
-    paymentMethod: 'Kredi Kartı',
-    shippingAddress: 'Bağdat Cad. No:240 D:8 Çiftehavuzlar Kadıköy / İstanbul',
-    cargoCompany: 'Yurtiçi Kargo (Barkod Basıldı)',
-    isGiftWrapped: true,
-    giftNote: 'Tüm sevdiklerimize söz günümüzden tatlı bir hatıra...',
-    atelierNote:
-      '25 adet nişan hediyeliğinin koku ve fitil testleri tamamlandı. Kraft etiketlere "Selin & Emre" baskısı uygulandı ve mühürlü kutulara yerleştirildi.',
-    photos: [
-      {
-        stageKey: 'ATOLYEDE_URETIMDE',
-        stageName: '2. Aşama: Toplu Döküm',
-        title: '25 Adet Nişan Hediyeliği Dökümü',
-        photoUrl:
-          'https://images.unsplash.com/photo-1608571423902-eed4a5ad8108?auto=format&fit=crop&w=800&q=80',
-        caption: 'Toplu barem siparişi için 25 adet kalıp hazırlandı.',
-        timestamp: '13 Ekim 17:00',
-      },
-      {
-        stageKey: 'KALITE_KONTROL_PAKETLEME',
-        stageName: '3. Aşama: Etiketleme & Kurdele',
-        title: 'Mühürlü Hediye Paketleri',
-        photoUrl:
-          'https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&w=800&q=80',
-        caption: 'Özel hediye paketleri mühürlenip kurdeleleri bağlandı.',
-        timestamp: '14 Ekim 09:30',
-      },
-    ],
-    items: [
-      {
-        name: 'Kişiye Özel İsimli Söz/Nişan Soya Mumu',
-        variantTitle: '25 Adet Nişan Baremi',
-        quantity: 25,
-        price: 58.0,
-        image:
-          'https://images.unsplash.com/photo-1608571423902-eed4a5ad8108?auto=format&fit=crop&w=300&q=80',
-        scentNote: 'Lavanta & Amber',
-        customText: 'Selin & Emre 2026',
-        colorPalette: 'Terracotta',
-        bulkTierLabel: '25+ Adet Baremi (%15 İndirim)',
-      },
-    ],
-  },
-  'SFR-2026-8921': {
-    orderNumber: 'SFR-2026-8921',
-    customerName: 'Zeynep Arslan',
-    email: 'zeynep.arslan@example.com',
-    phone: '+90 533 111 2233',
-    orderDate: '12 Ekim 2026 • 09:15',
-    currentStageIndex: 3,
-    totalAmount: 499.0,
-    paymentMethod: 'Havale / EFT',
-    shippingAddress: 'Alsancak Mah. Atatürk Cad. No:52 D:3 Konak / İzmir',
-    cargoCompany: 'Yurtiçi Kargo',
-    trackingCode: 'YK-84920193',
-    trackingUrl: 'https://www.yurticikargo.com',
-    isGiftWrapped: false,
-    atelierNote:
-      'Okyanus epoksi sunumluk ahşap zımparası ve doğal yağ bakımı tamamlanıp darbe emici ambalajla paketlendi.',
-    photos: [
-      {
-        stageKey: 'KALITE_KONTROL_PAKETLEME',
-        stageName: '3. Aşama: Epoksi Zımpara & Cila',
-        title: 'Doğal Yağ Bakımı',
-        photoUrl:
-          'https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?auto=format&fit=crop&w=800&q=80',
-        caption: 'Epoksi sunumluk yüzeyi parlatıldı ve koruyucu balmumu sürüldü.',
-        timestamp: '12 Ekim 16:00',
-      },
-    ],
-    items: [
-      {
-        name: 'Okyanus Esintisi Epoksi Tepsi & Sunumluk',
-        variantTitle: 'Doğal Ceviz Ağacı & Mavi Reçine',
-        quantity: 1,
-        price: 499.0,
-        image:
-          'https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?auto=format&fit=crop&w=300&q=80',
-        colorPalette: 'Safir Mavi',
-      },
-    ],
-  },
-};
+// Canlı siparişler API ve doğrulanmış atölye kayıtları üzerinden sorgulanır
+
+
+function maskPhone(phone?: string): string {
+  if (!phone) return '';
+  const clean = phone.trim();
+  if (clean.length < 7) return clean;
+  const start = clean.slice(0, Math.min(8, clean.length - 4));
+  const end = clean.slice(-2);
+  return `${start} *** **${end}`;
+}
+
+function maskEmail(email?: string): string {
+  if (!email || !email.includes('@')) return email || '';
+  const [local, domain] = email.split('@');
+  if (local.length <= 2) return `${local[0]}***@${domain}`;
+  return `${local[0]}***${local[local.length - 1]}@${domain}`;
+}
 
 function OrderTrackingContent() {
   const searchParams = useSearchParams();
   const paramOrderNumber = searchParams.get('orderNumber') || '';
   const paramEmail = searchParams.get('email') || '';
 
-  const [orderQuery, setOrderQuery] = useState(paramOrderNumber || 'SFR-2026-1042');
-  const [emailOrPhone, setEmailOrPhone] = useState(paramEmail || 'elif.kaya@example.com');
+  const [orderQuery, setOrderQuery] = useState(paramOrderNumber || '');
+  const [emailInput, setEmailInput] = useState(paramEmail || '');
   const [activeOrder, setActiveOrder] = useState<OrderTrackingData | null>(null);
   const [searchError, setSearchError] = useState<string | null>(null);
   const [selectedPhoto, setSelectedPhoto] = useState<StagePhoto | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const performLookup = (queryNo: string, contact: string) => {
+  const performLookup = async (queryNo: string, contactEmail: string) => {
     setSearchError(null);
-    const cleanNo = queryNo.trim().toUpperCase();
+    const cleanNo = (queryNo || '').trim().toUpperCase();
+    const cleanEmail = (contactEmail || '').trim().toLowerCase();
 
-    // 1. Önce Admin Atölye Üretim Bandı ve Canlı Siparişlere bak (safirya_admin_orders)
-    try {
-      const adminRaw = typeof window !== 'undefined' ? localStorage.getItem('safirya_admin_orders') : null;
-      if (adminRaw) {
-        const adminOrders = JSON.parse(adminRaw);
-        const match = adminOrders.find(
-          (o: any) => o.orderNumber && o.orderNumber.toUpperCase() === cleanNo
+    // 1. ZORUNLU GÜVENLİK ALANLARI KONTROLÜ
+    // Takip numarası ve e-posta adresi BİRLİKTE girilmek zorundadır.
+    if (!cleanNo || !cleanEmail) {
+      setActiveOrder(null);
+      if (!cleanNo && !cleanEmail) {
+        setSearchError('Lütfen sipariş numaranızı ve siparişte kullandığınız e-posta adresini giriniz.');
+      } else if (!cleanNo) {
+        setSearchError('Lütfen sipariş numaranızı giriniz.');
+      } else {
+        setSearchError(
+          'Sipariş gizliliği ve güvenliği gereğince, sipariş detaylarını görüntülemek için siparişinize ait e-posta adresinizi girmeniz zorunludur.'
         );
-        if (match) {
-          let stageIdx = 0;
-          if (match.stage === 'SIPARIS_ALINDI') stageIdx = 0;
-          else if (match.stage === 'ATOLYEDE_URETIMDE') stageIdx = 1;
-          else if (match.stage === 'KALITE_KONTROL_PAKETLEME') stageIdx = 2;
-          else if (match.stage === 'KARGOYA_VERILDI') stageIdx = 3;
-          else if (match.stage === 'TESLIM_EDILDI') stageIdx = 4;
-
-          const photos = (match.stagePhotos && match.stagePhotos.length > 0)
-            ? match.stagePhotos.map((p: any) => ({
-                stageKey: p.stageKey || match.stage,
-                stageName: p.stageName || 'Atölye Aşaması',
-                title: p.stageName || 'Üretim Güncellemesi',
-                photoUrl: p.photoUrl,
-                caption: p.caption,
-                timestamp: p.takenAt || 'Bugün',
-              }))
-            : [
-                {
-                  stageKey: 'SIPARIS_ALINDI',
-                  stageName: '1. Aşama: Sipariş Onayı',
-                  title: 'Atölye Üretim Fişi Hazırlandı',
-                  photoUrl: 'https://images.unsplash.com/photo-1513519245088-0e12902e5a38?auto=format&fit=crop&w=800&q=80',
-                  caption: 'Özel kişiselleştirme talebiniz atölye üretim panosuna iletildi.',
-                  timestamp: match.createdAt || 'Bugün',
-                },
-              ];
-
-          const items = (match.items || []).map((it: any) => ({
-            name: it.productName,
-            variantTitle: it.variantTitle,
-            quantity: it.quantity,
-            price: it.unitPrice,
-            scentNote: it.customization?.selectedScent,
-            customText: it.customization?.customText,
-            colorPalette: it.customization?.selectedColor,
-          }));
-
-          setActiveOrder({
-            orderNumber: match.orderNumber,
-            customerName: match.customerName,
-            email: match.customerEmail || contact,
-            phone: match.customerPhone || '',
-            orderDate: match.createdAt || 'Bugün',
-            currentStageIndex: stageIdx,
-            totalAmount: match.totalAmount,
-            paymentMethod: match.paymentMethod === 'HAVALE_EFT' ? 'Havale / EFT' : 'Kredi Kartı',
-            shippingAddress: typeof match.shippingAddress === 'string'
-              ? match.shippingAddress
-              : `${match.shippingAddress?.address || ''} ${match.shippingAddress?.district || ''} / ${match.shippingAddress?.city || ''}`,
-            cargoCompany: match.cargoCompany || 'Yurtiçi Kargo',
-            trackingCode: match.cargoTrackingNo,
-            trackingUrl: match.cargoTrackingNo ? `https://www.yurticikargo.com/tr/online-servisler/gonderi-sorgula?code=${match.cargoTrackingNo}` : undefined,
-            isGiftWrapped: match.isGiftWrapped,
-            giftNote: match.giftNote,
-            atelierNote:
-              photos.length > 0
-                ? `${photos[photos.length - 1].caption} (Son aşama: ${photos[photos.length - 1].stageName})`
-                : 'Siparişiniz atölye üretim bandında ilerlemektedir.',
-            photos,
-            items,
-          });
-          return;
-        }
       }
-    } catch {}
-
-    // 2. Vitrin localStorage siparişlerine bak
-    try {
-      const storedRaw = typeof window !== 'undefined' ? localStorage.getItem('safirya_orders') : null;
-      if (storedRaw) {
-        const storedOrders = JSON.parse(storedRaw);
-        const match = storedOrders.find(
-          (o: { orderNumber: string }) => o.orderNumber.toUpperCase() === cleanNo
-        );
-        if (match) {
-          setActiveOrder({
-            orderNumber: match.orderNumber,
-            customerName: match.customerName || 'Değerli Müşterimiz',
-            email: match.email || contact,
-            phone: match.phone || '',
-            orderDate: match.date || 'Bugün',
-            currentStageIndex: 0,
-            totalAmount: match.totalAmount,
-            paymentMethod: match.paymentMethod === 'HAVALE_EFT' ? 'Havale / EFT' : 'Kredi Kartı',
-            shippingAddress: match.shippingAddress,
-            cargoCompany: 'Yurtiçi Kargo (Sıraya Alındı)',
-            isGiftWrapped: match.isGiftWrapped,
-            giftNote: match.giftNote,
-            atelierNote:
-              'Siparişiniz sistemimize kaydedildi. Hammadde reçeteniz oluşturuldu ve Kadıköy atölyemizde üretim sırasına alındı. Ustalarımız en kısa sürede üretime başlayacaktır.',
-            photos: [
-              {
-                stageKey: 'SIPARIS_ALINDI',
-                stageName: '1. Aşama: Sipariş Onayı',
-                title: 'Atölye Üretim Fişi Hazırlandı',
-                photoUrl:
-                  'https://images.unsplash.com/photo-1513519245088-0e12902e5a38?auto=format&fit=crop&w=800&q=80',
-                caption: 'Özel kişiselleştirme talebiniz atölye üretim panosuna iletildi.',
-                timestamp: 'Bugün',
-              },
-            ],
-            items: match.items || [],
-          });
-          return;
-        }
-      }
-    } catch {}
-
-    // 3. Demo veritabanında ara
-    if (DEMO_ORDERS[cleanNo]) {
-      setActiveOrder(DEMO_ORDERS[cleanNo]);
       return;
     }
 
-    setSearchError(
-      `"${cleanNo}" numaralı sipariş bulunamadı. Lütfen sipariş numaranızı kontrol ediniz. (Örn: SFR-2026-1042, SFR-2026-1043, SFR-2026-8921)`
-    );
-    setActiveOrder(null);
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(cleanEmail)) {
+      setActiveOrder(null);
+      setSearchError('Lütfen geçerli bir e-posta adresi giriniz.');
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      // 2. SUNUCU TARAFI API KONTROLÜ (/api/orders/track)
+      try {
+        const apiRes = await fetch('/api/orders/track', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ orderNumber: cleanNo, email: cleanEmail }),
+        });
+
+        if (apiRes.ok) {
+          const apiData = await apiRes.json();
+          if (apiData.success && apiData.order) {
+            setActiveOrder(apiData.order);
+            setIsLoading(false);
+            return;
+          }
+        }
+      } catch {
+        // Ağ / API hatasında yerel depolama kontrollerine devam et
+      }
+
+      // 3. Admin Atölye Üretim Bandı ve Canlı Siparişlere bak (safirya_admin_orders)
+      try {
+        const adminRaw =
+          typeof window !== 'undefined'
+            ? localStorage.getItem('safirya_admin_orders')
+            : null;
+        if (adminRaw) {
+          const adminOrders = JSON.parse(adminRaw);
+          const match = adminOrders.find(
+            (o: any) => o.orderNumber && o.orderNumber.toUpperCase() === cleanNo
+          );
+          if (match) {
+            const orderEmail = (
+              match.customerEmail ||
+              match.email ||
+              ''
+            )
+              .trim()
+              .toLowerCase();
+
+            // GÜVENLİK KONTROLÜ: E-posta birebir uyuşmak zorunda!
+            if (orderEmail && orderEmail === cleanEmail) {
+              let stageIdx = 0;
+              if (match.stage === 'SIPARIS_ALINDI') stageIdx = 0;
+              else if (match.stage === 'ATOLYEDE_URETIMDE') stageIdx = 1;
+              else if (match.stage === 'KALITE_KONTROL_PAKETLEME') stageIdx = 2;
+              else if (match.stage === 'KARGOYA_VERILDI') stageIdx = 3;
+              else if (match.stage === 'TESLIM_EDILDI') stageIdx = 4;
+
+              const photos =
+                match.stagePhotos && match.stagePhotos.length > 0
+                  ? match.stagePhotos.map((p: any) => ({
+                      stageKey: p.stageKey || match.stage,
+                      stageName: p.stageName || 'Atölye Aşaması',
+                      title: p.stageName || 'Üretim Güncellemesi',
+                      photoUrl: p.photoUrl,
+                      caption: p.caption,
+                      timestamp: p.takenAt || 'Bugün',
+                    }))
+                  : [
+                      {
+                        stageKey: 'SIPARIS_ALINDI',
+                        stageName: '1. Aşama: Sipariş Onayı',
+                        title: 'Atölye Üretim Fişi Hazırlandı',
+                        photoUrl:
+                          'https://images.unsplash.com/photo-1513519245088-0e12902e5a38?auto=format&fit=crop&w=800&q=80',
+                        caption:
+                          'Özel kişiselleştirme talebiniz atölye üretim panosuna iletildi.',
+                        timestamp: match.createdAt || 'Bugün',
+                      },
+                    ];
+
+              const items = (match.items || []).map((it: any) => ({
+                name: it.productName,
+                variantTitle: it.variantTitle,
+                quantity: it.quantity,
+                price: it.unitPrice,
+                scentNote: it.customization?.selectedScent,
+                customText: it.customization?.customText,
+                colorPalette: it.customization?.selectedColor,
+              }));
+
+              setActiveOrder({
+                orderNumber: match.orderNumber,
+                customerName: match.customerName,
+                email: orderEmail,
+                phone: match.customerPhone || '',
+                orderDate: match.createdAt || 'Bugün',
+                currentStageIndex: stageIdx,
+                totalAmount: match.totalAmount,
+                paymentMethod:
+                  match.paymentMethod === 'HAVALE_EFT' ? 'Havale / EFT' : 'Kredi Kartı',
+                shippingAddress:
+                  typeof match.shippingAddress === 'string'
+                    ? match.shippingAddress
+                    : `${match.shippingAddress?.address || ''} ${match.shippingAddress?.district || ''} / ${match.shippingAddress?.city || ''}`,
+                cargoCompany: match.cargoCompany || 'Yurtiçi Kargo',
+                trackingCode: match.cargoTrackingNo,
+                trackingUrl: match.cargoTrackingNo
+                  ? `https://www.yurticikargo.com/tr/online-servisler/gonderi-sorgula?code=${match.cargoTrackingNo}`
+                  : undefined,
+                isGiftWrapped: match.isGiftWrapped,
+                giftNote: match.giftNote,
+                atelierNote:
+                  photos.length > 0
+                    ? `${photos[photos.length - 1].caption} (Son aşama: ${photos[photos.length - 1].stageName})`
+                    : 'Siparişiniz atölye üretim bandında ilerlemektedir.',
+                photos,
+                items,
+              });
+              setIsLoading(false);
+              return;
+            } else {
+              // GÜVENLİK ZAİFİYETİ ÖNLEME: Sipariş numarası var ama e-posta uyuşmuyor!
+              // Kullanıcı ve sipariş numarası tarama saldırılarını engellemek için standart bulunamadı hatası döndürülür.
+              setActiveOrder(null);
+              setIsLoading(false);
+              setSearchError(
+                'Girdiğiniz sipariş numarası ve e-posta adresiyle eşleşen bir sipariş bulunamadı. Lütfen bilgilerinizi kontrol ediniz.'
+              );
+              return;
+            }
+          }
+        }
+      } catch {}
+
+      // 4. Vitrin localStorage siparişlerine bak (safirya_orders)
+      try {
+        const storedRaw =
+          typeof window !== 'undefined'
+            ? localStorage.getItem('safirya_orders')
+            : null;
+        if (storedRaw) {
+          const storedOrders = JSON.parse(storedRaw);
+          const match = storedOrders.find(
+            (o: { orderNumber: string }) =>
+              o.orderNumber && o.orderNumber.toUpperCase() === cleanNo
+          );
+          if (match) {
+            const orderEmail = (
+              match.email ||
+              match.guestEmail ||
+              match.customerEmail ||
+              ''
+            )
+              .trim()
+              .toLowerCase();
+
+            // GÜVENLİK KONTROLÜ: E-posta doğrulaması
+            if (orderEmail && orderEmail === cleanEmail) {
+              setActiveOrder({
+                orderNumber: match.orderNumber,
+                customerName: match.customerName || 'Değerli Müşterimiz',
+                email: orderEmail,
+                phone: match.phone || '',
+                orderDate: match.date || 'Bugün',
+                currentStageIndex: 0,
+                totalAmount: match.totalAmount,
+                paymentMethod:
+                  match.paymentMethod === 'HAVALE_EFT' ? 'Havale / EFT' : 'Kredi Kartı',
+                shippingAddress: match.shippingAddress,
+                cargoCompany: 'Yurtiçi Kargo (Sıraya Alındı)',
+                isGiftWrapped: match.isGiftWrapped,
+                giftNote: match.giftNote,
+                atelierNote:
+                  'Siparişiniz sistemimize kaydedildi. Hammadde reçeteniz oluşturuldu ve Kadıköy atölyemizde üretim sırasına alındı. Ustalarımız en kısa sürede üretime başlayacaktır.',
+                photos: [
+                  {
+                    stageKey: 'SIPARIS_ALINDI',
+                    stageName: '1. Aşama: Sipariş Onayı',
+                    title: 'Atölye Üretim Fişi Hazırlandı',
+                    photoUrl:
+                      'https://images.unsplash.com/photo-1513519245088-0e12902e5a38?auto=format&fit=crop&w=800&q=80',
+                    caption:
+                      'Özel kişiselleştirme talebiniz atölye üretim panosuna iletildi.',
+                    timestamp: 'Bugün',
+                  },
+                ],
+                items: match.items || [],
+              });
+              setIsLoading(false);
+              return;
+            } else {
+              // GÜVENLİK ZAİFİYETİ ÖNLEME
+              setActiveOrder(null);
+              setIsLoading(false);
+              setSearchError(
+                'Girdiğiniz sipariş numarası ve e-posta adresiyle eşleşen bir sipariş bulunamadı. Lütfen bilgilerinizi kontrol ediniz.'
+              );
+              return;
+            }
+          }
+        }
+      } catch {}
+
+      // Hiçbir kaynakta eşleşme bulunamadı
+      setActiveOrder(null);
+      setIsLoading(false);
+      setSearchError(
+        'Girdiğiniz sipariş numarası ve e-posta adresiyle eşleşen bir sipariş bulunamadı. Lütfen bilgilerinizi kontrol ediniz.'
+      );
+    } catch {
+      setActiveOrder(null);
+      setIsLoading(false);
+      setSearchError('Sorgulama sırasında bir hata oluştu. Lütfen tekrar deneyiniz.');
+    }
   };
 
   useEffect(() => {
-    if (paramOrderNumber) {
+    if (paramOrderNumber && paramEmail) {
       setOrderQuery(paramOrderNumber);
-      if (paramEmail) setEmailOrPhone(paramEmail);
+      setEmailInput(paramEmail);
       performLookup(paramOrderNumber, paramEmail);
+    } else if (paramOrderNumber) {
+      setOrderQuery(paramOrderNumber);
+      setEmailInput('');
+      setActiveOrder(null);
+      setSearchError(
+        'Sipariş detaylarını görüntülemek için lütfen siparişinizde kullandığınız e-posta adresinizi giriniz.'
+      );
     } else {
-      performLookup('SFR-2026-1042', 'elif.kaya@example.com');
+      setOrderQuery('');
+      setEmailInput('');
+      setActiveOrder(null);
+      setSearchError(null);
     }
   }, [paramOrderNumber, paramEmail]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    performLookup(orderQuery, emailOrPhone);
-  };
-
-  const handleQuickDemoClick = (demoNo: string, email: string) => {
-    setOrderQuery(demoNo);
-    setEmailOrPhone(email);
-    performLookup(demoNo, email);
+    performLookup(orderQuery, emailInput);
   };
 
   return (
@@ -431,8 +408,8 @@ function OrderTrackingContent() {
           </p>
         </div>
 
-        {/* 1. SORGULAMA KUTUSU & HIZLI DEMO SEÇENEKLERİ */}
-        <div className="bg-white p-6 sm:p-8 rounded-xs border border-stone-200 mb-8">
+        {/* 1. SORGULAMA KUTUSU */}
+        <div className="bg-white p-6 sm:p-8 rounded-xs border border-stone-200 mb-8 shadow-xs">
           <form onSubmit={handleSearchSubmit} className="grid grid-cols-1 sm:grid-cols-12 gap-4">
             <div className="sm:col-span-6">
               <label className="block text-[11px] uppercase tracking-wider font-medium text-[#231B18] mb-1.5">
@@ -441,7 +418,7 @@ function OrderTrackingContent() {
               <input
                 type="text"
                 required
-                placeholder="Örn: SFR-2026-1042"
+                placeholder="Örn: SFR-2026-1001"
                 value={orderQuery}
                 onChange={(e) => setOrderQuery(e.target.value)}
                 className="w-full px-3.5 py-2.5 rounded-xs border border-stone-300 bg-white text-sm font-medium text-[#231B18] focus:outline-none focus:border-[#231B18]"
@@ -455,9 +432,9 @@ function OrderTrackingContent() {
               <input
                 type="email"
                 required
-                placeholder="elif.kaya@example.com"
-                value={emailOrPhone}
-                onChange={(e) => setEmailOrPhone(e.target.value)}
+                placeholder="ornek@alanadi.com"
+                value={emailInput}
+                onChange={(e) => setEmailInput(e.target.value)}
                 className="w-full px-3.5 py-2.5 rounded-xs border border-stone-300 bg-white text-sm text-[#231B18] focus:outline-none focus:border-[#231B18]"
               />
             </div>
@@ -465,46 +442,49 @@ function OrderTrackingContent() {
             <div className="sm:col-span-2 flex items-end">
               <button
                 type="submit"
-                className="w-full py-3 px-4 rounded-xs bg-[#231B18] hover:bg-[#3A2E29] text-white flex items-center justify-center gap-2 text-xs uppercase tracking-widest font-medium transition cursor-pointer"
+                disabled={isLoading}
+                className="w-full py-3 px-4 rounded-xs bg-[#231B18] hover:bg-[#3A2E29] disabled:opacity-50 text-white flex items-center justify-center gap-2 text-xs uppercase tracking-widest font-medium transition cursor-pointer"
               >
-                <Search className="w-3.5 h-3.5" />
-                <span>Sorgula</span>
+                {isLoading ? (
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <>
+                    <Search className="w-3.5 h-3.5" />
+                    <span>Sorgula</span>
+                  </>
+                )}
               </button>
             </div>
           </form>
 
-          {/* Hızlı Demo Siparişleri */}
-          <div className="mt-4 pt-4 border-t border-stone-200 flex flex-wrap items-center gap-2 text-xs">
-            <span className="text-[#7A7067] text-[11px] uppercase tracking-wider">Hızlı Aşama Örnekleri:</span>
-            <button
-              type="button"
-              onClick={() => handleQuickDemoClick('SFR-2026-1042', 'elif.kaya@example.com')}
-              className="px-2.5 py-1 rounded-xs bg-[#FAF8F5] border border-stone-200 hover:border-[#231B18] text-[#231B18] text-xs transition"
-            >
-              SFR-2026-1042 (2. Aşama: Atölyede Üretimde)
-            </button>
-            <button
-              type="button"
-              onClick={() => handleQuickDemoClick('SFR-2026-1043', 'caner.demir@example.com')}
-              className="px-2.5 py-1 rounded-xs bg-[#FAF8F5] border border-stone-200 hover:border-[#231B18] text-[#231B18] text-xs transition"
-            >
-              SFR-2026-1043 (3. Aşama: Paketleme)
-            </button>
-            <button
-              type="button"
-              onClick={() => handleQuickDemoClick('SFR-2026-8921', 'zeynep.arslan@example.com')}
-              className="px-2.5 py-1 rounded-xs bg-[#FAF8F5] border border-stone-200 hover:border-[#231B18] text-[#231B18] text-xs transition"
-            >
-              SFR-2026-8921 (4. Aşama: Kargoda)
-            </button>
+          {/* Güvenlik Bilgilendirme Notu */}
+          <div className="mt-4 pt-3 border-t border-stone-100 flex items-center gap-2 text-[11px] text-[#7A7067]">
+            <ShieldCheck className="w-3.5 h-3.5 text-[#5F6F52] shrink-0" />
+            <span>Kişisel verilerinizin ve sipariş gizliliğinizin korunması amacıyla yalnızca eşleşen e-posta adresiyle sorgulama yapılabilir.</span>
           </div>
 
           {searchError && (
-            <div className="mt-4 p-3 bg-red-50 text-red-700 rounded-xs text-xs font-medium border border-red-200">
-              {searchError}
+            <div className="mt-4 p-3 bg-red-50 text-red-700 rounded-xs text-xs font-medium border border-red-200 flex items-start gap-2">
+              <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
+              <span>{searchError}</span>
             </div>
           )}
         </div>
+
+        {/* Sipariş Henüz Sorgulanmadığında Bilgilendirme Kartı */}
+        {!activeOrder && !searchError && (
+          <div className="bg-[#FAF8F5] border border-stone-200 rounded-xs p-8 text-center max-w-xl mx-auto space-y-3 mb-12">
+            <div className="w-12 h-12 rounded-full bg-white border border-stone-200 flex items-center justify-center mx-auto text-[#231B18]">
+              <PackageCheck className="w-6 h-6 text-[#C85A32]" />
+            </div>
+            <h3 className="font-serif text-lg font-normal text-[#231B18]">
+              Siparişinizi Canlı Takip Edin
+            </h3>
+            <p className="text-xs text-[#7A7067] leading-relaxed">
+              Sipariş numaranızı ve sipariş verirken kullandığınız e-posta adresinizi yukarıdaki alana girerek atölye üretim sürecini ve kargo aşamalarını canlı olarak izleyebilirsiniz.
+            </p>
+          </div>
+        )}
 
         {/* 2. DETAYLI SİPARİŞ TAKİP EKRANI */}
         {activeOrder && (
@@ -771,7 +751,12 @@ function OrderTrackingContent() {
                   <p className="text-xs text-[#7A7067] leading-relaxed">
                     {activeOrder.shippingAddress}
                   </p>
-                  <p className="text-xs text-[#7A7067]">Tel: {activeOrder.phone}</p>
+                  {activeOrder.phone && (
+                    <p className="text-xs text-[#7A7067]">Tel: {maskPhone(activeOrder.phone)}</p>
+                  )}
+                  {activeOrder.email && (
+                    <p className="text-xs text-[#7A7067]">E-posta: {maskEmail(activeOrder.email)}</p>
+                  )}
 
                   {/* Kargo Takip Linki */}
                   <div className="pt-3 border-t border-stone-200 flex items-center justify-between text-xs">

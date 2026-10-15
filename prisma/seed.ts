@@ -19,7 +19,7 @@ async function main() {
       contactEmail: 'destek@safirya.tr',
       contactPhone: '+90 (212) 555 7234',
       whatsappNumber: '+90 532 555 7234',
-      instagramHandle: '@safirya.craft',
+      instagramHandle: '@safirya35353535',
       atelierAddress: 'Caferağa Mah. Şair Nefi Sk. No:18 Kadıköy / İstanbul',
       exitIntentEnabled: true,
       exitIntentTitle: 'Atölyemizden Ayrılmadan Önce %10 Tanışma İndirimi!',

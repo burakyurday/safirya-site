@@ -420,7 +420,7 @@ export function AuthModal() {
                   <input
                     type="text"
                     required
-                    placeholder="Örn: Elif Kaya"
+                    placeholder="Adınız Soyadınız"
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
                     className="w-full pl-9 pr-3.5 py-2 rounded-xs border border-stone-300 text-sm text-[#231B18] bg-white focus:outline-none focus:border-[#231B18] transition"

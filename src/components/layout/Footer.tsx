@@ -245,13 +245,19 @@ export function Footer({ settings }: FooterProps) {
             © 2026 {settings.storeName}. Tüm hakları saklıdır. Butik Zanaatkar Üretimi.
           </p>
 
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-1.5 text-[#B8AEA5]">
-              <ShieldCheck className="w-4 h-4 text-[#5F6F52]" />
-              <span>256-Bit SSL Güvenli Alışveriş</span>
+          <div className="flex flex-wrap items-center justify-center sm:justify-end gap-3 sm:gap-4 text-[#B8AEA5]">
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xs bg-[#2C221E] border border-[#3A2E29]">
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
+              <span className="text-[11px] font-medium text-[#F6F3EC]">256-Bit SSL Sertifikalı</span>
             </div>
-            <span className="text-[#3A2E29]">|</span>
-            <span className="font-medium text-[#B8AEA5] tracking-wider text-[11px]">İYZİCO / KREDİ KARTI / HAVALE</span>
+            <span className="text-[#3A2E29] hidden sm:inline">|</span>
+            <div className="flex items-center gap-2 text-[11px] tracking-wider uppercase font-medium">
+              <span className="text-emerald-400 font-bold">PayTR</span>
+              <span>•</span>
+              <span>3D Secure</span>
+              <span>•</span>
+              <span>Havale / EFT</span>
+            </div>
           </div>
         </div>
       </div>

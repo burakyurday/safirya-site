@@ -167,7 +167,7 @@ export default function EpostaPazarlamaPage() {
     brandTagline: settings?.brandTagline || 'El Yapımı Tasarım Atölyesi',
     storeName: settings?.storeName || 'Safirya Atölyesi',
     contactEmail: settings?.contactEmail || 'destek@safirya.tr',
-    instagramHandle: settings?.instagramHandle || '@safirya.craft',
+    instagramHandle: settings?.instagramHandle || '@safirya35353535',
     address: settings?.atelierAddress || 'Caferağa Mah. Şair Nefi Sk. No:18 Kadıköy / İstanbul',
   };
 

@@ -20,25 +20,42 @@ export async function POST(req: NextRequest) {
     let mimeType = 'image/jpeg';
     let folder = 'safirya_products';
 
+    const ALLOWED_MIME_TYPES = new Set([
+      'image/jpeg',
+      'image/jpg',
+      'image/png',
+      'image/webp',
+      'image/avif',
+      'image/gif',
+    ]);
+    const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+
     if (contentType.includes('multipart/form-data')) {
       const formData = await req.formData();
       const file = formData.get('file') as File | null;
       const folderParam = formData.get('folder') as string | null;
-      if (folderParam) folder = folderParam;
+      if (folderParam) folder = folderParam.replace(/[^a-zA-Z0-9_-]/g, '');
 
       if (!file) {
         return NextResponse.json({ error: 'Yüklenecek dosya bulunamadı.' }, { status: 400 });
       }
 
+      if (file.size > MAX_FILE_SIZE) {
+        return NextResponse.json(
+          { error: 'Dosya boyutu çok büyük. Maksimum 10MB boyutunda görsel yükleyebilirsiniz.' },
+          { status: 400 }
+        );
+      }
+
       const arrayBuffer = await file.arrayBuffer();
       fileBuffer = Buffer.from(arrayBuffer);
-      fileName = file.name || fileName;
-      mimeType = file.type || mimeType;
+      fileName = (file.name || fileName).replace(/[^a-zA-Z0-9._-]/g, '_');
+      mimeType = (file.type || mimeType).toLowerCase();
     } else {
       // JSON Base64 payload
       const body = await req.json();
       const { file, folder: folderParam } = body;
-      if (folderParam) folder = folderParam;
+      if (folderParam) folder = folderParam.replace(/[^a-zA-Z0-9_-]/g, '');
 
       if (!file) {
         return NextResponse.json({ error: 'Görsel verisi (base64) bulunamadı.' }, { status: 400 });
@@ -47,11 +64,25 @@ export async function POST(req: NextRequest) {
       // Base64 Data URL kontrolü
       const matches = file.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
       if (matches && matches.length === 3) {
-        mimeType = matches[1];
+        mimeType = matches[1].toLowerCase();
         fileBuffer = Buffer.from(matches[2], 'base64');
       } else {
         fileBuffer = Buffer.from(file, 'base64');
       }
+
+      if (fileBuffer.length > MAX_FILE_SIZE) {
+        return NextResponse.json(
+          { error: 'Dosya boyutu çok büyük. Maksimum 10MB boyutunda görsel yükleyebilirsiniz.' },
+          { status: 400 }
+        );
+      }
+    }
+
+    if (!ALLOWED_MIME_TYPES.has(mimeType)) {
+      return NextResponse.json(
+        { error: 'Geçersiz dosya formatı. Yalnızca JPEG, PNG, WebP ve AVIF görselleri desteklenir.' },
+        { status: 400 }
+      );
     }
 
     // 2. Cloudinary Entegrasyonu (Varsayılan ve Öncelikli)

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
+import { getAdminSessionServer } from '@/lib/adminAuth';
 
 export async function GET() {
   try {
@@ -25,6 +26,13 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
+    const session = await getAdminSessionServer();
+    if (!session) {
+      return NextResponse.json(
+        { success: false, message: 'Yetkisiz erişim. Ürün eklemek için yönetici girişi gereklidir.' },
+        { status: 401 }
+      );
+    }
     const body = await request.json();
     const {
       name,

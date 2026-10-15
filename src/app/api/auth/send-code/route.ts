@@ -1,17 +1,15 @@
 import { NextResponse } from 'next/server';
 import nodemailer from 'nodemailer';
-import { createVerificationCode } from '@/lib/auth/verificationStore';
+import {
+  createVerificationCode,
+  checkCodeRequestRateLimit,
+} from '@/lib/auth/verificationStore';
 import { generateAuthVerificationEmailHtml } from '@/lib/auth/authEmailTemplate';
 
 function getResendApiKey(): string | undefined {
   if (process.env.RESEND_API_KEY) return process.env.RESEND_API_KEY;
   if (process.env.SMTP_PASS?.startsWith('re_')) return process.env.SMTP_PASS;
-  // Güvenli proje yedek anahtarı (Vercel ortam değişkeni henüz tanımlanmadıysa devreye girer)
-  try {
-    return Buffer.from('cmVfRHNiV1NER3ZfM3g4MUN1bW1uWDVjRWFIVWY4dXFYSkda', 'base64').toString('ascii');
-  } catch {
-    return undefined;
-  }
+  return undefined;
 }
 
 export async function POST(req: Request) {
@@ -31,6 +29,19 @@ export async function POST(req: Request) {
     }
 
     const cleanEmail = email.toLowerCase().trim();
+
+    // Rate limiting: 10 dakika içinde en fazla 3 kod talebi
+    const rateLimit = checkCodeRequestRateLimit(cleanEmail);
+    if (!rateLimit.allowed) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: `Güvenlik uyarısı: Çok sık doğrulama kodu talep ettiniz. Lütfen ${rateLimit.remainingMinutes} dakika sonra tekrar deneyiniz.`,
+        },
+        { status: 429 }
+      );
+    }
+
     // 6 haneli kod üret (10 dakika geçerli)
     const code = createVerificationCode(cleanEmail, type);
 

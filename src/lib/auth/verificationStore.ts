@@ -3,18 +3,55 @@ interface VerificationEntry {
   code: string;
   type: string;
   expiresAt: number;
+  attempts: number;
+}
+
+interface RequestRateLimitEntry {
+  count: number;
+  resetAt: number;
 }
 
 // In-memory verification storage across API calls in the same server instance
-// Global declaration ensures it survives hot reloads in Next.js development
 declare global {
-  // eslint-disable-next-line no-var
   var __safirya_verification_codes: Map<string, VerificationEntry> | undefined;
+  var __safirya_code_rate_limits: Map<string, RequestRateLimitEntry> | undefined;
 }
 
 const codesStore =
   global.__safirya_verification_codes ||
   (global.__safirya_verification_codes = new Map<string, VerificationEntry>());
+
+const rateLimitsStore =
+  global.__safirya_code_rate_limits ||
+  (global.__safirya_code_rate_limits = new Map<string, RequestRateLimitEntry>());
+
+const MAX_VERIFY_ATTEMPTS = 5;
+const MAX_REQUESTS_PER_WINDOW = 3;
+const REQUEST_WINDOW_MS = 10 * 60 * 1000; // 10 dakika
+
+/**
+ * Belirli bir e-posta için kod isteme sınırını kontrol eder.
+ */
+export function checkCodeRequestRateLimit(email: string): { allowed: boolean; remainingMinutes?: number } {
+  const cleanEmail = email.toLowerCase().trim();
+  const now = Date.now();
+  const record = rateLimitsStore.get(cleanEmail);
+
+  if (record && record.resetAt > now) {
+    if (record.count >= MAX_REQUESTS_PER_WINDOW) {
+      const remainingMinutes = Math.ceil((record.resetAt - now) / 60000);
+      return { allowed: false, remainingMinutes };
+    }
+    record.count += 1;
+  } else {
+    rateLimitsStore.set(cleanEmail, {
+      count: 1,
+      resetAt: now + REQUEST_WINDOW_MS,
+    });
+  }
+
+  return { allowed: true };
+}
 
 /**
  * 6 haneli rastgele sayısal doğrulama kodu üretir ve kaydeder (10 dakika geçerli)
@@ -32,6 +69,7 @@ export function createVerificationCode(
     code,
     type,
     expiresAt,
+    attempts: 0,
   });
 
   return code;
@@ -64,10 +102,23 @@ export function verifyCode(
     };
   }
 
-  if (entry.code.trim() !== code.trim()) {
+  // Brute-force koruması: Hatalı deneme sayacı
+  entry.attempts = (entry.attempts || 0) + 1;
+
+  if (entry.attempts >= MAX_VERIFY_ATTEMPTS) {
+    codesStore.delete(key);
     return {
       valid: false,
-      reason: 'Girdiğiniz doğrulama kodu hatalı. Lütfen kontrol edip tekrar deneyiniz.',
+      reason:
+        'Çok fazla hatalı deneme yapıldı. Güvenlik nedeniyle bu doğrulama kodu iptal edildi. Lütfen yeni bir kod talep ediniz.',
+    };
+  }
+
+  if (entry.code.trim() !== code.trim()) {
+    const remaining = MAX_VERIFY_ATTEMPTS - entry.attempts;
+    return {
+      valid: false,
+      reason: `Girdiğiniz doğrulama kodu hatalı. Lütfen kontrol edip tekrar deneyiniz. (Kalan deneme hakkı: ${remaining})`,
     };
   }
 

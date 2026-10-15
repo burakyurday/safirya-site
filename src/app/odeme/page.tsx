@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import {
   ShieldCheck,
@@ -45,34 +45,47 @@ export default function CheckoutPage() {
     giftNote,
     appliedCoupon,
     clearCart,
+    currentUser,
   } = useStore();
 
-  // Müşteri & Teslimat Bilgileri Form State
+  // Müşteri & Teslimat Bilgileri Form State (Temiz kullanıcı formu)
   const [formData, setFormData] = useState({
-    fullName: 'Elif Kaya',
-    email: 'elif.kaya@example.com',
-    phone: '0541 234 5678',
+    fullName: '',
+    email: '',
+    phone: '',
     city: 'İstanbul',
-    district: 'Kadıköy',
-    neighborhood: 'Moda / Caferağa Mah.',
-    address: 'Şair Nefi Sokak No:18 Daire:4',
-    postalCode: '34710',
-    orderNote: 'Zil çalışmıyor, gelince lütfen arayınız.',
+    district: '',
+    neighborhood: '',
+    address: '',
+    postalCode: '',
+    orderNote: '',
     // Fatura
     invoiceType: 'INDIVIDUAL' as 'INDIVIDUAL' | 'CORPORATE',
     sameAsShipping: true,
-    tckn: '12345678901',
+    tckn: '',
     companyName: '',
     taxOffice: '',
     vkn: '',
     corporateAddress: '',
     // Ödeme
     paymentMethod: 'CREDIT_CARD' as 'CREDIT_CARD' | 'HAVALE_EFT',
-    cardNumber: '5428 •••• •••• 9012',
-    cardHolder: 'ELİF KAYA',
-    expiry: '12/28',
-    cvv: '321',
+    cardNumber: '',
+    cardHolder: '',
+    expiry: '',
+    cvv: '',
   });
+
+  // Giriş yapmış kullanıcının profil bilgilerini forma aktar
+  useEffect(() => {
+    if (currentUser) {
+      setFormData((prev) => ({
+        ...prev,
+        fullName: prev.fullName || currentUser.name || '',
+        email: prev.email || currentUser.email || '',
+        phone: prev.phone || currentUser.phone || '',
+      }));
+    }
+  }, [currentUser]);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -158,13 +171,54 @@ export default function CheckoutPage() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const placeDirectOrder = (orderNum: string, method: string = formData.paymentMethod) => {
+  const placeDirectOrder = async (orderNum: string, method: string = formData.paymentMethod) => {
+    setIsSubmitting(true);
+    let confirmedOrderNumber = orderNum;
+    let finalTotal = grandTotal;
+
+    try {
+      const res = await fetch('/api/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fullName: formData.fullName,
+          email: formData.email,
+          phone: formData.phone,
+          city: formData.city,
+          district: formData.district,
+          neighborhood: formData.neighborhood,
+          address: formData.address,
+          postalCode: formData.postalCode,
+          orderNote: formData.orderNote,
+          invoiceType: formData.invoiceType,
+          companyName: formData.companyName,
+          taxOffice: formData.taxOffice,
+          vkn: formData.vkn,
+          paymentMethod: method,
+          cartItems,
+          couponCode: appliedCoupon?.code,
+          isGiftWrapped,
+          giftNote: isGiftWrapped ? giftNote : undefined,
+        }),
+      });
+
+      const data = await res.json();
+      if (data.success && data.orderNumber) {
+        confirmedOrderNumber = data.orderNumber;
+        if (data.order?.totalAmount) {
+          finalTotal = Number(data.order.totalAmount);
+        }
+      }
+    } catch (apiErr) {
+      console.warn('Sunucuya sipariş iletilirken uyarı (yerel yedek devrede):', apiErr);
+    }
+
     const orderPayload = {
-      orderNumber: orderNum,
+      orderNumber: confirmedOrderNumber,
       email: formData.email,
       customerName: formData.fullName,
       phone: formData.phone,
-      totalAmount: grandTotal,
+      totalAmount: finalTotal,
       items: [...cartItems],
       date: new Date().toLocaleDateString('tr-TR', {
         day: 'numeric',
@@ -191,9 +245,9 @@ export default function CheckoutPage() {
     }
 
     setPlacedOrder({
-      orderNumber: orderNum,
+      orderNumber: confirmedOrderNumber,
       email: formData.email,
-      totalAmount: grandTotal,
+      totalAmount: finalTotal,
       items: [...cartItems],
       date: orderPayload.date,
       shippingAddress: orderPayload.shippingAddress,
@@ -242,6 +296,7 @@ export default function CheckoutPage() {
             shippingFee,
             giftWrapFee,
             couponDiscount,
+            couponCode: appliedCoupon?.code,
             isGiftWrapped,
             giftNote: isGiftWrapped ? giftNote : undefined,
             invoiceType: formData.invoiceType,
@@ -296,9 +351,14 @@ export default function CheckoutPage() {
     }
 
     // 2. Havale / EFT Akışı
-    setTimeout(() => {
-      placeDirectOrder(orderNumber, 'HAVALE_EFT');
-    }, 600);
+    await placeDirectOrder(orderNumber, 'HAVALE_EFT');
+  };
+
+  const [copiedIban, setCopiedIban] = useState<string | null>(null);
+  const copyIban = (iban: string) => {
+    navigator.clipboard.writeText(iban.replace(/\s+/g, ''));
+    setCopiedIban(iban);
+    setTimeout(() => setCopiedIban(null), 2000);
   };
 
   const copyOrderNumber = (num: string) => {
@@ -504,7 +564,7 @@ export default function CheckoutPage() {
                     <input
                       type="text"
                       name="fullName"
-                      placeholder="Örn: Elif Kaya"
+                      placeholder="Adınız Soyadınız"
                       value={formData.fullName}
                       onChange={handleInputChange}
                       className={`w-full px-3.5 py-2.5 rounded-xs border text-sm text-[#231B18] bg-white focus:outline-none transition ${
@@ -527,7 +587,7 @@ export default function CheckoutPage() {
                     <input
                       type="email"
                       name="email"
-                      placeholder="elif.kaya@example.com"
+                      placeholder="ornek@alanadi.com"
                       value={formData.email}
                       onChange={handleInputChange}
                       className={`w-full px-3.5 py-2.5 rounded-xs border text-sm text-[#231B18] bg-white focus:outline-none transition ${
@@ -965,17 +1025,58 @@ export default function CheckoutPage() {
                   </div>
                 ) : (
                   <div className="p-5 rounded-xs bg-[#FAF8F5] border border-stone-200 space-y-3 text-xs text-[#231B18]">
-                    <div className="p-3 bg-white rounded-xs border border-stone-200 space-y-1">
-                      <span className="font-medium text-[#231B18] block">Garanti BBVA - Safirya Tasarım Ltd.</span>
-                      <p className="font-mono text-xs text-[#231B18]">TR42 0006 2000 1234 5678 9012 34</p>
-                      <span className="text-[11px] text-[#7A7067] block">Şube: Kadıköy Çarşı / 123</span>
+                    <div className="p-3.5 bg-white rounded-xs border border-stone-200 flex items-center justify-between gap-3">
+                      <div className="space-y-1 min-w-0">
+                        <span className="font-medium text-[#231B18] block truncate">Garanti BBVA - Safirya Tasarım Ltd.</span>
+                        <p className="font-mono text-xs text-[#231B18] tracking-wider">TR42 0006 2000 1234 5678 9012 34</p>
+                        <span className="text-[11px] text-[#7A7067] block">Şube: Kadıköy Çarşı / 123</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => copyIban('TR42 0006 2000 1234 5678 9012 34')}
+                        className="px-3 py-1.5 rounded-xs border border-stone-200 hover:border-[#231B18] bg-white text-[11px] font-medium text-[#231B18] shrink-0 flex items-center gap-1 transition"
+                      >
+                        {copiedIban === 'TR42 0006 2000 1234 5678 9012 34' ? (
+                          <>
+                            <Check className="w-3.5 h-3.5 text-emerald-600" />
+                            <span>Kopyalandı</span>
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="w-3.5 h-3.5 text-stone-500" />
+                            <span>Kopyala</span>
+                          </>
+                        )}
+                      </button>
                     </div>
-                    <div className="p-3 bg-white rounded-xs border border-stone-200 space-y-1">
-                      <span className="font-medium text-[#231B18] block">Türkiye İş Bankası - Safirya Tasarım Ltd.</span>
-                      <p className="font-mono text-xs text-[#231B18]">TR88 0006 4000 9876 5432 1098 76</p>
+
+                    <div className="p-3.5 bg-white rounded-xs border border-stone-200 flex items-center justify-between gap-3">
+                      <div className="space-y-1 min-w-0">
+                        <span className="font-medium text-[#231B18] block truncate">Türkiye İş Bankası - Safirya Tasarım Ltd.</span>
+                        <p className="font-mono text-xs text-[#231B18] tracking-wider">TR88 0006 4000 9876 5432 1098 76</p>
+                        <span className="text-[11px] text-[#7A7067] block">Şube: Kadıköy Moda / 456</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => copyIban('TR88 0006 4000 9876 5432 1098 76')}
+                        className="px-3 py-1.5 rounded-xs border border-stone-200 hover:border-[#231B18] bg-white text-[11px] font-medium text-[#231B18] shrink-0 flex items-center gap-1 transition"
+                      >
+                        {copiedIban === 'TR88 0006 4000 9876 5432 1098 76' ? (
+                          <>
+                            <Check className="w-3.5 h-3.5 text-emerald-600" />
+                            <span>Kopyalandı</span>
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="w-3.5 h-3.5 text-stone-500" />
+                            <span>Kopyala</span>
+                          </>
+                        )}
+                      </button>
                     </div>
+
                     <p className="text-[11px] text-[#554D46] bg-[#FEF5C8] p-3 rounded-xs border border-[#F5E898]">
-                      ℹ️ Siparişinizi tamamladıktan sonra banka açıklama alanına üretilecek <strong>Sipariş Numaranızı</strong> yazmanız yeterlidir.
+                      ℹ️ Siparişinizi tamamladıktan sonra banka açıklama alanına üretilecek <strong>Sipariş Numaranızı</strong> yazmanız yeterlidir. Havaleniz ulaştığında siparişiniz anında üretime alınır.
                     </p>
                   </div>
                 )}

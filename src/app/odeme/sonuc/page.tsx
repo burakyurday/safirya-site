@@ -115,7 +115,11 @@ function PaymentResultContent() {
           {/* Butonlar */}
           <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-3">
             <Link
-              href="/siparis-takip"
+              href={
+                orderNumber
+                  ? `/siparis-takip?orderNumber=${encodeURIComponent(orderNumber)}`
+                  : '/siparis-takip'
+              }
               className="w-full sm:w-auto px-6 py-3 rounded-xs bg-[#231B18] hover:bg-[#C85A32] text-white text-xs uppercase tracking-widest font-medium transition inline-flex items-center justify-center gap-2"
             >
               <span>Siparişimi Takip Et</span>

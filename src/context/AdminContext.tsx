@@ -440,7 +440,7 @@ const initialSettings: AdminSettings = {
   contactEmail: 'destek@safirya.tr',
   contactPhone: '+90 (212) 555 7234',
   whatsappNumber: '+90 532 555 7234',
-  instagramHandle: '@safirya.craft',
+  instagramHandle: '@safirya35353535',
   atelierAddress: 'Caferağa Mah. Şair Nefi Sk. No:18 Kadıköy / İstanbul',
   exitIntentEnabled: true,
   exitIntentTitle: 'Atölyemizden Ayrılmadan Önce %10 Tanışma İndirimi!',
@@ -843,7 +843,20 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
   const [orders, setOrders] = useState<AdminOrder[]>(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('safirya_orders');
-      if (saved) try { return JSON.parse(saved); } catch {}
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed)) {
+            return parsed.filter(
+              (o: any) =>
+                o &&
+                !['SFR-2026-1042', 'SFR-2026-1043', 'SFR-2026-8921'].includes(o.orderNumber) &&
+                o.customerName !== 'Elif Kaya' &&
+                !String(o.customerEmail || o.email || '').includes('elif.kaya')
+            );
+          }
+        } catch {}
+      }
     }
     return initialOrders;
   });
@@ -945,33 +958,29 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
 
-  // Eski demo verilerin tarayıcı önbelleğinden temizlenmesi (v2)
+  // Eski demo verilerin ve Elif Kaya gibi örnek siparişlerin tarayıcı önbelleğinden temizlenmesi (v3)
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const isCleaned = localStorage.getItem('safirya_demo_cleaned_v2');
+      const isCleaned = localStorage.getItem('safirya_demo_cleaned_v3');
       if (!isCleaned) {
-        localStorage.removeItem('safirya_orders');
-        localStorage.removeItem('safirya_quote_requests');
-        localStorage.removeItem('safirya_invoices');
-        localStorage.removeItem('safirya_accounts');
-        localStorage.removeItem('safirya_account_movements');
-        localStorage.removeItem('safirya_finance_txs');
-        localStorage.removeItem('safirya_stock_logs');
-        localStorage.removeItem('safirya_raw_materials');
-        localStorage.removeItem('safirya_abandoned_carts');
-        localStorage.removeItem('safirya_admin_campaigns');
-        localStorage.setItem('safirya_demo_cleaned_v2', 'true');
-
-        setOrders([]);
-        setQuoteRequests([]);
-        setInvoices([]);
-        setAccounts([]);
-        setAccountMovements([]);
-        setFinanceTransactions([]);
-        setStockLogs([]);
-        setRawMaterials([]);
-        setAbandonedCarts([]);
-        setCampaigns([]);
+        const savedOrders = localStorage.getItem('safirya_orders');
+        if (savedOrders) {
+          try {
+            const parsed = JSON.parse(savedOrders);
+            if (Array.isArray(parsed)) {
+              const cleaned = parsed.filter(
+                (o: any) =>
+                  o &&
+                  !['SFR-2026-1042', 'SFR-2026-1043', 'SFR-2026-8921'].includes(o.orderNumber) &&
+                  o.customerName !== 'Elif Kaya' &&
+                  !String(o.customerEmail || o.email || '').includes('elif.kaya')
+              );
+              localStorage.setItem('safirya_orders', JSON.stringify(cleaned));
+              setOrders(cleaned);
+            }
+          } catch {}
+        }
+        localStorage.setItem('safirya_demo_cleaned_v3', 'true');
       }
     }
   }, []);
@@ -1025,6 +1034,90 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
+  // Buluttan ve Veritabanından Canlı Siparişleri Eşitle
+  useEffect(() => {
+    let isMounted = true;
+
+    async function syncCloudOrders() {
+      try {
+        const res = await fetch('/api/orders');
+        if (!res.ok) return;
+        const data = await res.json();
+
+        if (data.success && Array.isArray(data.orders) && data.orders.length > 0) {
+          if (isMounted) {
+            setOrders((prev) => {
+              const existingIds = new Set(prev.map((o) => o.orderNumber));
+              const newOrders: AdminOrder[] = [];
+
+              data.orders.forEach((apiOrder: any) => {
+                if (!existingIds.has(apiOrder.orderNumber)) {
+                  newOrders.push({
+                    id: apiOrder.id || `ord-${apiOrder.orderNumber}`,
+                    orderNumber: apiOrder.orderNumber,
+                    customerName: apiOrder.customerName || apiOrder.guestName || 'Müşteri',
+                    customerEmail: apiOrder.customerEmail || apiOrder.guestEmail || apiOrder.email || '',
+                    customerPhone: apiOrder.customerPhone || apiOrder.guestPhone || apiOrder.phone || '',
+                    channel: 'WEB',
+                    stage: apiOrder.stage || 'SIPARIS_ALINDI',
+                    paymentStatus: apiOrder.paymentStatus || 'BEKLIYOR',
+                    paymentMethod: apiOrder.paymentMethod || 'HAVALE_EFT',
+                    subtotal: Number(apiOrder.subtotal) || Number(apiOrder.totalAmount) || 0,
+                    discountTotal: Number(apiOrder.discountTotal) || 0,
+                    shippingFee: Number(apiOrder.shippingFee) || 0,
+                    giftWrapFee: Number(apiOrder.giftWrapFee) || 0,
+                    totalAmount: Number(apiOrder.totalAmount) || 0,
+                    shippingAddress: {
+                      fullName: apiOrder.customerName || apiOrder.guestName || 'Müşteri',
+                      phone: apiOrder.customerPhone || apiOrder.guestPhone || apiOrder.phone || '',
+                      address: apiOrder.shippingAddress?.address || apiOrder.shippingAddress?.fullAddress || '',
+                      district: apiOrder.shippingAddress?.district || '',
+                      city: apiOrder.shippingAddress?.city || 'İstanbul',
+                    },
+                    items: (apiOrder.items || []).map((it: any) => ({
+                      productName: it.productName || it.name,
+                      variantTitle: it.variantName || it.variantTitle,
+                      quantity: Number(it.quantity) || 1,
+                      unitPrice: Number(it.unitPrice) || 0,
+                      totalAmount: Number(it.totalAmount) || 0,
+                    })),
+                    isGiftWrapped: Boolean(apiOrder.isGiftWrapped),
+                    giftNote: apiOrder.giftNote,
+                    createdAt: apiOrder.createdAt
+                      ? new Date(apiOrder.createdAt).toLocaleDateString('tr-TR', {
+                          day: 'numeric',
+                          month: 'short',
+                          year: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })
+                      : 'Yeni',
+                    invoiceStatus: 'BEKLIYOR',
+                  });
+                }
+              });
+
+              if (newOrders.length === 0) return prev;
+              const merged = [...newOrders, ...prev];
+              if (typeof window !== 'undefined') {
+                localStorage.setItem('safirya_orders', JSON.stringify(merged));
+              }
+              return merged;
+            });
+          }
+        }
+      } catch (err) {
+        console.warn('Canlı sipariş senkronizasyon uyarısı:', err);
+      }
+    }
+
+    syncCloudOrders();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   const purgeAllDemoData = () => {
     if (typeof window !== 'undefined') {
       localStorage.removeItem('safirya_orders');
@@ -1038,6 +1131,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
       localStorage.removeItem('safirya_abandoned_carts');
       localStorage.removeItem('safirya_admin_campaigns');
       localStorage.setItem('safirya_demo_cleaned_v2', 'true');
+      localStorage.setItem('safirya_demo_cleaned_v3', 'true');
 
       setOrders([]);
       setQuoteRequests([]);

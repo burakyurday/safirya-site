@@ -55,9 +55,10 @@ function ThankYouContent() {
     }
   }, [orderNumberParam]);
 
-  const displayOrderNumber = orderData?.orderNumber || orderNumberParam || 'SFR-2026-8921';
+  const displayOrderNumber = orderData?.orderNumber || orderNumberParam || '';
 
   const copyOrderNumber = () => {
+    if (!displayOrderNumber) return;
     navigator.clipboard.writeText(displayOrderNumber);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -91,33 +92,35 @@ function ThankYouContent() {
           </div>
 
           {/* Benzersiz Sipariş Numarası Vurgusu */}
-          <div className="p-4 rounded-xs bg-[#FAF8F5] border border-stone-200 flex items-center justify-between gap-4 max-w-md mx-auto">
-            <div className="text-left">
-              <span className="text-[10px] uppercase tracking-widest text-[#7A7067] block">
-                Sipariş Numaranız
-              </span>
-              <span className="text-lg sm:text-xl font-mono font-medium text-[#231B18] tracking-wider">
-                {displayOrderNumber}
-              </span>
+          {displayOrderNumber && (
+            <div className="p-4 rounded-xs bg-[#FAF8F5] border border-stone-200 flex items-center justify-between gap-4 max-w-md mx-auto">
+              <div className="text-left">
+                <span className="text-[10px] uppercase tracking-widest text-[#7A7067] block">
+                  Sipariş Numaranız
+                </span>
+                <span className="text-lg sm:text-xl font-mono font-medium text-[#231B18] tracking-wider">
+                  {displayOrderNumber}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={copyOrderNumber}
+                className="px-3.5 py-2 rounded-xs bg-white border border-stone-300 hover:border-[#231B18] text-xs uppercase tracking-wider text-[#231B18] flex items-center gap-1.5 transition active:scale-95"
+              >
+                {copied ? (
+                  <>
+                    <Check className="w-3.5 h-3.5 text-[#C85A32]" />
+                    <span>Kopyalandı</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-3.5 h-3.5 text-stone-500" />
+                    <span>Kopyala</span>
+                  </>
+                )}
+              </button>
             </div>
-            <button
-              type="button"
-              onClick={copyOrderNumber}
-              className="px-3.5 py-2 rounded-xs bg-white border border-stone-300 hover:border-[#231B18] text-xs uppercase tracking-wider text-[#231B18] flex items-center gap-1.5 transition active:scale-95"
-            >
-              {copied ? (
-                <>
-                  <Check className="w-3.5 h-3.5 text-[#C85A32]" />
-                  <span>Kopyalandı</span>
-                </>
-              ) : (
-                <>
-                  <Copy className="w-3.5 h-3.5 text-stone-500" />
-                  <span>Kopyala</span>
-                </>
-              )}
-            </button>
-          </div>
+          )}
 
           {/* Atölye Hazırlık Aşamaları Önizlemesi */}
           <div className="p-5 rounded-xs bg-[#FAF8F5] border border-stone-200 text-left space-y-3">
@@ -144,7 +147,13 @@ function ThankYouContent() {
           {/* Aksiyon Butonları */}
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
             <Link
-              href={`/siparis-takip?orderNumber=${displayOrderNumber}`}
+              href={
+                displayOrderNumber
+                  ? orderData?.email
+                    ? `/siparis-takip?orderNumber=${encodeURIComponent(displayOrderNumber)}&email=${encodeURIComponent(orderData.email)}`
+                    : `/siparis-takip?orderNumber=${encodeURIComponent(displayOrderNumber)}`
+                  : '/siparis-takip'
+              }
               className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-7 py-3.5 rounded-xs bg-[#231B18] hover:bg-[#3A2E29] text-white text-xs uppercase tracking-widest font-medium transition"
             >
               <PackageCheck className="w-4 h-4" />

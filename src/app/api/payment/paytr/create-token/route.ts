@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { generatePaytrToken, isPaytrConfigured } from '@/lib/paytr';
 import { supabaseAdmin } from '@/lib/supabase';
+import { verifyCartAndCalculateTotal } from '@/lib/orderVerification';
 
 export const dynamic = 'force-dynamic';
 
@@ -21,10 +22,8 @@ export async function POST(req: NextRequest) {
       postalCode,
       orderNote,
       cartItems,
-      grandTotal,
-      shippingFee = 0,
-      giftWrapFee = 0,
-      couponDiscount = 0,
+      grandTotal: clientGrandTotal,
+      couponCode,
       isGiftWrapped = false,
       giftNote,
       invoiceType = 'INDIVIDUAL',
@@ -41,11 +40,31 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    if (!grandTotal || grandTotal <= 0) {
+    // 2. Fiyat ve Sepet Doğrulaması (Sunucu Tabanlı Güvenlik Kontrolü)
+    const verification = verifyCartAndCalculateTotal({
+      cartItems,
+      couponCode,
+      isGiftWrapped,
+    });
+
+    if (!verification.isValid || verification.verifiedItems.length === 0) {
       return NextResponse.json(
-        { success: false, error: 'Geçersiz sepet tutarı.' },
+        { success: false, error: verification.error || 'Sepet tutarı doğrulanamadı.' },
         { status: 400 }
       );
+    }
+
+    const verifiedGrandTotal = verification.grandTotal;
+    const verifiedShippingFee = verification.shippingFee;
+    const verifiedGiftWrapFee = verification.giftWrapFee;
+    const verifiedCouponDiscount = verification.couponDiscount;
+
+    if (clientGrandTotal && Math.abs(Number(clientGrandTotal) - verifiedGrandTotal) > 1.0) {
+      console.warn('Güvenlik Uyarısı: İstemci fiyatı ile sunucu fiyatı uyuşmuyor. Sunucu fiyatı uygulandı.', {
+        clientTotal: clientGrandTotal,
+        verifiedTotal: verifiedGrandTotal,
+        orderNumber,
+      });
     }
 
     // 2. Müşteri IP Adresini Al
@@ -88,17 +107,17 @@ export async function POST(req: NextRequest) {
       address,
       postalCode,
       orderNote,
-      totalAmount: grandTotal,
-      shippingFee,
-      giftWrapFee,
-      couponDiscount,
+      totalAmount: verifiedGrandTotal,
+      shippingFee: verifiedShippingFee,
+      giftWrapFee: verifiedGiftWrapFee,
+      couponDiscount: verifiedCouponDiscount,
       isGiftWrapped,
       giftNote,
       invoiceType,
       companyName,
       taxOffice,
       vkn,
-      items: cartItems,
+      items: verification.verifiedItems,
       stage: 'SIPARIS_ALINDI',
       paymentStatus: 'BEKLIYOR',
       paymentMethod: 'PAYTR_KREDI_KARTI',
@@ -126,12 +145,12 @@ export async function POST(req: NextRequest) {
       fullName,
       phone,
       address: fullShippingAddress,
-      totalAmount: grandTotal,
+      totalAmount: verifiedGrandTotal,
       userIp,
-      cartItems,
-      shippingFee,
-      giftWrapFee,
-      couponDiscount,
+      cartItems: verification.verifiedItems as any,
+      shippingFee: verifiedShippingFee,
+      giftWrapFee: verifiedGiftWrapFee,
+      couponDiscount: verifiedCouponDiscount,
     });
 
     if (!result.success) {

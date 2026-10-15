@@ -11,9 +11,12 @@ const getJwtSecret = () => {
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Sadece /admin yollarını koru
-  if (pathname.startsWith('/admin')) {
-    const isLoginPage = pathname === '/admin/giris' || pathname === '/admin/login';
+  const isApiAdmin = pathname.startsWith('/api/admin');
+  const isAdminPage = pathname.startsWith('/admin');
+
+  // 1. Yönetici Kontrolleri
+  if (isAdminPage || isApiAdmin) {
+    const isLoginPage = pathname === '/admin/giris' || pathname === '/admin/login' || pathname === '/api/admin/auth/login';
     const token = request.cookies.get(ADMIN_COOKIE_NAME)?.value;
 
     let isAuthenticated = false;
@@ -30,23 +33,51 @@ export async function middleware(request: NextRequest) {
       }
     }
 
-    // 1. Zaten giriş yapmış ve /admin/giris sayfasına gidiyorsa -> /admin paneline yönlendir
-    if (isLoginPage && isAuthenticated) {
-      const returnUrl = request.nextUrl.searchParams.get('returnUrl') || '/admin';
-      return NextResponse.redirect(new URL(returnUrl, request.url));
+    // A. API Admin Rotaları Koruması (/api/admin/*)
+    if (isApiAdmin && !isLoginPage) {
+      if (!isAuthenticated) {
+        return NextResponse.json(
+          { success: false, error: 'Yetkisiz erişim. Yönetici oturumu gereklidir.' },
+          { status: 401 }
+        );
+      }
     }
 
-    // 2. Giriş yapmamış ve korumalı bir /admin sayfasına gitmeye çalışıyorsa -> /admin/giris'e yönlendir
-    if (!isLoginPage && !isAuthenticated) {
-      const loginUrl = new URL('/admin/giris', request.url);
-      loginUrl.searchParams.set('returnUrl', pathname);
-      return NextResponse.redirect(loginUrl);
+    // B. Admin Sayfa Rotaları Koruması (/admin/*)
+    if (isAdminPage) {
+      // Zaten giriş yapmışsa /admin/giris sayfasından ana panele yönlendir
+      if (isLoginPage && isAuthenticated) {
+        const returnUrl = request.nextUrl.searchParams.get('returnUrl') || '/admin';
+        return NextResponse.redirect(new URL(returnUrl, request.url));
+      }
+
+      // Giriş yapmamışsa /admin sayfalarından /admin/giris'e yönlendir
+      if (!isLoginPage && !isAuthenticated) {
+        const loginUrl = new URL('/admin/giris', request.url);
+        loginUrl.searchParams.set('returnUrl', pathname);
+        return NextResponse.redirect(loginUrl);
+      }
     }
   }
 
-  return NextResponse.next();
+  // 2. Güvenlik Başlıkları ile Devam Et
+  const response = NextResponse.next();
+
+  response.headers.set('X-Content-Type-Options', 'nosniff');
+  response.headers.set('X-Frame-Options', 'SAMEORIGIN');
+  response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+  response.headers.set(
+    'Permissions-Policy',
+    'camera=(), microphone=(), geolocation=(), browsing-topics=()'
+  );
+  response.headers.set(
+    'Strict-Transport-Security',
+    'max-age=63072000; includeSubDomains; preload'
+  );
+
+  return response;
 }
 
 export const config = {
-  matcher: ['/admin/:path*'],
+  matcher: ['/admin/:path*', '/api/admin/:path*'],
 };

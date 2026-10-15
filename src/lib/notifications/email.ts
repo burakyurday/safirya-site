@@ -23,9 +23,12 @@ export function generateSafiryaEmailHtml({
   photoUrl,
   caption,
   trackingUrl,
+  to,
 }: StageEmailPayload): string {
   const currentYear = new Date().getFullYear();
-  const safeTrackingUrl = trackingUrl || `https://safirya.tr/siparis-takip?orderNumber=${orderNumber}`;
+  const safeTrackingUrl =
+    trackingUrl ||
+    `https://safirya.tr/siparis-takip?orderNumber=${encodeURIComponent(orderNumber)}${to ? `&email=${encodeURIComponent(to)}` : ''}`;
 
   return `
 <!DOCTYPE html>
