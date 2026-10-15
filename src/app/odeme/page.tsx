@@ -88,6 +88,12 @@ export default function CheckoutPage() {
 
   const [copied, setCopied] = useState(false);
 
+  // PayTR Ödeme State'leri
+  const [paytrToken, setPaytrToken] = useState<string | null>(null);
+  const [paytrOrderNumber, setPaytrOrderNumber] = useState<string | null>(null);
+  const [paytrError, setPaytrError] = useState<string | null>(null);
+  const [paytrNotConfiguredNotice, setPaytrNotConfiguredNotice] = useState(false);
+
   // Fiyat Hesaplamaları
   const freeShippingThreshold = 500;
   const giftWrapFee = 30;
@@ -152,7 +158,54 @@ export default function CheckoutPage() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleCompleteOrder = (e: React.FormEvent) => {
+  const placeDirectOrder = (orderNum: string, method: string = formData.paymentMethod) => {
+    const orderPayload = {
+      orderNumber: orderNum,
+      email: formData.email,
+      customerName: formData.fullName,
+      phone: formData.phone,
+      totalAmount: grandTotal,
+      items: [...cartItems],
+      date: new Date().toLocaleDateString('tr-TR', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      }),
+      shippingAddress: `${formData.neighborhood} ${formData.address} ${formData.district} / ${formData.city}`,
+      isGiftWrapped,
+      giftNote: isGiftWrapped ? giftNote : undefined,
+      stage: 'SIPARIS_ALINDI',
+      paymentMethod: method,
+      paymentStatus: method === 'HAVALE_EFT' ? 'BEKLIYOR' : 'ODENDI',
+    };
+
+    try {
+      const existingRaw = localStorage.getItem('safirya_orders');
+      const existingList = existingRaw ? JSON.parse(existingRaw) : [];
+      existingList.unshift(orderPayload);
+      localStorage.setItem('safirya_orders', JSON.stringify(existingList));
+    } catch (err) {
+      console.error('Sipariş kaydedilirken hata:', err);
+    }
+
+    setPlacedOrder({
+      orderNumber: orderNum,
+      email: formData.email,
+      totalAmount: grandTotal,
+      items: [...cartItems],
+      date: orderPayload.date,
+      shippingAddress: orderPayload.shippingAddress,
+      giftNote: isGiftWrapped ? giftNote : undefined,
+    });
+
+    clearCart();
+    setIsSubmitting(false);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleCompleteOrder = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateCheckout()) {
       window.scrollTo({ top: 220, behavior: 'smooth' });
@@ -160,57 +213,92 @@ export default function CheckoutPage() {
     }
 
     setIsSubmitting(true);
+    setPaytrError(null);
+    setPaytrNotConfiguredNotice(false);
 
     // Benzersiz Sipariş Numarası Üret (Örn: SFR-2026-8921)
     const randomSuffix = Math.floor(1000 + Math.random() * 9000);
     const orderNumber = `SFR-2026-${randomSuffix}`;
 
-    setTimeout(() => {
-      const orderPayload = {
-        orderNumber,
-        email: formData.email,
-        customerName: formData.fullName,
-        phone: formData.phone,
-        totalAmount: grandTotal,
-        items: [...cartItems],
-        date: new Date().toLocaleDateString('tr-TR', {
-          day: 'numeric',
-          month: 'long',
-          year: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit',
-        }),
-        shippingAddress: `${formData.neighborhood} ${formData.address} ${formData.district} / ${formData.city}`,
-        isGiftWrapped,
-        giftNote: isGiftWrapped ? giftNote : undefined,
-        stage: 'SIPARIS_ALINDI',
-        paymentMethod: formData.paymentMethod,
-      };
-
-      // localStorage'a kaydet ki sipariş-takip sorgulayabilsin
+    // 1. Kredi Kartı (PayTR 3D Secure Akışı)
+    if (formData.paymentMethod === 'CREDIT_CARD') {
       try {
-        const existingRaw = localStorage.getItem('safirya_orders');
-        const existingList = existingRaw ? JSON.parse(existingRaw) : [];
-        existingList.unshift(orderPayload);
-        localStorage.setItem('safirya_orders', JSON.stringify(existingList));
-      } catch (err) {
-        console.error('Sipariş kaydedilirken hata:', err);
+        const res = await fetch('/api/payment/paytr/create-token', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            orderNumber,
+            email: formData.email,
+            fullName: formData.fullName,
+            phone: formData.phone,
+            city: formData.city,
+            district: formData.district,
+            neighborhood: formData.neighborhood,
+            address: formData.address,
+            postalCode: formData.postalCode,
+            orderNote: formData.orderNote,
+            cartItems,
+            grandTotal,
+            shippingFee,
+            giftWrapFee,
+            couponDiscount,
+            isGiftWrapped,
+            giftNote: isGiftWrapped ? giftNote : undefined,
+            invoiceType: formData.invoiceType,
+            companyName: formData.companyName,
+            taxOffice: formData.taxOffice,
+            vkn: formData.vkn,
+          }),
+        });
+
+        const data = await res.json();
+
+        if (data.isConfigured === false) {
+          // PayTR bilgileri henüz .env'de tanımlanmamış
+          setPaytrNotConfiguredNotice(true);
+          setIsSubmitting(false);
+          return;
+        }
+
+        if (data.success && data.token) {
+          // PayTR iframe token'ı hazır, modalı aç
+          setPaytrToken(data.token);
+          setPaytrOrderNumber(orderNumber);
+
+          // PayTR iFrameResizer script'ini yükle
+          if (typeof window !== 'undefined' && !document.getElementById('paytr-resizer-script')) {
+            const script = document.createElement('script');
+            script.id = 'paytr-resizer-script';
+            script.src = 'https://www.paytr.com/js/iframeResizer.min.js';
+            script.onload = () => {
+              // @ts-ignore
+              if (window.iFrameResize) window.iFrameResize({}, '#paytriframe');
+            };
+            document.body.appendChild(script);
+          } else {
+            setTimeout(() => {
+              // @ts-ignore
+              if (window.iFrameResize) window.iFrameResize({}, '#paytriframe');
+            }, 300);
+          }
+
+          setIsSubmitting(false);
+          return;
+        } else {
+          setPaytrError(data.error || 'PayTR ödeme oturumu başlatılamadı. Lütfen tekrar deneyiniz.');
+          setIsSubmitting(false);
+        }
+      } catch (err: any) {
+        setPaytrError('Ödeme servisine bağlanırken bir hata oluştu: ' + (err?.message || ''));
+        setIsSubmitting(false);
       }
+      return;
+    }
 
-      setPlacedOrder({
-        orderNumber,
-        email: formData.email,
-        totalAmount: grandTotal,
-        items: [...cartItems],
-        date: orderPayload.date,
-        shippingAddress: orderPayload.shippingAddress,
-        giftNote: isGiftWrapped ? giftNote : undefined,
-      });
-
-      clearCart();
-      setIsSubmitting(false);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }, 800);
+    // 2. Havale / EFT Akışı
+    setTimeout(() => {
+      placeDirectOrder(orderNumber, 'HAVALE_EFT');
+    }, 600);
   };
 
   const copyOrderNumber = (num: string) => {
@@ -794,75 +882,86 @@ export default function CheckoutPage() {
                   </label>
                 </div>
 
-                {/* Kredi Kartı Form Alanları */}
+                {/* Kredi Kartı (PayTR 3D Secure Güvenli Ödeme) Bilgi Kartı */}
                 {formData.paymentMethod === 'CREDIT_CARD' ? (
-                  <div className="p-5 rounded-xs bg-[#FAF8F5] border border-stone-200 space-y-4">
-                    <div>
-                      <label className="block text-[11px] uppercase tracking-wider font-medium text-[#231B18] mb-1.5">
-                        Kart Üzerindeki İsim Soyisim *
-                      </label>
-                      <input
-                        type="text"
-                        name="cardHolder"
-                        required
-                        placeholder="Örn: ELİF KAYA"
-                        value={formData.cardHolder}
-                        onChange={handleInputChange}
-                        className="w-full px-3.5 py-2.5 rounded-xs border border-stone-300 bg-white text-sm text-[#231B18] uppercase focus:outline-none focus:border-[#231B18]"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-[11px] uppercase tracking-wider font-medium text-[#231B18] mb-1.5">
-                        Kart Numarası *
-                      </label>
-                      <input
-                        type="text"
-                        name="cardNumber"
-                        required
-                        placeholder="•••• •••• •••• ••••"
-                        value={formData.cardNumber}
-                        onChange={handleInputChange}
-                        className="w-full px-3.5 py-2.5 rounded-xs border border-stone-300 bg-white text-sm text-[#231B18] tracking-wider focus:outline-none focus:border-[#231B18]"
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-[11px] uppercase tracking-wider font-medium text-[#231B18] mb-1.5">
-                          Son Kullanma (AA/YY) *
-                        </label>
-                        <input
-                          type="text"
-                          name="expiry"
-                          required
-                          placeholder="12/28"
-                          value={formData.expiry}
-                          onChange={handleInputChange}
-                          className="w-full px-3.5 py-2.5 rounded-xs border border-stone-300 bg-white text-sm text-[#231B18] focus:outline-none focus:border-[#231B18]"
-                        />
+                  <div className="space-y-4">
+                    <div className="p-5 rounded-xs bg-[#FAF8F5] border border-stone-200 space-y-3.5">
+                      <div className="flex items-center justify-between pb-3 border-b border-stone-200">
+                        <div className="flex items-center gap-2">
+                          <ShieldCheck className="w-5 h-5 text-emerald-600" />
+                          <span className="text-xs font-semibold uppercase tracking-wider text-[#231B18]">
+                            PayTR 3D Secure Güvenli Ödeme
+                          </span>
+                        </div>
+                        <span className="text-[10px] font-medium bg-emerald-100 text-emerald-800 px-2.5 py-0.5 rounded-xs">
+                          256-Bit SSL Korumalı
+                        </span>
                       </div>
-                      <div>
-                        <label className="block text-[11px] uppercase tracking-wider font-medium text-[#231B18] mb-1.5">
-                          Güvenlik Kodu (CVV) *
-                        </label>
-                        <input
-                          type="text"
-                          name="cvv"
-                          maxLength={4}
-                          required
-                          placeholder="321"
-                          value={formData.cvv}
-                          onChange={handleInputChange}
-                          className="w-full px-3.5 py-2.5 rounded-xs border border-stone-300 bg-white text-sm text-[#231B18] focus:outline-none focus:border-[#231B18]"
-                        />
+
+                      <p className="text-xs text-[#54473F] leading-relaxed">
+                        Kart bilgileriniz Safirya sunucularında asla tutulmaz. &quot;Siparişi Onayla &amp; 3D Secure ile Öde&quot; butonuna bastığınızda resmi <strong>PayTR Güvenli Ödeme Ekranı</strong> açılacak, bankanızın SMS doğrulama kodu ile ödemeniz doğrudan banka güvencesiyle tamamlanacaktır.
+                      </p>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1 text-[11px] text-[#7A7067]">
+                        <div className="flex items-center gap-1.5">
+                          <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                          <span>Tüm Banka Kartları</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                          <span>Taksit Seçenekleri</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                          <span>BDDK / TCMB Lisanslı</span>
+                        </div>
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2 pt-2 text-[11px] text-[#7A7067]">
-                      <ShieldCheck className="w-4 h-4 text-[#15803D] shrink-0" />
-                      <span>Kart bilgileriniz asla sunucularımızda saklanmaz, 256-Bit SSL ile korunur.</span>
-                    </div>
+                    {/* PayTR Hata Bildirimi */}
+                    {paytrError && (
+                      <div className="p-4 rounded-xs bg-red-50 border border-red-200 text-red-800 flex items-start gap-2.5 text-xs">
+                        <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
+                        <div>
+                          <span className="font-semibold block">Ödeme Başlatılamadı:</span>
+                          <span className="text-[11px] mt-0.5 block">{paytrError}</span>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* PayTR Henüz Tanımlanmamışsa Kurulum Rehberi & Test Desteği */}
+                    {paytrNotConfiguredNotice && (
+                      <div className="p-4 rounded-xs bg-amber-50 border border-amber-200 text-amber-900 space-y-2.5 text-xs">
+                        <div className="flex items-center gap-2 font-semibold">
+                          <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+                          <span>PayTR API Anahtarları Henüz Girilmedi</span>
+                        </div>
+                        <p className="text-[11px] text-amber-800 leading-relaxed">
+                          Canlı kart ödemeleri alabilmek için PayTR Mağaza Paneli&apos;nden aldığınız
+                          <strong> PAYTR_MERCHANT_ID</strong>, <strong>PAYTR_MERCHANT_KEY</strong> ve <strong>PAYTR_MERCHANT_SALT</strong> bilgilerini
+                          Vercel / .env ortam değişkenlerine eklemeniz gerekmektedir.
+                        </p>
+                        <div className="pt-1 flex flex-wrap items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const rSuffix = Math.floor(1000 + Math.random() * 9000);
+                              placeDirectOrder(`SFR-TEST-${rSuffix}`, 'PAYTR_TEST');
+                            }}
+                            className="px-3 py-1.5 rounded-xs bg-[#231B18] text-white text-[11px] hover:bg-[#C85A32] transition cursor-pointer"
+                          >
+                            ✓ Test Siparişi Olarak Onayla
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setFormData((p) => ({ ...p, paymentMethod: 'HAVALE_EFT' }))}
+                            className="px-3 py-1.5 rounded-xs border border-amber-300 bg-white text-amber-900 text-[11px] hover:bg-amber-100 transition cursor-pointer"
+                          >
+                            Havale / EFT ile Devam Et
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <div className="p-5 rounded-xs bg-[#FAF8F5] border border-stone-200 space-y-3 text-xs text-[#231B18]">
@@ -1006,16 +1105,24 @@ export default function CheckoutPage() {
                 {/* SİPARİŞİ TAMAMLA BUTONU */}
                 <button
                   type="submit"
-                  disabled={isSubmitting}
-                  className="w-full py-4 rounded-xs bg-[#231B18] hover:bg-[#3A2E29] text-white flex items-center justify-center gap-2 text-xs uppercase tracking-widest font-medium transition active:scale-[0.99] disabled:opacity-70 cursor-pointer"
+                  disabled={isSubmitting || cartItems.length === 0}
+                  className="w-full py-4 rounded-xs bg-[#231B18] hover:bg-[#C85A32] text-white flex items-center justify-center gap-2 text-xs uppercase tracking-widest font-medium transition active:scale-[0.99] disabled:opacity-70 cursor-pointer shadow-sm"
                 >
                   {isSubmitting ? (
                     <span className="flex items-center gap-2">
                       <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                      <span>Siparişiniz Oluşturuluyor...</span>
+                      <span>{formData.paymentMethod === 'CREDIT_CARD' ? 'PayTR Ödeme Ekranı Hazırlanıyor...' : 'Siparişiniz Alınıyor...'}</span>
                     </span>
                   ) : (
-                    <span>Siparişi Onayla & Güvenle Öde</span>
+                    <span className="flex items-center gap-2">
+                      <ShieldCheck className="w-4 h-4" />
+                      <span>
+                        {formData.paymentMethod === 'CREDIT_CARD'
+                          ? `PayTR ile Güvenli Öde (₺${grandTotal.toFixed(2)})`
+                          : `Havale ile Onayla (₺${grandTotal.toFixed(2)})`}
+                      </span>
+                      <ArrowRight className="w-3.5 h-3.5 ml-0.5" />
+                    </span>
                   )}
                 </button>
 
@@ -1028,6 +1135,58 @@ export default function CheckoutPage() {
 
           </div>
         </form>
+
+        {/* ── PAYTR 3D SECURE GÜVENLİ ÖDEME MODAL PENCERESİ ── */}
+        {paytrToken && (
+          <div className="fixed inset-0 z-50 bg-black/65 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 overflow-y-auto">
+            <div className="bg-white rounded-xs border border-stone-200 max-w-2xl w-full p-4 sm:p-6 shadow-2xl relative my-auto animate-in fade-in zoom-in-95 duration-200">
+              
+              {/* Modal Üst Başlık */}
+              <div className="flex items-center justify-between pb-3 border-b border-stone-200 mb-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-600 flex items-center justify-center">
+                    <ShieldCheck className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <span className="font-serif text-sm sm:text-base font-normal text-[#231B18] block">
+                      PayTR 3D Secure Güvenli Ödeme
+                    </span>
+                    <span className="text-[10px] text-[#7A7067] block">
+                      Sipariş: #{paytrOrderNumber} • Tutar: ₺{grandTotal.toFixed(2)}
+                    </span>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (confirm('Ödeme penceresini kapatmak istediğinize emin misiniz? Siparişiniz henüz onaylanmadı.')) {
+                      setPaytrToken(null);
+                    }
+                  }}
+                  className="text-stone-400 hover:text-stone-700 text-xs px-2.5 py-1 rounded-xs border border-stone-200 hover:border-stone-300 transition cursor-pointer"
+                >
+                  ✕ Kapat
+                </button>
+              </div>
+
+              {/* PayTR Resmi iframe */}
+              <div className="w-full bg-stone-50 rounded-xs overflow-hidden min-h-[560px] flex items-center justify-center">
+                <iframe
+                  src={`https://www.paytr.com/odeme/guvenli/${paytrToken}`}
+                  id="paytriframe"
+                  frameBorder="0"
+                  scrolling="no"
+                  className="w-full min-h-[580px] border-0"
+                />
+              </div>
+
+              <div className="pt-3 text-center text-[10px] text-[#7A7067]">
+                🔒 256-Bit SSL Şifreli Güvenli Ödeme Altyapısı • PayTR Ödeme ve Elektronik Para Kuruluşu A.Ş.
+              </div>
+            </div>
+          </div>
+        )}
 
       </div>
     </div>

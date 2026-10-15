@@ -468,6 +468,13 @@ const initialSettings: AdminSettings = {
   logoText: 'SAFİRYA',
   brandTagline: 'El Yapımı Tasarım Atölyesi',
   logoScale: 100,
+
+  // PayTR Ödeme Entegrasyonu
+  paytrMerchantId: '',
+  paytrMerchantKey: '',
+  paytrMerchantSalt: '',
+  paytrTestMode: true,
+  paytrDebugOn: false,
 };
 
 // Konsept Tasarım Bannerları (Kullanıcı sonradan ekleyebilmesi için varsayılan olarak boş şablon)

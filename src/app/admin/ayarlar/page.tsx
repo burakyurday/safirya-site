@@ -32,6 +32,11 @@ import {
   ExternalLink,
   Smartphone,
   ChevronDown,
+  CreditCard,
+  ShieldCheck,
+  Key,
+  Copy,
+  Check,
 } from 'lucide-react';
 import { useAdmin } from '@/context/AdminContext';
 
@@ -45,7 +50,15 @@ export default function AyarlarPage() {
     showToast,
   } = useAdmin();
 
-  const [activeTab, setActiveTab] = useState<'logo' | 'store' | 'cms'>('logo');
+  const [activeTab, setActiveTab] = useState<'logo' | 'store' | 'payment' | 'cms'>('logo');
+
+  // PayTR Ödeme Altyapısı State'leri
+  const [paytrMerchantId, setPaytrMerchantId] = useState(settings.paytrMerchantId || '');
+  const [paytrMerchantKey, setPaytrMerchantKey] = useState(settings.paytrMerchantKey || '');
+  const [paytrMerchantSalt, setPaytrMerchantSalt] = useState(settings.paytrMerchantSalt || '');
+  const [paytrTestMode, setPaytrTestMode] = useState<boolean>(settings.paytrTestMode ?? true);
+  const [paytrDebugOn, setPaytrDebugOn] = useState<boolean>(settings.paytrDebugOn ?? false);
+  const [copiedCallbackUrl, setCopiedCallbackUrl] = useState(false);
 
   // 0. Marka & Logo Yönetimi Form State
   const [logoUrl, setLogoUrl] = useState(settings.logoUrl || '');
@@ -211,6 +224,18 @@ export default function AyarlarPage() {
     showToast('Mağaza ayarları başarıyla güncellendi!');
   };
 
+  const handleSavePaymentSettings = (e: React.FormEvent) => {
+    e.preventDefault();
+    updateSettings({
+      paytrMerchantId: paytrMerchantId.trim(),
+      paytrMerchantKey: paytrMerchantKey.trim(),
+      paytrMerchantSalt: paytrMerchantSalt.trim(),
+      paytrTestMode,
+      paytrDebugOn,
+    });
+    showToast('✓ PayTR ödeme altyapı ayarları güncellendi!');
+  };
+
   const handleSaveCmsPage = (e: React.FormEvent) => {
     e.preventDefault();
     updateCmsPage(selectedSlug, {
@@ -311,6 +336,18 @@ export default function AyarlarPage() {
         >
           <SlidersHorizontal className="w-3.5 h-3.5 text-[#C85A32]" />
           <span>Mağaza & Kargo Ayarları</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('payment')}
+          className={`px-4 py-2 rounded-md text-xs font-medium transition flex items-center gap-2 ${
+            activeTab === 'payment'
+              ? 'bg-[#231B18] text-white shadow-xs'
+              : 'bg-[#FAF8F5] text-stone-700 hover:bg-[#EFECE6]'
+          }`}
+        >
+          <CreditCard className="w-3.5 h-3.5 text-[#C85A32]" />
+          <span>Ödeme & PayTR</span>
         </button>
 
         <button
@@ -898,7 +935,217 @@ export default function AyarlarPage() {
         </form>
       )}
 
-      {/* 5. İÇERİK: SEKME 3 - CMS KURUMSAL SAYFALAR */}
+      {/* 4. İÇERİK: SEKME - PAYTR ÖDEME ALTYAPISI */}
+      {activeTab === 'payment' && (
+        <form onSubmit={handleSavePaymentSettings} className="space-y-6 text-xs animate-fadeIn">
+          
+          {/* PayTR Bilgi ve Durum Kartı */}
+          <div className="bg-[#FAF8F5] p-5 sm:p-6 rounded-2xl border border-[#E2DCD3] space-y-3">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-xl bg-[#231B18] text-white flex items-center justify-center shrink-0">
+                <CreditCard className="w-5 h-5 text-[#C85A32]" />
+              </div>
+              <div className="flex-1">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <h3 className="font-serif text-base text-[#231B18] font-normal">
+                    PayTR Sanal POS &amp; 3D Secure Entegrasyonu
+                  </h3>
+                  <span
+                    className={`px-2.5 py-0.5 rounded-full text-[10px] font-semibold tracking-wider uppercase ${
+                      paytrMerchantId && paytrMerchantKey && paytrMerchantSalt
+                        ? 'bg-emerald-100 text-emerald-800'
+                        : 'bg-amber-100 text-amber-800'
+                    }`}
+                  >
+                    {paytrMerchantId && paytrMerchantKey && paytrMerchantSalt
+                      ? (paytrTestMode ? 'Test Modu Aktif' : 'Canlı POS Aktif')
+                      : 'Kurulum Bekliyor'}
+                  </span>
+                </div>
+                <p className="text-[11px] text-stone-600 mt-1 leading-relaxed">
+                  Safirya mağazanızda tüm kredi ve banka kartlarından 3D Secure güvencesiyle tek çekim ve taksitli ödeme almak için PayTR bilgilerinizi tanımlayabilirsiniz. Kart bilgileri sunucunuzda tutulmaz, doğrudan PayTR BDDK lisanslı altyapısında işlenir.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            
+            {/* Sol Kolon (7 Sütun): API Bilgileri */}
+            <div className="lg:col-span-7 bg-white p-6 rounded-2xl border border-[#E2DCD3] shadow-2xs space-y-4">
+              <div className="flex items-center gap-2 pb-3 border-b border-[#E2DCD3]">
+                <Key className="w-4 h-4 text-[#C85A32]" />
+                <h4 className="font-serif text-sm text-[#231B18] font-normal">
+                  PayTR Mağaza API Bilgileri
+                </h4>
+              </div>
+
+              <div>
+                <label className="block text-stone-700 font-medium mb-1">
+                  Mağaza No (Merchant ID) *
+                </label>
+                <input
+                  type="text"
+                  placeholder="Örn: 123456"
+                  value={paytrMerchantId}
+                  onChange={(e) => setPaytrMerchantId(e.target.value)}
+                  className="w-full px-3 py-2 rounded-md border border-[#E2DCD3] bg-white font-mono text-xs focus:outline-none focus:border-[#231B18]"
+                />
+                <span className="text-[10px] text-stone-500 mt-0.5 block">
+                  PayTR Mağaza Paneli &gt; Bilgi menüsündeki &quot;Mağaza No&quot; değeri.
+                </span>
+              </div>
+
+              <div>
+                <label className="block text-stone-700 font-medium mb-1">
+                  Mağaza Parolası (Merchant Key) *
+                </label>
+                <input
+                  type="password"
+                  placeholder="••••••••••••••••"
+                  value={paytrMerchantKey}
+                  onChange={(e) => setPaytrMerchantKey(e.target.value)}
+                  className="w-full px-3 py-2 rounded-md border border-[#E2DCD3] bg-white font-mono text-xs focus:outline-none focus:border-[#231B18]"
+                />
+                <span className="text-[10px] text-stone-500 mt-0.5 block">
+                  PayTR Mağaza Paneli &gt; Bilgi menüsündeki &quot;Mağaza Parolası&quot;.
+                </span>
+              </div>
+
+              <div>
+                <label className="block text-stone-700 font-medium mb-1">
+                  Mağaza Gizli Anahtar (Merchant Salt) *
+                </label>
+                <input
+                  type="password"
+                  placeholder="••••••••••••••••"
+                  value={paytrMerchantSalt}
+                  onChange={(e) => setPaytrMerchantSalt(e.target.value)}
+                  className="w-full px-3 py-2 rounded-md border border-[#E2DCD3] bg-white font-mono text-xs focus:outline-none focus:border-[#231B18]"
+                />
+                <span className="text-[10px] text-stone-500 mt-0.5 block">
+                  PayTR Mağaza Paneli &gt; Bilgi menüsündeki &quot;Mağaza Gizli Anahtar&quot;.
+                </span>
+              </div>
+
+              {/* Mod Seçimleri */}
+              <div className="pt-2 border-t border-[#E2DCD3] space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="font-medium text-stone-800 block text-xs">Test Modu</span>
+                    <span className="text-[11px] text-stone-500 block">
+                      Açıkken PayTR test kartları ile sipariş simülasyonu yapılır. Canlıya geçerken kapatınız.
+                    </span>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={paytrTestMode}
+                      onChange={(e) => setPaytrTestMode(e.target.checked)}
+                      className="sr-only peer"
+                    />
+                    <div className="w-9 h-5 bg-stone-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#C85A32]"></div>
+                  </label>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="font-medium text-stone-800 block text-xs">Hata Ayıklama (Debug On)</span>
+                    <span className="text-[11px] text-stone-500 block">
+                      PayTR API yanıtlarındaki hata detaylarını loglar.
+                    </span>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={paytrDebugOn}
+                      onChange={(e) => setPaytrDebugOn(e.target.checked)}
+                      className="sr-only peer"
+                    />
+                    <div className="w-9 h-5 bg-stone-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#231B18]"></div>
+                  </label>
+                </div>
+              </div>
+
+            </div>
+
+            {/* Sağ Kolon (5 Sütun): PayTR Paneline Girilecek URL Rehberi */}
+            <div className="lg:col-span-5 bg-white p-6 rounded-2xl border border-[#E2DCD3] shadow-2xs space-y-4">
+              <div className="flex items-center gap-2 pb-3 border-b border-[#E2DCD3]">
+                <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                <h4 className="font-serif text-sm text-[#231B18] font-normal">
+                  PayTR Paneline Girilmesi Gerekenler
+                </h4>
+              </div>
+
+              {/* Bildirim URL (Callback URL) */}
+              <div className="space-y-1.5 bg-[#FAF8F5] p-3.5 rounded-xl border border-[#E2DCD3]">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-[#C85A32]">
+                    1. Bildirim URL (Callback URL)
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard.writeText('https://safirya.tr/api/payment/paytr/callback');
+                      setCopiedCallbackUrl(true);
+                      setTimeout(() => setCopiedCallbackUrl(false), 2000);
+                    }}
+                    className="text-[10px] text-stone-700 hover:text-[#C85A32] font-medium flex items-center gap-1 cursor-pointer"
+                  >
+                    {copiedCallbackUrl ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />}
+                    <span>{copiedCallbackUrl ? 'Kopyalandı' : 'Kopyala'}</span>
+                  </button>
+                </div>
+                <div className="font-mono text-[11px] text-[#231B18] break-all bg-white p-2 rounded border border-stone-200 select-all">
+                  https://safirya.tr/api/payment/paytr/callback
+                </div>
+                <p className="text-[10px] text-stone-500 leading-relaxed pt-1">
+                  ⚠️ PayTR Mağaza Paneli &gt; <strong>Ayarlar &gt; Bildirim URL</strong> kısmına bu adresi yapıştırıp kaydediniz. Banka 3D Secure onayını bu adrese iletir.
+                </p>
+              </div>
+
+              {/* Başarılı & Başarısız Sayfalar */}
+              <div className="space-y-2 pt-1 text-[11px] text-stone-600">
+                <span className="font-medium text-[#231B18] block">Ödeme Dönüş Sayfaları (Otomatik):</span>
+                <div className="p-2.5 rounded bg-stone-50 border border-stone-200 font-mono text-[10px] space-y-1">
+                  <div>✓ Başarılı: https://safirya.tr/odeme/sonuc?status=success</div>
+                  <div>✕ Başarısız: https://safirya.tr/odeme/sonuc?status=failed</div>
+                </div>
+                <p className="text-[10px] text-stone-500">
+                  Bu URL&apos;ler PayTR API isteklerinde sistem tarafından otomatik olarak iletilmektedir.
+                </p>
+              </div>
+
+              {/* Vercel Env Notu */}
+              <div className="p-3 rounded-xl bg-blue-50 border border-blue-200 text-blue-900 text-[11px] space-y-1">
+                <span className="font-semibold block">Vercel Çevre Değişkenleri:</span>
+                <p className="text-[10px] text-blue-800 leading-relaxed">
+                  İsterseniz bu anahtarları doğrudan Vercel Dashboard &gt; Settings &gt; Environment Variables kısmına da ekleyebilirsiniz:
+                  <code className="block font-mono text-[10px] mt-1 bg-white/70 p-1 rounded">
+                    PAYTR_MERCHANT_ID, PAYTR_MERCHANT_KEY, PAYTR_MERCHANT_SALT, PAYTR_TEST_MODE
+                  </code>
+                </p>
+              </div>
+
+            </div>
+
+          </div>
+
+          <div className="flex justify-end pt-2">
+            <button
+              type="submit"
+              className="px-6 py-2.5 rounded-md bg-[#231B18] hover:bg-[#C85A32] text-white font-medium text-xs shadow-xs flex items-center gap-1.5 transition cursor-pointer"
+            >
+              <Save className="w-3.5 h-3.5" />
+              <span>PayTR Ayarlarını Kaydet</span>
+            </button>
+          </div>
+
+        </form>
+      )}
+
+      {/* 5. İÇERİK: SEKME 4 - CMS KURUMSAL SAYFALAR */}
       {activeTab === 'cms' && (
         <div className="space-y-6 text-xs">
           

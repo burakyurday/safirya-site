@@ -399,6 +399,13 @@ export interface AdminSettings {
   logoText?: string;
   brandTagline?: string;
   logoScale?: number;
+
+  // PayTR Ödeme Entegrasyonu
+  paytrMerchantId?: string;
+  paytrMerchantKey?: string;
+  paytrMerchantSalt?: string;
+  paytrTestMode?: boolean;
+  paytrDebugOn?: boolean;
 }
 
 export interface MarketingCampaign {
