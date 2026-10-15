@@ -95,6 +95,28 @@ interface StoreContextType {
 
 const StoreContext = createContext<StoreContextType | undefined>(undefined);
 
+// Sepet Depolama Sabitleri
+// KURAL: LocalStorage SADECE kayıt olmayan (misafir) kullanıcılar içindir.
+// Kayıtlı (giriş yapmış) kullanıcıların sepeti ise hafızada (Session & Server in-memory) saklanır.
+const GUEST_CART_STORAGE_KEY = 'safirya_guest_cart';
+const SESSION_CART_STORAGE_KEY = 'safirya_session_cart';
+
+const mergeCartLists = (target: CartItem[], incoming: CartItem[]): CartItem[] => {
+  const result = [...target];
+  incoming.forEach((inItem) => {
+    const existingIndex = result.findIndex((r) => r.id === inItem.id);
+    if (existingIndex > -1) {
+      result[existingIndex] = {
+        ...result[existingIndex],
+        quantity: result[existingIndex].quantity + inItem.quantity,
+      };
+    } else {
+      result.push(inItem);
+    }
+  });
+  return result;
+};
+
 // Başlangıç kayıtlı örnek kullanıcılar (Demo test hesabı dahil)
 const DEFAULT_REGISTERED_USERS: Array<UserProfile & { passwordHash: string }> = [
   {
@@ -132,25 +154,88 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   // Bildirimler
   const [notifications, setNotifications] = useState<StoreNotification[]>([]);
 
-  // LocalStorage senkronizasyonu
+  // Sepet ve Oturum Senkronizasyonu
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    // 0. Sepet ve Favorileri yükle
+    // 1. Kullanıcı oturumunu oku
+    let activeUser: UserProfile | null = null;
     try {
-      const savedCart = localStorage.getItem('safirya_cart_items');
-      if (savedCart) {
-        const parsed = JSON.parse(savedCart);
-        if (Array.isArray(parsed)) {
-          // Eski demo verileri temizle
-          const cleaned = parsed.filter(
-            (item: any) => item && item.id !== 'demo-item-1' && item.id !== 'demo-item-2'
-          );
-          setCartItems(cleaned);
-        }
+      const savedUser = localStorage.getItem('safirya_active_user');
+      if (savedUser) {
+        activeUser = JSON.parse(savedUser);
+        setCurrentUser(activeUser);
       }
     } catch {}
 
+    // Eski 'safirya_cart_items' anahtarı varsa temizle / misafir ise aktar
+    try {
+      const legacyCart = localStorage.getItem('safirya_cart_items');
+      if (legacyCart) {
+        if (!activeUser) {
+          localStorage.setItem(GUEST_CART_STORAGE_KEY, legacyCart);
+        }
+        localStorage.removeItem('safirya_cart_items');
+      }
+    } catch {}
+
+    // 2. Sepeti yükle:
+    // - Kayıtlı kullanıcı: LocalStorage KULLANILMAZ; hafızadan (sessionStorage & /api/cart) yüklenir
+    // - Kayıt olmayan misafir: Yalnızca LocalStorage kullanılır
+    if (activeUser) {
+      try {
+        localStorage.removeItem(GUEST_CART_STORAGE_KEY);
+      } catch {}
+
+      let loadedFromSession = false;
+      try {
+        const sessionCart = sessionStorage.getItem(SESSION_CART_STORAGE_KEY);
+        if (sessionCart) {
+          const parsed = JSON.parse(sessionCart);
+          if (Array.isArray(parsed)) {
+            const cleaned = parsed.filter(
+              (item: any) => item && item.id !== 'demo-item-1' && item.id !== 'demo-item-2'
+            );
+            setCartItems(cleaned);
+            loadedFromSession = true;
+          }
+        }
+      } catch {}
+
+      // Sunucu in-memory deposundan senkronize et
+      fetch(`/api/cart?userId=${encodeURIComponent(activeUser.id)}`)
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          if (data?.success && Array.isArray(data.items)) {
+            const cleaned = data.items.filter(
+              (item: any) => item && item.id !== 'demo-item-1' && item.id !== 'demo-item-2'
+            );
+            if (!loadedFromSession || cleaned.length > 0) {
+              setCartItems(cleaned);
+              try {
+                sessionStorage.setItem(SESSION_CART_STORAGE_KEY, JSON.stringify(cleaned));
+              } catch {}
+            }
+          }
+        })
+        .catch(() => {});
+    } else {
+      // Kayıt olmayan (misafir) kullanıcı -> Yalnızca LocalStorage kullanılır
+      try {
+        const savedGuestCart = localStorage.getItem(GUEST_CART_STORAGE_KEY);
+        if (savedGuestCart) {
+          const parsed = JSON.parse(savedGuestCart);
+          if (Array.isArray(parsed)) {
+            const cleaned = parsed.filter(
+              (item: any) => item && item.id !== 'demo-item-1' && item.id !== 'demo-item-2'
+            );
+            setCartItems(cleaned);
+          }
+        }
+      } catch {}
+    }
+
+    // 3. Favorileri yükle
     try {
       const savedFavs = localStorage.getItem('safirya_favorites');
       if (savedFavs) {
@@ -164,15 +249,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
     isLoadedRef.current = true;
 
-    // 1. Kullanıcı oturumunu yükle
-    try {
-      const savedUser = localStorage.getItem('safirya_active_user');
-      if (savedUser) {
-        setCurrentUser(JSON.parse(savedUser));
-      }
-    } catch {}
-
-    // 2. Kayıtlı kullanıcı tablosunu ilklendir (eğer boşsa)
+    // 4. Kayıtlı kullanıcı tablosunu ilklendir (eğer boşsa)
     try {
       const storedUsers = localStorage.getItem('safirya_registered_users');
       if (!storedUsers) {
@@ -183,7 +260,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       }
     } catch {}
 
-    // 3. Bildirimleri yükle
+    // 5. Bildirimleri yükle
     try {
       const savedNotifs = localStorage.getItem('safirya_user_notifications');
       if (savedNotifs) {
@@ -206,7 +283,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       }
     } catch {}
 
-    // 4. Custom event ile sekmeler veya admin paneli arası canlı bildirim dinleyicisi
+    // 6. Custom event ile sekmeler veya admin paneli arası canlı bildirim dinleyicisi
     const handleNotificationsUpdated = (e: Event) => {
       const customEvent = e as CustomEvent<StoreNotification[]>;
       if (customEvent.detail) {
@@ -225,13 +302,36 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  // Sepet güncellendiğinde LocalStorage'a kaydet
+  // Sepet güncellendiğinde senkronizasyon:
+  // - Giriş Yapmış Kullanıcı: LocalStorage KESİNLİKLE KULLANILMAZ; sepet hafızada (sessionStorage & /api/cart) tutulur
+  // - Kayıt Olmayan Misafir: Yalnızca LocalStorage kullanılır
   useEffect(() => {
     if (!isLoadedRef.current || typeof window === 'undefined') return;
-    try {
-      localStorage.setItem('safirya_cart_items', JSON.stringify(cartItems));
-    } catch {}
-  }, [cartItems]);
+
+    if (currentUser) {
+      // Giriş yapılmışsa LocalStorage'ı temiz tut
+      try {
+        localStorage.removeItem(GUEST_CART_STORAGE_KEY);
+        localStorage.removeItem('safirya_cart_items');
+      } catch {}
+
+      // Hafızaya yaz (Oturum hafızası & Sunucu in-memory)
+      try {
+        sessionStorage.setItem(SESSION_CART_STORAGE_KEY, JSON.stringify(cartItems));
+      } catch {}
+
+      fetch('/api/cart', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: currentUser.id, items: cartItems }),
+      }).catch(() => {});
+    } else {
+      // Misafir: Yalnızca LocalStorage kullanılır
+      try {
+        localStorage.setItem(GUEST_CART_STORAGE_KEY, JSON.stringify(cartItems));
+      } catch {}
+    }
+  }, [cartItems, currentUser]);
 
   // Favoriler güncellendiğinde LocalStorage'a kaydet
   useEffect(() => {
@@ -289,6 +389,21 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   const clearCart = () => {
     setCartItems([]);
+    if (typeof window !== 'undefined') {
+      if (currentUser) {
+        try {
+          sessionStorage.removeItem(SESSION_CART_STORAGE_KEY);
+        } catch {}
+        fetch(`/api/cart?userId=${encodeURIComponent(currentUser.id)}`, {
+          method: 'DELETE',
+        }).catch(() => {});
+      } else {
+        try {
+          localStorage.removeItem(GUEST_CART_STORAGE_KEY);
+          localStorage.removeItem('safirya_cart_items');
+        } catch {}
+      }
+    }
   };
 
   const applyCoupon = (code: string) => {
@@ -376,6 +491,41 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       localStorage.setItem('safirya_active_user', JSON.stringify(profile));
       setIsAuthModalOpen(false);
 
+      // Misafir sepeti varsa kullanıcının hafızasına aktar ve localStorage'dan sil
+      let newCart = [...cartItems];
+      const guestCartRaw = localStorage.getItem(GUEST_CART_STORAGE_KEY);
+      if (guestCartRaw) {
+        try {
+          const guestItems = JSON.parse(guestCartRaw);
+          if (Array.isArray(guestItems) && guestItems.length > 0) {
+            newCart = mergeCartLists(newCart, guestItems);
+          }
+        } catch {}
+        localStorage.removeItem(GUEST_CART_STORAGE_KEY);
+      }
+      localStorage.removeItem('safirya_cart_items');
+
+      // Sunucu in-memory deposundan da varsa sepeti al ve birleştir
+      try {
+        const res = await fetch(`/api/cart?userId=${encodeURIComponent(profile.id)}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data?.success && Array.isArray(data.items) && data.items.length > 0) {
+            newCart = mergeCartLists(newCart, data.items);
+          }
+        }
+      } catch {}
+
+      setCartItems(newCart);
+      try {
+        sessionStorage.setItem(SESSION_CART_STORAGE_KEY, JSON.stringify(newCart));
+      } catch {}
+      fetch('/api/cart', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: profile.id, items: newCart }),
+      }).catch(() => {});
+
       // Giriş yapınca karşılama bildirimi ekle
       addNotification({
         userEmail: profile.email,
@@ -450,6 +600,30 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       localStorage.setItem('safirya_active_user', JSON.stringify(profile));
       setIsAuthModalOpen(false);
 
+      // Misafir sepeti varsa kullanıcının hafızasına aktar ve localStorage'dan sil
+      let newCart = [...cartItems];
+      const guestCartRaw = localStorage.getItem(GUEST_CART_STORAGE_KEY);
+      if (guestCartRaw) {
+        try {
+          const guestItems = JSON.parse(guestCartRaw);
+          if (Array.isArray(guestItems) && guestItems.length > 0) {
+            newCart = mergeCartLists(newCart, guestItems);
+          }
+        } catch {}
+        localStorage.removeItem(GUEST_CART_STORAGE_KEY);
+      }
+      localStorage.removeItem('safirya_cart_items');
+
+      setCartItems(newCart);
+      try {
+        sessionStorage.setItem(SESSION_CART_STORAGE_KEY, JSON.stringify(newCart));
+      } catch {}
+      fetch('/api/cart', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: profile.id, items: newCart }),
+      }).catch(() => {});
+
       // Hoş geldin bildirimi
       addNotification({
         userEmail: profile.email,
@@ -510,10 +684,16 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   };
 
   const logoutUser = () => {
-    setCurrentUser(null);
     if (typeof window !== 'undefined') {
       localStorage.removeItem('safirya_active_user');
+      localStorage.removeItem(GUEST_CART_STORAGE_KEY);
+      localStorage.removeItem('safirya_cart_items');
+      try {
+        sessionStorage.removeItem(SESSION_CART_STORAGE_KEY);
+      } catch {}
     }
+    setCurrentUser(null);
+    setCartItems([]);
   };
 
   // ══════════════════════════════════════════════
