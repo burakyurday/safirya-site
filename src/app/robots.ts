@@ -19,12 +19,12 @@ export default function robots(): MetadataRoute.Robots {
         ],
       },
       {
-        userAgent: ['Googlebot', 'Bingbot', 'YandexBot', 'Applebot'],
+        userAgent: ['Googlebot', 'Bingbot', 'YandexBot', 'Applebot', 'Baiduspider'],
         allow: '/',
         disallow: ['/admin/', '/api/', '/hesabim/', '/sepet', '/odeme'],
       },
       {
-        // Generative Engine Optimization (GEO) & AI Crawlers
+        // Generative Engine Optimization (GEO) & AI Search Crawlers
         userAgent: [
           'GPTBot',
           'ChatGPT-User',
@@ -33,6 +33,8 @@ export default function robots(): MetadataRoute.Robots {
           'anthropic-ai',
           'Google-Extended',
           'Cohere-ai',
+          'FacebookBot',
+          'meta-externalagent',
         ],
         allow: ['/', '/llms.txt', '/llms-full.txt'],
         disallow: ['/admin/', '/api/', '/hesabim/', '/sepet', '/odeme'],

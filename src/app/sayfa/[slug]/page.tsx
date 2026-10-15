@@ -682,6 +682,17 @@ const pagesContent: Record<
   },
 };
 
+export async function generateStaticParams() {
+  return [
+    { slug: 'hakkimizda' },
+    { slug: 'iletisim' },
+    { slug: 'gizlilik-ve-kvkk' },
+    { slug: 'kullanim-kosullari' },
+    { slug: 'mesafeli-satis-sozlesmesi' },
+    { slug: 'iade-kosullari' },
+  ];
+}
+
 // Sayfa Başlığı ve Meta Açıklaması
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
@@ -719,15 +730,35 @@ export default async function CmsPageRoute({ params }: Props) {
     notFound();
   }
 
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://safirya.tr';
+
   const breadcrumbSchema = getBreadcrumbSchema([
     { name: 'Anasayfa', item: '/' },
     { name: 'Kurumsal', item: '/sayfa/hakkimizda' },
     { name: page.title, item: `/sayfa/${canonicalSlug}` },
   ]);
 
+  const webPageSchema = {
+    '@context': 'https://schema.org',
+    '@type':
+      canonicalSlug === 'iletisim'
+        ? 'ContactPage'
+        : canonicalSlug === 'hakkimizda'
+        ? 'AboutPage'
+        : 'WebPage',
+    name: page.title,
+    description: page.metaDescription,
+    url: `${siteUrl}/sayfa/${canonicalSlug}`,
+    inLanguage: 'tr-TR',
+    isPartOf: {
+      '@id': `${siteUrl}/#website`,
+    },
+  };
+
   return (
     <>
       <JsonLd data={breadcrumbSchema} />
+      <JsonLd data={webPageSchema} />
       <DynamicCmsPage
         slug={canonicalSlug}
         defaultTitle={page.title}

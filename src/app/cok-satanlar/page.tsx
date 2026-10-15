@@ -2,7 +2,11 @@ import React from 'react';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { ProductCard } from '@/components/catalog/ProductCard';
-import { JsonLd, getBreadcrumbSchema } from '@/components/seo/JsonLd';
+import {
+  JsonLd,
+  getBreadcrumbSchema,
+  getItemListSchema,
+} from '@/components/seo/JsonLd';
 
 export const metadata: Metadata = {
   title: 'Çok Satanlar Koleksiyonu',
@@ -124,9 +128,17 @@ export default function BestSellersPage() {
     { name: 'Çok Satanlar', item: '/cok-satanlar' },
   ]);
 
+  const itemListSchema = getItemListSchema(
+    'Safirya Çok Satanlar Koleksiyonu',
+    'Kadıköy atölyemizde müşterilerimizin en çok tercih ettiği, doğal malzemeler ve zanaatkar dokunuşuyla üretilen favori parçalar.',
+    '/cok-satanlar',
+    bestSellers
+  );
+
   return (
     <div className="bg-white min-h-[70vh]">
       <JsonLd data={breadcrumbSchema} />
+      <JsonLd data={itemListSchema} />
 
       {/* ── Üst Başlık ── */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-12 pb-8 border-b border-stone-100 text-center">

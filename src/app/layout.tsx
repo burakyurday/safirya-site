@@ -38,29 +38,35 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: {
-    default: 'Safirya | El Yapımı Tasarım Atölyesi',
+    default: 'Safirya | El Yapımı Tasarım Atölyesi Kadıköy',
     template: '%s | Safirya Atölye',
   },
   description:
-    'Doğal soya mumları, kalıcı kokulu taşlar, ahşap epoksi sunumluklar ve el dokuması Miyuki boncuk takılar. Kadıköy atölyemizden zarafet ve el emeğiyle üretilir.',
+    'İstanbul Kadıköy merkezli zanaat atölyesi. %100 doğal soya mumları, kalıcı kokulu taş objeler, masif ceviz epoksi sunumluk tepsiler ve el dokuması Japon Miyuki boncuk takılar. Türkiye geneli sigortalı hasarsız teslimat.',
   keywords: [
     'Safirya',
+    'Safirya Atölye',
     'El Yapımı Mum',
     'Doğal Soya Mumu',
+    'Kadıköy Mum Atölyesi',
+    'Moda Tasarım Hediyelik',
     'Kokulu Taş Figür',
     'Epoksi Ahşap Tepsi',
     'Miyuki Boncuk Bileklik',
-    'Toplu Hediyelik',
+    'Japon Delica Boncuk Takı',
+    'Toplu Hediyelik Sipariş',
     'Söz Nişan Hediyelikleri',
-    'Kişiye Özel Hediye',
-    'Kadıköy Tasarım Atölyesi',
-    'Zanaatkar Üretim',
     'Nikah Şekeri Alternatifi',
-    'Moda Tasarım Hediyelik',
+    'Kurumsal Hediye Seti',
+    'Kişiye Özel İsimli Mum',
+    'Kadıköy Zanaat Atölyesi',
+    'İstanbul El Sanatları',
   ],
   authors: [{ name: 'Safirya Tasarım Atölyesi', url: siteUrl }],
   creator: 'Safirya',
   publisher: 'Safirya Atölye',
+  category: 'Home Goods & Handcrafted Gifts',
+  classification: 'Handmade Crafts, Soy Candles, Resin Art, Beaded Jewelry',
   formatDetection: {
     email: true,
     address: true,
@@ -70,7 +76,7 @@ export const metadata: Metadata = {
     canonical: '/',
     languages: {
       'tr-TR': '/',
-      'tr': '/',
+      tr: '/',
     },
   },
   openGraph: {
@@ -78,15 +84,25 @@ export const metadata: Metadata = {
     locale: 'tr_TR',
     url: siteUrl,
     siteName: 'Safirya El Yapımı Tasarım Atölyesi',
-    title: 'Safirya | El Yapımı Tasarım Atölyesi',
+    title: 'Safirya | El Yapımı Tasarım Atölyesi Kadıköy',
     description:
-      'Doğal soya mumları, kokulu taşlar, ahşap epoksi sunumluklar ve el dokuması Miyuki boncuk takılar. Kadıköy atölyemizden zarafet ve el emeğiyle üretilir.',
+      'Doğal soya mumları, kalıcı kokulu taşlar, ahşap epoksi sunumluklar ve el dokuması Miyuki takılar. Kadıköy atölyemizden zarafet ve el emeğiyle.',
+    images: [
+      {
+        url: `${siteUrl}/opengraph-image`,
+        width: 1200,
+        height: 630,
+        alt: 'Safirya El Yapımı Tasarım Atölyesi Kadıköy',
+        type: 'image/png',
+      },
+    ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Safirya | El Yapımı Tasarım Atölyesi',
+    title: 'Safirya | El Yapımı Tasarım Atölyesi Kadıköy',
     description:
       'Doğal soya mumları, kokulu taşlar, ahşap epoksi sunumluklar ve el dokuması Miyuki takılar. %100 el yapımı zanaat.',
+    images: [`${siteUrl}/opengraph-image`],
   },
   icons: {
     icon: [
@@ -109,9 +125,18 @@ export const metadata: Metadata = {
   },
   other: {
     'geo.region': 'TR-34',
-    'geo.placename': 'Kadıköy, İstanbul',
+    'geo.placename': 'Kadıköy, İstanbul, Türkiye',
     'geo.position': '40.9880;29.0260',
-    'ICBM': '40.9880, 29.0260',
+    ICBM: '40.9880, 29.0260',
+    'DC.title': 'Safirya El Yapımı Tasarım Atölyesi',
+    'DC.creator': 'Safirya',
+    'DC.subject':
+      'Doğal Soya Mumu, Kokulu Taş, Epoksi Ahşap Tepsi, Miyuki Boncuk Takı, Kadıköy Atölyesi',
+    'DC.description':
+      'Kadıköy atölyemizde özenle üretilen doğal soya mumları, kokulu taşlar, epoksi sunumluklar ve Miyuki takılar.',
+    'DC.publisher': 'Safirya Atölye',
+    'DC.language': 'tr',
+    'DC.coverage': 'Kadıköy, İstanbul, Türkiye',
   },
 };
 

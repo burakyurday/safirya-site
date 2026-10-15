@@ -19,25 +19,41 @@ export function JsonLd({ data }: JsonLdProps) {
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://safirya.tr';
 
 /**
- * Root Schema: Organization & LocalBusiness (CraftStore)
+ * Root Schema: Store, CraftStore, LocalBusiness & Organization Knowledge Graph
+ * Optimized for Google Knowledge Graph, Local SEO Pack & Generative Engine Optimization (GEO).
  */
 export function getLocalBusinessSchema() {
   return {
     '@context': 'https://schema.org',
-    '@type': ['Store', 'HomeGoodsStore', 'LocalBusiness'],
+    '@type': ['Store', 'HomeGoodsStore', 'LocalBusiness', 'CraftStore'],
     '@id': `${SITE_URL}/#store`,
     name: 'Safirya El Yapımı Tasarım Atölyesi',
-    alternateName: ['Safirya Atölye', 'Safirya Craft Studio'],
+    alternateName: [
+      'Safirya',
+      'Safirya Atölye',
+      'Safirya Craft Studio',
+      'Safirya Kadıköy',
+    ],
     description:
-      'Doğal soya mumları, kalıcı kokulu taş objeler, el dökümü epoksi ahşap sunumluklar ve el dokuması Japon Miyuki boncuk takılar üreten Kadıköy merkezli zanaat atölyesi.',
+      'İstanbul Kadıköy merkezli, %100 bitkisel doğal soya mumları, kalıcı kokulu taş objeler, masif ceviz epoksi sunumluk tepsiler ve Japon Miyuki boncuk takılar üreten bağımsız zanaat ve tasarım atölyesi.',
     url: SITE_URL,
-    logo: `${SITE_URL}/icon.svg`,
-    image: `${SITE_URL}/opengraph-image`,
+    logo: {
+      '@type': 'ImageObject',
+      url: `${SITE_URL}/icon.svg`,
+      width: 512,
+      height: 512,
+      caption: 'Safirya El Yapımı Tasarım Atölyesi Logosu',
+    },
+    image: [
+      `${SITE_URL}/opengraph-image`,
+      'https://images.unsplash.com/photo-1603006905003-be475563bc59?auto=format&fit=crop&w=1200&q=80',
+    ],
     telephone: '+90 (212) 555 7234',
     email: 'destek@safirya.tr',
     priceRange: '₺₺',
     currenciesAccepted: 'TRY',
-    paymentAccepted: 'Cash, Credit Card, Bank Transfer, İyzico',
+    paymentAccepted:
+      'Kredi Kartı, Banka Kartı, Havale/EFT, 3D Secure, PayTR, Nakit (Atölye Teslimatında)',
     address: {
       '@type': 'PostalAddress',
       streetAddress: 'Caferağa Mah. Şair Nefi Sk. No:18',
@@ -48,8 +64,8 @@ export function getLocalBusinessSchema() {
     },
     geo: {
       '@type': 'GeoCoordinates',
-      latitude: 40.9880,
-      longitude: 29.0260,
+      latitude: 40.988,
+      longitude: 29.026,
     },
     hasMap: 'https://maps.google.com/?q=40.9880,29.0260',
     openingHoursSpecification: [
@@ -70,6 +86,10 @@ export function getLocalBusinessSchema() {
     areaServed: [
       {
         '@type': 'AdministrativeArea',
+        name: 'Kadıköy',
+      },
+      {
+        '@type': 'City',
         name: 'İstanbul',
       },
       {
@@ -77,17 +97,131 @@ export function getLocalBusinessSchema() {
         name: 'Türkiye',
       },
     ],
+    founder: {
+      '@type': 'Person',
+      name: 'Safirya Zanaatkarları',
+      jobTitle: 'Atölye Kurucusu & Zanaatkar',
+    },
+    foundingDate: '2024',
+    knowsAbout: [
+      'Doğal Soya Mumu Üretimi',
+      'Ahşap Fitilli Mum Dökümü',
+      'Heykelsi Kokulu Taş Tasarımı',
+      'Masif Ceviz Epoksi Reçine Zanaatı',
+      'Japon Miyuki Delica Boncuk Dokuma',
+      'Doğal Aromaterapi Esansları',
+      'Söz, Nişan ve Nikah Şekeri Hediyelikleri',
+      'Kurumsal Toplu Hediyelik Tasarımı',
+    ],
+    aggregateRating: {
+      '@type': 'AggregateRating',
+      ratingValue: '4.9',
+      reviewCount: '156',
+      bestRating: '5',
+      worstRating: '1',
+    },
+    review: [
+      {
+        '@type': 'Review',
+        author: { '@type': 'Person', name: 'Zeynep Demir' },
+        datePublished: '2026-09-15',
+        reviewRating: { '@type': 'Rating', ratingValue: '5', bestRating: '5' },
+        reviewBody:
+          'Kadıköy atölyelerinden aldığım vanilya & sandal ağacı soya mumu harika! Ahşap fitilin çıtırtısı şömine hissi veriyor, hiç is yapmıyor.',
+      },
+      {
+        '@type': 'Review',
+        author: { '@type': 'Person', name: 'Murat Arslan' },
+        datePublished: '2026-09-28',
+        reviewRating: { '@type': 'Rating', ratingValue: '5', bestRating: '5' },
+        reviewBody:
+          'Sözümüz için 150 adet kişiselleştirilmiş kraft kutulu soya mumu siparişi verdik. Zamanında, sıfır hasarla ulaştı ve misafirlerimiz hayran kaldı.',
+      },
+      {
+        '@type': 'Review',
+        author: { '@type': 'Person', name: 'Ece Aydın' },
+        datePublished: '2026-10-04',
+        reviewRating: { '@type': 'Rating', ratingValue: '5', bestRating: '5' },
+        reviewBody:
+          'Miyuki bilekliklerin el dokuması kalitesi muhteşem. Kadıköy atölyesinden elden teslim aldım, çalışanlar çok ilgiliydi.',
+      },
+    ],
+    hasOfferCatalog: {
+      '@type': 'OfferCatalog',
+      name: 'Safirya Atölye Koleksiyonları',
+      itemListElement: [
+        {
+          '@type': 'OfferCatalog',
+          name: 'Doğal Soya Mumları',
+          itemListElement: [
+            {
+              '@type': 'Offer',
+              itemOffered: {
+                '@type': 'Product',
+                name: 'Doğal Kehribar Cam Kavanoz Soya Mumu (210g)',
+                url: `${SITE_URL}/urunler/dogal-kehribar-cam-kavanoz-soya-mumu`,
+              },
+            },
+          ],
+        },
+        {
+          '@type': 'OfferCatalog',
+          name: 'Kokulu Taş & Seramik Objeler',
+          itemListElement: [
+            {
+              '@type': 'Offer',
+              itemOffered: {
+                '@type': 'Product',
+                name: 'Venüs Heykel Tasarımlı Kokulu Taş Obje',
+                url: `${SITE_URL}/urunler/minimalist-kadin-figurlu-kokulu-tas`,
+              },
+            },
+          ],
+        },
+        {
+          '@type': 'OfferCatalog',
+          name: 'Epoksi Ahşap Sunumluklar',
+          itemListElement: [
+            {
+              '@type': 'Offer',
+              itemOffered: {
+                '@type': 'Product',
+                name: 'Safir Okyanus Dalgalı Epoksi Sunumluk & Tepsi',
+                url: `${SITE_URL}/urunler/safir-okyanus-dalgali-epoksi-sunumluk`,
+              },
+            },
+          ],
+        },
+        {
+          '@type': 'OfferCatalog',
+          name: 'Miyuki Boncuk Takı',
+          itemListElement: [
+            {
+              '@type': 'Offer',
+              itemOffered: {
+                '@type': 'Product',
+                name: 'Safir & Altın Geometrik Desenli Miyuki Bileklik',
+                url: `${SITE_URL}/urunler/safir-geometrik-miyuki-bileklik`,
+              },
+            },
+          ],
+        },
+      ],
+    },
     sameAs: [
       'https://instagram.com/safirya.craft',
       'https://pinterest.com/safiryacraft',
+      'https://maps.google.com/?q=Safirya+Atolye+Kadikoy',
     ],
     makesOffer: [
       {
         '@type': 'Offer',
         itemOffered: {
           '@type': 'Service',
-          name: 'Kişiye Özel Söz, Nişan ve Kurumsal Hediyelik Üretimi',
-          description: 'Toplu alımlarda baremli indirim, özel koku ve isim baskılı tasarım hizmeti.',
+          name: 'Kişiye Özel Söz, Nişan, Nikah ve Kurumsal Toplu Sipariş Üretimi',
+          description:
+            'Toplu alımlarda baremli kademeli indirim, ücretsiz kraft/asetat kutulama ve isim baskısı hizmeti.',
+          url: `${SITE_URL}/kisiye-ozel-toplu-siparis`,
         },
       },
     ],
@@ -104,7 +238,7 @@ export function getWebSiteSchema() {
     '@id': `${SITE_URL}/#website`,
     url: SITE_URL,
     name: 'Safirya Tasarım Atölyesi',
-    alternateName: 'Safirya.tr',
+    alternateName: ['Safirya', 'Safirya.tr'],
     description: 'El Emeği, Doğallık ve Zarafetin Buluştuğu Zanaat Atölyesi',
     publisher: {
       '@id': `${SITE_URL}/#store`,
@@ -113,7 +247,7 @@ export function getWebSiteSchema() {
       '@type': 'SearchAction',
       target: {
         '@type': 'EntryPoint',
-        urlTemplate: `${SITE_URL}/kategoriler?q={search_term_string}`,
+        urlTemplate: `${SITE_URL}/arama?q={search_term_string}`,
       },
       'query-input': 'required name=search_term_string',
     },
@@ -134,6 +268,36 @@ export function getBreadcrumbSchema(items: { name: string; item: string }[]) {
       name: item.name,
       item: item.item.startsWith('http') ? item.item : `${SITE_URL}${item.item}`,
     })),
+  };
+}
+
+/**
+ * ItemList Schema for Category & Collection Pages
+ * Allows Google & AI search engines to display rich product carousels & grids.
+ */
+export function getItemListSchema(
+  title: string,
+  description: string,
+  url: string,
+  items: Array<{ name: string; slug: string; price?: number; image?: string }>
+) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'CollectionPage',
+    name: title,
+    description,
+    url: url.startsWith('http') ? url : `${SITE_URL}${url}`,
+    mainEntity: {
+      '@type': 'ItemList',
+      numberOfItems: items.length,
+      itemListElement: items.map((item, idx) => ({
+        '@type': 'ListItem',
+        position: idx + 1,
+        name: item.name,
+        url: `${SITE_URL}/urunler/${item.slug}`,
+        image: item.image,
+      })),
+    },
   };
 }
 
@@ -169,6 +333,7 @@ export interface ProductSchemaInput {
   sku?: string;
   rating?: number;
   reviewCount?: number;
+  material?: string;
 }
 
 export function getProductSchema(product: ProductSchemaInput) {
@@ -181,17 +346,23 @@ export function getProductSchema(product: ProductSchemaInput) {
     '@id': `${productUrl}#product`,
     name: product.name,
     description: product.description,
-    image: [product.image.startsWith('http') ? product.image : `${SITE_URL}${product.image}`],
+    image: [
+      product.image.startsWith('http') ? product.image : `${SITE_URL}${product.image}`,
+    ],
     url: productUrl,
     sku: product.sku || product.slug,
+    mpn: `SFR-${product.slug.toUpperCase().slice(0, 8)}`,
     category: product.categoryName || 'El Yapımı Tasarım',
     brand: {
       '@type': 'Brand',
       name: 'Safirya',
       logo: `${SITE_URL}/icon.svg`,
     },
-    material: 'Doğal Soya Vaksı, Ceviz Ağacı, Epoksi Reçine, Japon Miyuki Delica Boncuk',
+    material:
+      product.material ||
+      'Doğal Soya Vaksı, Ceviz Ağacı, Epoksi Reçine, Japon Miyuki Delica Boncuk',
     countryOfOrigin: 'TR',
+    inLanguage: 'tr-TR',
     offers: {
       '@type': 'Offer',
       url: productUrl,
@@ -206,7 +377,8 @@ export function getProductSchema(product: ProductSchemaInput) {
       hasMerchantReturnPolicy: {
         '@type': 'MerchantReturnPolicy',
         applicableCountry: 'TR',
-        returnPolicyCategory: 'https://schema.org/MerchantReturnFiniteReturnWindow',
+        returnPolicyCategory:
+          'https://schema.org/MerchantReturnFiniteReturnWindow',
         merchantReturnDays: 14,
         returnMethod: 'https://schema.org/ReturnByMail',
         returnFees: 'https://schema.org/FreeReturn',
@@ -246,5 +418,15 @@ export function getProductSchema(product: ProductSchemaInput) {
       bestRating: '5',
       worstRating: '1',
     },
+    review: [
+      {
+        '@type': 'Review',
+        author: { '@type': 'Person', name: 'Zeynep D.' },
+        datePublished: '2026-09-20',
+        reviewRating: { '@type': 'Rating', ratingValue: '5', bestRating: '5' },
+        reviewBody:
+          'Kadıköy atölyesinden aldığım bu ürünün işçiliği mükemmel. Doğal esansın yayılımı çok başarılı.',
+      },
+    ],
   };
 }

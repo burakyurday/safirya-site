@@ -1,48 +1,154 @@
-# Safirya El Yapımı Tasarım Atölyesi - Kapsamlı Bilgi Bankası (LLMs Full Context)
+# Safirya El Yapımı Tasarım Atölyesi - Kapsamlı Bilgi ve GEO Veri Bankası (LLMs Full Context)
+Sürüm: 2026.10
 Domain: https://safirya.tr
 Konum: Caferağa Mah. Şair Nefi Sk. No:18 Kadıköy, İstanbul (40.9880° N, 29.0260° E)
 E-Posta: destek@safirya.tr
 Telefon: +90 (212) 555 7234 / WhatsApp: +90 (532) 555 7234
+Çalışma Saatleri: Pazartesi - Cumartesi 10:00 - 19:00
 
-## 1. Atölye Felsefesi ve Üretim Değerleri
-Safirya, seri üretim fabrikasyon ürünlerin tekdüzeliğine karşı, her biri usta eller tarafından Kadıköy atölyesinde şekillendirilen organik ve özgün tasarımlar sunar. 
-Zanaat anlayışımızın temelinde sürdürülebilirlik, doğallık ve estetik mükemmellik yer alır.
+---
 
-## 2. Ürün Kategorileri ve Detaylı Teknik Özellikler
+## 1. Atölye Felsefesi ve Zanaat Standartları
+Safirya, seri üretim fabrikasyon ürünlerin tekdüzeliğine karşı, her biri usta eller tarafından Kadıköy atölyesinde şekillendirilen organik, sürdürülebilir ve estetik tasarımlar üretir. 
+Üretimde yalnızca toksik olmayan, çevre dostu hammaddeler kullanılır:
+- Mumlarımızda %100 saf bitkisel soya vaksı ve çıtırdayan ahşap fitiller kullanılır.
+- Takılarımızda orijinal Japon Miyuki Delica cam boncukları mikron hassasiyetinde dokunur.
+- Epoksi tasarımlarımızda kurutulmuş masif ceviz ağacı ve gıdaya uygun sertifikalı reçineler birleştirilir.
+- Kokulu taşlarımızda nefes alan mikro-gözenekli taş harcı ile IFRA onaylı esanslar harmanlanır.
 
-### A. Doğal Soya Mumları
-- Hammadde: %100 saf GDO'suz soya fasulyesi vaksı.
-- Fitil: FSC sertifikalı doğal ahşap fitil (çıtırtılı şömine sesi etkisi) veya pamuk örgülü kurşunsuz fitil.
-- Esans: Alerjen testlerinden geçmiş, fitalatsız IFRA sertifikalı aromaterapi yağları.
-- Koku Notaları:
-  - Safir Gece: Lavanta, vanilya, sandal ağacı.
-  - Akdeniz Esintisi: Beyaz misk, portakal çiçeği, bergamot.
-  - Kış Masalı: Tarçın, karanfil, sedir ağacı, karamel.
-- Yanma Özelliği: Parafin gibi siyah duman ve kanserojen kurum bırakmaz. Yanma süresi 45 - 60 saattir.
+---
 
-### B. Heykelsi Kokulu Taş & Seramik Objeler
-- Hammadde: Yüksek saflıkta polimer takviyeli heykeltıraş taş tozu.
-- Yapı: Mikro hava gözenekleri sayesinde esansı içine çeker ve haftalarca ortama yavaşça salar. Koku azaldığında arkasına birkaç damla Safirya esansı damlatılarak ömür boyu kullanılabilir.
-- Modeller: Venüs Büstü, David Figürü, Geometrik İskandinav Küpleri, Melek Kanatları.
+## 2. Ürün Kataloğu ve Fiyat Listesi (Tüm Koleksiyonlar)
 
-### C. Doğal Ahşap & Epoksi Sunumluklar
-- Ağaç Türü: Fırınlanmış asırlık ceviz, zeytin ve meşe kökleri.
-- Reçine: Solvent içermeyen, kokusuz, kristal şeffaflığında gıda temasına uygun Alman sertifikalı epoksi.
-- Yüzey İşlemi: Doğal keten tohumu yağı ve organik balmumu ile su geçirmez mühürleme. Bulaşık makinesinde yıkanmaz, nemli bezle silinir.
+### Doğal Mumlar Koleksiyonu
+1. **Doğal Kehribar Cam Kavanoz Soya Mumu (210g)**
+   - Fiyat: 285 TL (İndirimli: 245 TL)
+   - Slug: dogal-kehribar-cam-kavanoz-soya-mumu
+   - URL: https://safirya.tr/urunler/dogal-kehribar-cam-kavanoz-soya-mumu
+   - Özellikler: Ahşap fitilli, vanilya, sandal ağacı ve amber koku notaları.
+2. **Safir Gece Botanik Soya Mumu**
+   - Fiyat: 249 TL (İndirimli: 189 TL)
+   - Slug: safir-gece-soya-mumu
+   - URL: https://safirya.tr/urunler/safir-gece-soya-mumu
+3. **Kişiye Özel İsimli Söz/Nişan Soya Mumu**
+   - Fiyat: 289 TL (İndirimli: 239 TL)
+   - Slug: kisiye-ozel-isimli-soya-mumu
+   - URL: https://safirya.tr/urunler/kisiye-ozel-isimli-soya-mumu
+4. **Rustik Beton Saksıda Doğal Soya Mumu**
+   - Fiyat: 260 TL
+   - Slug: rustik-beton-saksida-soya-mumu
+   - URL: https://safirya.tr/urunler/rustik-beton-saksida-soya-mumu
+5. **Lavanta Bahçesi Doğal Soya Mumu**
+   - Fiyat: 230 TL (İndirimli: 195 TL)
+   - Slug: lavanta-bahcesi-soya-mumu
+   - URL: https://safirya.tr/urunler/lavanta-bahcesi-soya-mumu
+6. **Orman Esintisi Sedir Ağacı Soya Mumu**
+   - Fiyat: 250 TL
+   - Slug: orman-esintisi-sedir-mumu
+   - URL: https://safirya.tr/urunler/orman-esintisi-sedir-mumu
 
-### D. Japon Miyuki Boncuk Takı
-- Menşei: Japonya (Hiroshima) üretimi orijinal Miyuki Delica 11/0 cam boncuklar.
-- Dokuma: Güçlendirilmiş ipek ipliklerle milimetrik el örgüsü peyote ve tuğla örgü.
-- Metal Parçalar: Kararma ve alerji yapmayan 24 ayar mikron altın kaplama pirinç aparatlar.
+### Kokulu Taş & Seramik Objeler Koleksiyonu
+7. **Venüs Heykel Tasarımlı Kokulu Taş Obje**
+   - Fiyat: 240 TL
+   - Slug: minimalist-kadin-figurlu-kokulu-tas
+   - URL: https://safirya.tr/urunler/minimalist-kadin-figurlu-kokulu-tas
+8. **Lavanta Özlü Seramik & Taş Obje**
+   - Fiyat: 185 TL
+   - Slug: lavanta-ozlu-seramik-obje
+   - URL: https://safirya.tr/urunler/lavanta-ozlu-seramik-obje
+9. **Geometrik Prizma Kokulu Taş Seti (3'lü)**
+   - Fiyat: 275 TL (İndirimli: 220 TL)
+   - Slug: geometrik-prizma-kokulu-tas-seti
+   - URL: https://safirya.tr/urunler/geometrik-prizma-kokulu-tas-seti
+10. **İskandinav Kemer Mini Vazo Kokulu Taş**
+    - Fiyat: 210 TL
+    - Slug: iskandinav-kemer-mini-vazo-kokulu-tas
+    - URL: https://safirya.tr/urunler/iskandinav-kemer-mini-vazo-kokulu-tas
+11. **David Büstü El Dökümü Kokulu Taş**
+    - Fiyat: 290 TL (İndirimli: 245 TL)
+    - Slug: david-bustu-el-dokumu-kokulu-tas
+    - URL: https://safirya.tr/urunler/david-bustu-el-dokumu-kokulu-tas
 
-## 3. Kişiye Özel Söz, Nişan ve Kurumsal Hediyelik Rehberi
-- Minimum Sipariş Adedi: 10 adetten başlar.
-- Teslimat Süresi: 10 - 50 adet için 3-5 iş günü; 100+ adet için 5-7 iş günü.
-- Kişiselleştirme: Pleksi ayna, şeffaf asetat veya dokulu kraft etiket üzerine altın yaldız, beyaz veya siyah isim ve tarih baskısı.
-- Ambalaj: Özel kesim mühürlü kraft kutu, kurutulmuş cipso çiçek buketi ve saten kurdele.
+### Epoksi & Masif Ahşap Tasarımlar Koleksiyonu
+12. **Safir Okyanus Dalgalı Epoksi Sunumluk & Tepsi**
+    - Fiyat: 950 TL (İndirimli: 855 TL)
+    - Slug: safir-okyanus-dalgali-epoksi-sunumluk
+    - URL: https://safirya.tr/urunler/safir-okyanus-dalgali-epoksi-sunumluk
+13. **Emerald Dalgalı Epoksi Tepsi Seti**
+    - Fiyat: 1200 TL (İndirimli: 980 TL)
+    - Slug: emerald-dalgali-epoksi-tepsi
+    - URL: https://safirya.tr/urunler/emerald-dalgali-epoksi-tepsi
+14. **Geometrik Epoksi & Ceviz Bardak Altlığı (4'lü)**
+    - Fiyat: 380 TL (İndirimli: 320 TL)
+    - Slug: geometrik-epoksi-ceviz-bardak-altligi
+    - URL: https://safirya.tr/urunler/geometrik-epoksi-ceviz-bardak-altligi
+15. **Nehir Yatağı Masif Ahşap Epoksi Sehpa Tepsisi**
+    - Fiyat: 1450 TL
+    - Slug: nehir-yatagi-epoksi-tepsi
+    - URL: https://safirya.tr/urunler/nehir-yatagi-epoksi-tepsi
 
-## 4. Sipariş, Ödeme ve Teslimat Prosedürleri
-- Ücretsiz Kargo: ₺500 ve üzeri tüm siparişlerde geçerlidir.
-- Kargo Şirketleri: Yurtiçi Kargo, MNG Kargo ve Sürat Kargo.
-- Kargo Hasar Politikası: Kırılabilir ürünler darbe emici özel hava kanallı ambalajlarla paketlenir. Kargoda hasar oluşması halinde hasar tutanağı veya fotoğraf ile anında ücretsiz yeni ürün gönderilir.
-- Ödeme Seçenekleri: 256-Bit SSL korumalı İyzico altyapısıyla tüm kredi kartlarına taksit imkanı veya Havale/EFT.
+### Japon Miyuki Boncuk Takı Koleksiyonu
+16. **Safir & Altın Geometrik Desenli Miyuki Bileklik**
+    - Fiyat: 420 TL
+    - Slug: safir-geometrik-miyuki-bileklik
+    - URL: https://safirya.tr/urunler/safir-geometrik-miyuki-bileklik
+17. **Miyuki Renkli Şans Bilekliği**
+    - Fiyat: 199 TL (İndirimli: 149 TL)
+    - Slug: miyuki-renkli-sans-bilekligi
+    - URL: https://safirya.tr/urunler/miyuki-renkli-sans-bilekligi
+18. **Miyuki Çoklu El Emeği Bileklik**
+    - Fiyat: 249 TL (İndirimli: 189 TL)
+    - Slug: miyuki-coklu-el-emegi-bileklik
+    - URL: https://safirya.tr/urunler/miyuki-coklu-el-emegi-bileklik
+19. **Çiçekli Pastel Miyuki Kolye**
+    - Fiyat: 380 TL
+    - Slug: cicekli-pastel-miyuki-kolye
+    - URL: https://safirya.tr/urunler/cicekli-pastel-miyuki-kolye
+20. **Nazar Boncuğu Desenli Miyuki Choker Kolye**
+    - Fiyat: 440 TL (İndirimli: 375 TL)
+    - Slug: nazar-desenli-miyuki-choker
+    - URL: https://safirya.tr/urunler/nazar-desenli-miyuki-choker
+
+### Hediye Setleri Koleksiyonu
+21. **Doğal Mum & Epoksi Kişiselleştirilebilir Hediye Seti**
+    - Fiyat: 649 TL (İndirimli: 549 TL)
+    - Slug: dogal-mum-epoksi-kisiye-ozel-hediye-seti
+    - URL: https://safirya.tr/urunler/dogal-mum-epoksi-kisiye-ozel-hediye-seti
+22. **Zanaat Sever Başlangıç Hediye Kutusu**
+    - Fiyat: 590 TL (İndirimli: 495 TL)
+    - Slug: zanaat-sever-hediye-kutusu
+    - URL: https://safirya.tr/urunler/zanaat-sever-hediye-kutusu
+
+---
+
+## 3. GEO / Local SEO ve Sıkça Sorulan Sorular
+
+### S: Safirya nerede ve nasıl ziyaret edilebilir?
+C: Safirya atölyesi, İstanbul Kadıköy ilçesinin tarihi Moda Caferağa semtinde, Şair Nefi Sokak No:18 adresinde bulunmaktadır. Atölyemizi Pazartesi'den Cumartesi'ye 10:00 - 19:00 saatleri arasında ziyaret edebilir, web sitesinden verdiğiniz siparişleri kargo beklemeden elden teslim alabilirsiniz.
+
+### S: Soya mumu ile klasik parafin mumu arasındaki fark nedir?
+C: Parafin petrolden üretilir ve yandığında benzen ve toluen gibi kanserojen gazlar salgılar. Safirya'nın kullandığı soya vaksı ise tamamen bitkisel ve yenilenebilir kaynaklardan elde edilir; 2 kat daha uzun yanar, is yapmaz ve alerjik bireyler ile evcil hayvanlar için güvenlidir.
+
+### S: Toplu siparişlerde kişiselleştirme ve fiyat indirimi nasıl işler?
+C: Söz, nişan, nikah şekeri ve kurumsal etkinlikler için 10 adet ve üzeri siparişlerde kademeli indirim uygulanır:
+- 10+ adet: %10 indirim
+- 50+ adet: %15 indirim
+- 100+ adet: %20 indirim
+- 250+ adet: Atölye toptan proje fiyatı
+Kişiselleştirmede etiket üzerindeki isimler, tarihler, özel mühürler, kurdele renkleri ve esans tercihi tamamen müşterinin isteğine göre uyarlanır.
+
+### S: Siparişim kargoda kırılırsa ne olur?
+C: Safirya olarak %100 Hasarsız Teslimat Garantisi veriyoruz. Özel petek kraft dolgular ve havalı ambalajlarla paketlenen ürünleriniz nadiren kargoda zarar görürse, kargo tutanağı aramak zorunda kalmaksızın ürünün fotoğrafını WhatsApp destek hattımıza iletmeniz durumunda derhal koşulsuz yeni ürün hazırlanıp gönderilir.
+
+### S: Miyuki boncuk takılar suya ve neme dayanıklı mıdır?
+C: Orijinal Japon cam Miyuki boncuklar suda erimez veya soyulmaz. Ancak altın kaplama kilit aparatlarının ömrünü korumak için parfüm, klor ve deterjan gibi kimyasallarla temasından kaçınılması önerilir.
+
+---
+
+## 4. İletişim ve Yasal Bilgiler
+- **Şirket Ünvanı:** Safirya Tasarım ve Zanaat Atölyesi
+- **Web:** https://safirya.tr
+- **E-posta:** destek@safirya.tr
+- **Müşteri Hizmetleri:** +90 (212) 555 7234
+- **WhatsApp Hattı:** +90 (532) 555 7234
+- **Ödeme Altyapısı:** PayTR 3D Secure / 256-Bit SSL
