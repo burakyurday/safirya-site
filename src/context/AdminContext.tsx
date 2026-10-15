@@ -32,6 +32,7 @@ import {
   ConceptBannersMap,
 } from '@/types/admin';
 import { dispatchStageNotification } from '@/lib/notifications';
+import { triggerOrderStageNotification } from '@/lib/notifications/orderNotifications';
 
 
 // Başlangıç Atölye Hammaddeleri (Demo veriler temizlendi - Gerçek stoklar eklenebilir)
@@ -475,6 +476,15 @@ const initialSettings: AdminSettings = {
   paytrMerchantSalt: '',
   paytrTestMode: true,
   paytrDebugOn: false,
+
+  // Sipariş Hareketleri & Bildirim Tercihleri
+  notifyOnOrderReceived: true,
+  notifyOnOrderProduction: true,
+  notifyOnOrderQuality: true,
+  notifyOnOrderShipped: true,
+  notifyOnOrderDelivered: true,
+  notifyChannelSite: true,
+  notifyChannelEmail: true,
 };
 
 // Konsept Tasarım Bannerları (Kullanıcı sonradan ekleyebilmesi için varsayılan olarak boş şablon)
@@ -1400,10 +1410,23 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
   };
 
   const updateOrderStage = (id: string, stage: OrderStage) => {
+    const orderToUpdate = orders.find((o) => o.id === id);
     setOrders((prev) =>
       prev.map((o) => (o.id === id ? { ...o, stage } : o))
     );
     showToast(`Sipariş aşaması güncellendi.`);
+
+    if (orderToUpdate) {
+      triggerOrderStageNotification({
+        order: { ...orderToUpdate, stage },
+        newStage: stage,
+        settings,
+      }).then(({ siteNotified, emailSent }) => {
+        if (siteNotified || emailSent) {
+          showToast(`🔔 Müşteri bildirimi iletildi (${siteNotified ? 'Çan Bildirimi' : ''}${siteNotified && emailSent ? ' + ' : ''}${emailSent ? 'E-posta' : ''})`);
+        }
+      });
+    }
   };
 
   const generateInvoice = (orderId: string): AdminInvoice => {
@@ -1550,6 +1573,19 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
           : o
       );
     });
+
+    const orderToMove = orders.find((o) => o.id === orderId);
+    let stageMapping: OrderStage = 'ATOLYEDE_URETIMDE';
+    if (targetColumnId === 'col-prep') stageMapping = 'SIPARIS_ALINDI';
+    else if (targetColumnId === 'col-qc') stageMapping = 'KALITE_KONTROL_PAKETLEME';
+
+    if (orderToMove && orderToMove.stage !== stageMapping) {
+      triggerOrderStageNotification({
+        order: { ...orderToMove, stage: stageMapping, kanbanColumnId: targetColumnId },
+        newStage: stageMapping,
+        settings,
+      });
+    }
   };
 
   const updateOrderSortOrder = (orderId: string, newSortOrder: number) => {

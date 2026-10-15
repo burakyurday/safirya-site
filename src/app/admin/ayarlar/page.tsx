@@ -37,8 +37,10 @@ import {
   Key,
   Copy,
   Check,
+  Bell,
 } from 'lucide-react';
 import { useAdmin } from '@/context/AdminContext';
+import { addSiteNotification } from '@/lib/notifications/orderNotifications';
 
 export default function AyarlarPage() {
   const {
@@ -103,6 +105,29 @@ export default function AyarlarPage() {
   const [smtpPass, setSmtpPass] = useState(settings.smtpPass || '');
   const [smtpFrom, setSmtpFrom] = useState(
     settings.smtpFrom || 'Safirya Atölyesi <bildirim@safirya.com>'
+  );
+
+  // Sipariş Hareketleri ve Bildirim Tercihleri State'leri
+  const [notifyOnOrderReceived, setNotifyOnOrderReceived] = useState<boolean>(
+    settings.notifyOnOrderReceived ?? true
+  );
+  const [notifyOnOrderProduction, setNotifyOnOrderProduction] = useState<boolean>(
+    settings.notifyOnOrderProduction ?? true
+  );
+  const [notifyOnOrderQuality, setNotifyOnOrderQuality] = useState<boolean>(
+    settings.notifyOnOrderQuality ?? true
+  );
+  const [notifyOnOrderShipped, setNotifyOnOrderShipped] = useState<boolean>(
+    settings.notifyOnOrderShipped ?? true
+  );
+  const [notifyOnOrderDelivered, setNotifyOnOrderDelivered] = useState<boolean>(
+    settings.notifyOnOrderDelivered ?? true
+  );
+  const [notifyChannelSite, setNotifyChannelSite] = useState<boolean>(
+    settings.notifyChannelSite ?? true
+  );
+  const [notifyChannelEmail, setNotifyChannelEmail] = useState<boolean>(
+    settings.notifyChannelEmail ?? true
   );
 
   // 2. CMS Kurumsal Sayfalar Form State
@@ -220,8 +245,15 @@ export default function AyarlarPage() {
       smtpUser,
       smtpPass,
       smtpFrom: (smtpFrom || '').replace(/[\r\n\t]+/g, ' ').trim(),
+      notifyOnOrderReceived,
+      notifyOnOrderProduction,
+      notifyOnOrderQuality,
+      notifyOnOrderShipped,
+      notifyOnOrderDelivered,
+      notifyChannelSite,
+      notifyChannelEmail,
     });
-    showToast('Mağaza ayarları başarıyla güncellendi!');
+    showToast('Mağaza ve bildirim ayarları başarıyla güncellendi!');
   };
 
   const handleSavePaymentSettings = (e: React.FormEvent) => {
@@ -893,6 +925,135 @@ export default function AyarlarPage() {
                 </div>
               </div>
 
+            </div>
+
+            {/* SİPARİŞ HAREKETLERİ SEÇİMİ (YÖNETİM PANELİNDEN SEÇİLEBİLİR) */}
+            <div className="pt-4 border-t border-[#E2DCD3] space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="font-serif text-sm text-[#231B18] font-normal flex items-center gap-1.5">
+                    <Bell className="w-4 h-4 text-[#C85A32]" />
+                    <span>Hangi Sipariş Hareketleri Bildirim Olarak Gönderilsin?</span>
+                  </h4>
+                  <p className="text-[11px] text-stone-500 mt-0.5">
+                    Seçtiğiniz aşamalarda müşteriye otomatik bildirim iletilir. İstemediğiniz adımları kapatabilirsiniz.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    addSiteNotification({
+                      title: '🎨 Test Sipariş Bildirimi',
+                      message: 'Siparişiniz #SFR-TEST atölyede üretime alındı! Bu bir deneme bildirimidir.',
+                      orderNumber: 'SFR-TEST',
+                      stageName: 'Atölyede Üretimde',
+                      type: 'order_stage',
+                      link: '/siparis-takip?orderNumber=SFR-TEST',
+                    });
+                    showToast('✓ Test bildirimi oluşturuldu! Giriş yapılmışsa ana sayfa bildirim çanına yansıdı.');
+                  }}
+                  className="px-3 py-1.5 rounded-md border border-[#E2DCD3] bg-[#FAF8F5] hover:bg-white text-[11px] font-medium text-[#231B18] flex items-center gap-1.5 transition cursor-pointer shrink-0"
+                >
+                  <Send className="w-3 h-3 text-[#C85A32]" />
+                  <span>Test Bildirimi Gönder</span>
+                </button>
+              </div>
+
+              {/* 5 Aşamalı Sipariş Hareketleri Toggles */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                <label className="p-3 rounded-lg border border-[#E2DCD3] bg-[#FAF8F5] flex items-start gap-2.5 cursor-pointer hover:bg-white transition">
+                  <input
+                    type="checkbox"
+                    checked={notifyOnOrderReceived}
+                    onChange={(e) => setNotifyOnOrderReceived(e.target.checked)}
+                    className="mt-0.5 rounded text-[#C85A32] focus:ring-[#C85A32]"
+                  />
+                  <div>
+                    <span className="font-medium text-[#231B18] block text-xs">1. Sipariş Alındı</span>
+                    <span className="text-[10px] text-stone-500">Müşteri siparişi oluşturduğunda</span>
+                  </div>
+                </label>
+
+                <label className="p-3 rounded-lg border border-[#E2DCD3] bg-[#FAF8F5] flex items-start gap-2.5 cursor-pointer hover:bg-white transition">
+                  <input
+                    type="checkbox"
+                    checked={notifyOnOrderProduction}
+                    onChange={(e) => setNotifyOnOrderProduction(e.target.checked)}
+                    className="mt-0.5 rounded text-[#C85A32] focus:ring-[#C85A32]"
+                  />
+                  <div>
+                    <span className="font-medium text-[#231B18] block text-xs">2. Atölyede Üretimde</span>
+                    <span className="text-[10px] text-stone-500">Üretim bandına çekildiğinde</span>
+                  </div>
+                </label>
+
+                <label className="p-3 rounded-lg border border-[#E2DCD3] bg-[#FAF8F5] flex items-start gap-2.5 cursor-pointer hover:bg-white transition">
+                  <input
+                    type="checkbox"
+                    checked={notifyOnOrderQuality}
+                    onChange={(e) => setNotifyOnOrderQuality(e.target.checked)}
+                    className="mt-0.5 rounded text-[#C85A32] focus:ring-[#C85A32]"
+                  />
+                  <div>
+                    <span className="font-medium text-[#231B18] block text-xs">3. Kalite Kontrol & Paket</span>
+                    <span className="text-[10px] text-stone-500">Kutulama ve kalite aşamasında</span>
+                  </div>
+                </label>
+
+                <label className="p-3 rounded-lg border border-[#E2DCD3] bg-[#FAF8F5] flex items-start gap-2.5 cursor-pointer hover:bg-white transition">
+                  <input
+                    type="checkbox"
+                    checked={notifyOnOrderShipped}
+                    onChange={(e) => setNotifyOnOrderShipped(e.target.checked)}
+                    className="mt-0.5 rounded text-[#C85A32] focus:ring-[#C85A32]"
+                  />
+                  <div>
+                    <span className="font-medium text-[#231B18] block text-xs">4. Kargoya Verildi</span>
+                    <span className="text-[10px] text-stone-500">Kargo takip kodu ile yola çıktığında</span>
+                  </div>
+                </label>
+
+                <label className="p-3 rounded-lg border border-[#E2DCD3] bg-[#FAF8F5] flex items-start gap-2.5 cursor-pointer hover:bg-white transition">
+                  <input
+                    type="checkbox"
+                    checked={notifyOnOrderDelivered}
+                    onChange={(e) => setNotifyOnOrderDelivered(e.target.checked)}
+                    className="mt-0.5 rounded text-[#C85A32] focus:ring-[#C85A32]"
+                  />
+                  <div>
+                    <span className="font-medium text-[#231B18] block text-xs">5. Teslim Edildi</span>
+                    <span className="text-[10px] text-stone-500">Müşteriye ulaştığında</span>
+                  </div>
+                </label>
+              </div>
+
+              {/* Bildirim Kanalları Seçimi */}
+              <div className="pt-2">
+                <span className="text-[11px] font-medium text-stone-700 block mb-2">
+                  Aktif Bildirim Kanalları:
+                </span>
+                <div className="flex flex-wrap items-center gap-4 text-xs">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={notifyChannelSite}
+                      onChange={(e) => setNotifyChannelSite(e.target.checked)}
+                      className="rounded text-[#C85A32] focus:ring-[#C85A32]"
+                    />
+                    <span className="text-[#231B18] font-medium">🔔 Site İçi Bildirim Çanı (Giriş Yapan Kullanıcılara)</span>
+                  </label>
+
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={notifyChannelEmail}
+                      onChange={(e) => setNotifyChannelEmail(e.target.checked)}
+                      className="rounded text-[#C85A32] focus:ring-[#C85A32]"
+                    />
+                    <span className="text-[#231B18] font-medium">✉️ Müşteriye E-Posta Bildirimi</span>
+                  </label>
+                </div>
+              </div>
             </div>
           </div>
 

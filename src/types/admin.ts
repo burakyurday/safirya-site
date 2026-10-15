@@ -406,6 +406,15 @@ export interface AdminSettings {
   paytrMerchantSalt?: string;
   paytrTestMode?: boolean;
   paytrDebugOn?: boolean;
+
+  // Sipariş Hareketleri & Bildirim Tercihleri
+  notifyOnOrderReceived?: boolean;
+  notifyOnOrderProduction?: boolean;
+  notifyOnOrderQuality?: boolean;
+  notifyOnOrderShipped?: boolean;
+  notifyOnOrderDelivered?: boolean;
+  notifyChannelSite?: boolean;
+  notifyChannelEmail?: boolean;
 }
 
 export interface MarketingCampaign {

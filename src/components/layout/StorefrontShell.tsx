@@ -8,6 +8,7 @@ import { Footer } from '@/components/layout/Footer';
 import { LiveSearchModal } from '@/components/layout/LiveSearchModal';
 import { CartDrawer } from '@/components/layout/CartDrawer';
 import { ExitIntentModal } from '@/components/marketing/ExitIntentModal';
+import { AuthModal } from '@/components/auth/AuthModal';
 import { StickyMobileBar } from '@/components/layout/StickyMobileBar';
 import { CookieBanner } from '@/components/layout/CookieBanner';
 import { GoogleAnalytics } from '@/components/analytics/GoogleAnalytics';
@@ -56,6 +57,7 @@ export function StorefrontShell({ children, settings, categories }: Props) {
         giftWrapFee={settings.giftWrapFee}
       />
       <ExitIntentModal settings={settings} />
+      <AuthModal />
       <CookieBanner />
     </>
   );

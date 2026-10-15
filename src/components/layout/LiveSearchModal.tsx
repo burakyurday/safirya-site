@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { Search, X, Mic, Star, Check, Sparkles, AlertCircle } from 'lucide-react';
+import { Search, X, Mic, Star, Check, Sparkles, AlertCircle, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useStore } from '@/context/StoreContext';
@@ -16,8 +16,8 @@ const POPULAR_SEARCHES = [
   'Miyuki Takılar',
   'Epoksi Tepsi',
   'Kokulu Taş',
-  'Kahvaltılık Seti',
   'Hediye Setleri',
+  'Kahvaltılık',
 ];
 
 const SCENT_NOTES = [
@@ -42,13 +42,17 @@ export function LiveSearchModal() {
 
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Modal açıldığında odaklan ve ürün listesini yükle
+  // Modal açıldığında katalog ürünlerini yükle ve odaklan
   useEffect(() => {
     if (isSearchOpen) {
       setCatalogProducts(getClientCatalogProducts());
+      // Mobil cihazlarda ani klavye fırlamasını ve kaymasını önlemek için güvenli odaklanma
       const timer = setTimeout(() => {
-        inputRef.current?.focus();
-      }, 80);
+        if (inputRef.current) {
+          inputRef.current.focus({ preventScroll: true });
+        }
+      }, 100);
+
       document.body.style.overflow = 'hidden';
       return () => {
         clearTimeout(timer);
@@ -79,7 +83,7 @@ export function LiveSearchModal() {
   const defaultFeaturedProducts = useMemo(() => {
     return catalogProducts
       .filter((p) => p.isFeatured || p.isBestSeller)
-      .slice(0, 5);
+      .slice(0, 6);
   }, [catalogProducts]);
 
   const isFiltering = query.trim().length > 0 || selectedScent.length > 0;
@@ -150,253 +154,252 @@ export function LiveSearchModal() {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-[#231B18]/60 backdrop-blur-xs animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 flex items-start sm:items-center justify-center sm:p-4 md:p-6 bg-[#231B18]/70 backdrop-blur-xs animate-in fade-in duration-200"
       onClick={() => setIsSearchOpen(false)}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Ürün ve Koleksiyon Arama"
     >
+      {/* 
+        Mobil: Tam Ekran (100dvh) ve Sıfır Boşluk - Klavye Açıldığında Taşmaz ve Yazılabilir
+        Masaüstü: 820px Genişliğinde Ortalanmış Şık Kart
+      */}
       <div
-        className="w-full max-w-[820px] bg-[#F6F3EC] rounded-xs shadow-2xl border border-[#E2DCD3] p-5 sm:p-7 overflow-hidden text-[#231B18] relative animate-in zoom-in-95 duration-150"
+        className="w-full h-[100dvh] sm:h-auto sm:max-h-[88vh] sm:max-w-[820px] bg-[#F6F3EC] sm:rounded-xs shadow-2xl border-0 sm:border sm:border-[#E2DCD3] flex flex-col overflow-hidden text-[#231B18] relative animate-in slide-in-from-top-2 sm:zoom-in-95 duration-150"
         onClick={(e) => e.stopPropagation()}
-        role="dialog"
-        aria-modal="true"
-        aria-label="Ürün ve Koleksiyon Arama"
       >
-        {/* Üst Arama Input Çubuğu */}
-        <form onSubmit={handleSearchSubmit} className="mb-6">
-          <div className="bg-[#EFECE6] rounded-xs border border-[#E2DCD3] px-4 py-3 flex items-center gap-3 shadow-xs focus-within:border-[#231B18] transition-colors">
-            <Search className="w-5 h-5 text-[#7A7067] shrink-0" />
-            <input
-              ref={inputRef}
-              type="text"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Doğal mum, Miyuki takı, epoksi, koku veya ürün ara..."
-              className="flex-1 text-[#231B18] text-sm sm:text-base placeholder-[#7A7067] focus:outline-hidden bg-transparent font-normal"
-              autoComplete="off"
-            />
-            <div className="flex items-center gap-2 text-[#7A7067]">
-              {/* Sesli Arama Butonu */}
-              <button
-                type="button"
-                onClick={handleVoiceSearch}
-                title="Sesle Ara"
-                aria-label="Sesle Ara"
-                className={`transition p-1 rounded-xs ${
-                  isListening
-                    ? 'text-red-600 animate-pulse bg-red-100'
-                    : 'hover:text-[#231B18]'
-                }`}
-              >
-                <Mic className="w-4 h-4" />
-              </button>
+        {/* 1. ÜST ARAMA ÇUBUĞU (Mobilde ve Masaüstünde Sabit) */}
+        <div className="shrink-0 p-3 sm:p-5 border-b border-[#E2DCD3] bg-[#F6F3EC]">
+          <form onSubmit={handleSearchSubmit} className="flex items-center gap-2">
+            <div className="flex-1 bg-white rounded-xs border border-[#E2DCD3] px-3.5 py-2.5 sm:py-3 flex items-center gap-2.5 shadow-2xs focus-within:border-[#231B18] transition-colors">
+              <Search className="w-5 h-5 text-[#7A7067] shrink-0" />
+              
+              {/* 
+                ÖNEMLİ MOBİL DÜZELTMESİ:
+                Font size 'text-base' (16px) tutulmalıdır. 
+                iOS Safari font-size < 16px olduğunda ekranı otomatik %130 zoomlar,
+                bu da arama kutusunu devasa yapar ve yazmayı engeller.
+              */}
+              <input
+                ref={inputRef}
+                type="text"
+                inputMode="search"
+                enterKeyHint="search"
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="none"
+                spellCheck="false"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Mum, epoksi, Miyuki veya koku ara..."
+                className="flex-1 text-[#231B18] text-base placeholder-[#7A7067] focus:outline-none bg-transparent font-normal min-w-0"
+              />
 
-              <div className="h-4 w-px bg-[#E2DCD3]" />
+              <div className="flex items-center gap-1.5 text-[#7A7067] shrink-0">
+                {/* Sesli Arama */}
+                <button
+                  type="button"
+                  onClick={handleVoiceSearch}
+                  title="Sesle Ara"
+                  aria-label="Sesle Ara"
+                  className={`p-1 rounded-xs transition ${
+                    isListening
+                      ? 'text-red-600 animate-pulse bg-red-100'
+                      : 'hover:text-[#231B18]'
+                  }`}
+                >
+                  <Mic className="w-4 h-4" />
+                </button>
 
-              {/* Temizle / Kapat Butonu */}
+                {/* Temizle Butonu */}
+                {(query || selectedScent) && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setQuery('');
+                      setSelectedScent('');
+                      inputRef.current?.focus();
+                    }}
+                    title="Temizle"
+                    aria-label="Temizle"
+                    className="p-1 text-stone-400 hover:text-[#C85A32] transition"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Mobilde Kolay Kapatma Butonu */}
+            <button
+              type="button"
+              onClick={() => setIsSearchOpen(false)}
+              className="px-2.5 py-2 text-xs uppercase tracking-wider font-semibold text-[#7A7067] hover:text-[#231B18] shrink-0 sm:hidden cursor-pointer"
+            >
+              Kapat
+            </button>
+
+            {/* Masaüstünde Kapatma Butonu */}
+            <button
+              type="button"
+              onClick={() => setIsSearchOpen(false)}
+              className="hidden sm:flex p-2 text-stone-400 hover:text-[#231B18] transition shrink-0"
+              title="Kapat (ESC)"
+              aria-label="Kapat"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </form>
+
+          {/* Hızlı Filtre Çipleri (Mobilde tek satırda yatay kaydırılabilir, dikey yeri işgal etmez) */}
+          <div className="mt-2.5 flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none text-xs">
+            <span className="text-[10px] uppercase tracking-wider font-semibold text-[#7A7067] shrink-0">
+              Popüler:
+            </span>
+            {POPULAR_SEARCHES.map((item) => {
+              const isSelected = query.toLowerCase() === item.toLowerCase();
+              return (
+                <button
+                  key={item}
+                  type="button"
+                  onClick={() => {
+                    setQuery(item);
+                    setSelectedScent('');
+                  }}
+                  className={`px-2.5 py-1 rounded-xs text-[11px] font-medium whitespace-nowrap shrink-0 transition cursor-pointer ${
+                    isSelected
+                      ? 'bg-[#231B18] text-[#F6F3EC]'
+                      : 'bg-white border border-[#E2DCD3] text-[#231B18] hover:border-[#231B18]'
+                  }`}
+                >
+                  {item}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Koku Notaları Çipleri */}
+          <div className="mt-1.5 flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none text-xs">
+            <span className="text-[10px] uppercase tracking-wider font-semibold text-[#7A7067] shrink-0">
+              Koku:
+            </span>
+            {SCENT_NOTES.map((scent) => {
+              const isSelected = selectedScent === scent;
+              return (
+                <button
+                  key={scent}
+                  type="button"
+                  onClick={() => {
+                    setSelectedScent(isSelected ? '' : scent);
+                  }}
+                  className={`px-2 py-0.5 rounded-xs text-[10px] font-medium whitespace-nowrap shrink-0 transition cursor-pointer ${
+                    isSelected
+                      ? 'bg-[#C85A32] text-white'
+                      : 'bg-[#EFECE6] border border-[#E2DCD3] text-[#7A7067] hover:text-[#231B18]'
+                  }`}
+                >
+                  {scent}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* 2. ANA İÇERİK & CANLI ÜRÜN SONUÇLARI (Akıcı ve Bağımsız Kaydırma) */}
+        <div className="flex-1 overflow-y-auto overscroll-contain p-3.5 sm:p-6 space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="font-serif text-sm sm:text-base font-normal text-[#231B18]">
+              {isFiltering ? (
+                <span>
+                  Arama Sonuçları{' '}
+                  <span className="text-xs font-sans text-[#7A7067]">
+                    ({displayProducts.length} ürün)
+                  </span>
+                </span>
+              ) : (
+                <span>Öne Çıkan Atölye Parçaları</span>
+              )}
+            </h3>
+
+            {(query || selectedScent) && (
               <button
                 type="button"
                 onClick={() => {
-                  if (query || selectedScent) {
-                    setQuery('');
-                    setSelectedScent('');
-                    inputRef.current?.focus();
-                  } else {
-                    setIsSearchOpen(false);
-                  }
+                  setQuery('');
+                  setSelectedScent('');
+                  inputRef.current?.focus();
                 }}
-                title={query || selectedScent ? 'Aramayı Temizle' : 'Kapat'}
-                aria-label={query || selectedScent ? 'Aramayı Temizle' : 'Kapat'}
-                className="hover:text-[#C85A32] transition p-1"
+                className="text-[11px] text-[#C85A32] hover:underline font-medium"
               >
-                <X className="w-4 h-4" />
+                Filtreleri Temizle
               </button>
-            </div>
-          </div>
-        </form>
-
-        {/* Ana Gövde (2 Sütun) */}
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-8 pb-5">
-          {/* Sol Sütun: Hızlı Keşfet & Filtreler */}
-          <div className="md:col-span-5 space-y-6">
-            <div className="flex items-center justify-between">
-              <h3 className="font-serif text-lg font-normal text-[#231B18]">
-                Hızlı Keşfet
-              </h3>
-              {(query || selectedScent) && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setQuery('');
-                    setSelectedScent('');
-                    inputRef.current?.focus();
-                  }}
-                  className="text-[11px] text-[#C85A32] hover:underline"
-                >
-                  Filtreleri Sıfırla
-                </button>
-              )}
-            </div>
-
-            {/* Popüler Aramalar */}
-            <div className="space-y-2.5">
-              <h4 className="text-xs uppercase tracking-wider font-medium text-[#7A7067]">
-                Popüler Aramalar
-              </h4>
-              <div className="flex flex-wrap gap-2">
-                {POPULAR_SEARCHES.map((item) => {
-                  const isCurrent = query.toLowerCase() === item.toLowerCase();
-                  return (
-                    <button
-                      key={item}
-                      type="button"
-                      onClick={() => {
-                        setQuery(item);
-                        setSelectedScent('');
-                        inputRef.current?.focus();
-                      }}
-                      className={`px-3 py-1.5 rounded-xs text-xs font-medium transition ${
-                        isCurrent
-                          ? 'border border-[#231B18] bg-[#231B18] text-[#F6F3EC]'
-                          : 'bg-[#EFECE6] border border-[#E2DCD3] text-[#231B18] hover:border-[#231B18]'
-                      }`}
-                    >
-                      {item}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Koku Notalarına Göre */}
-            <div className="space-y-2.5">
-              <div className="flex items-center justify-between">
-                <h4 className="text-xs uppercase tracking-wider font-medium text-[#7A7067]">
-                  Koku Notalarına Göre
-                </h4>
-                {selectedScent && (
-                  <span className="text-[10px] text-[#C85A32] font-medium">
-                    {selectedScent} seçili
-                  </span>
-                )}
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {SCENT_NOTES.map((scent) => {
-                  const isSelected = selectedScent === scent;
-                  return (
-                    <button
-                      key={scent}
-                      type="button"
-                      onClick={() => {
-                        setSelectedScent(isSelected ? '' : scent);
-                        inputRef.current?.focus();
-                      }}
-                      className={`px-3 py-1.5 rounded-xs text-xs font-medium transition ${
-                        isSelected
-                          ? 'border border-[#C85A32] text-[#C85A32] bg-[#F8ECE6] font-semibold'
-                          : 'bg-[#EFECE6] border border-[#E2DCD3] text-[#231B18] hover:border-[#231B18]'
-                      }`}
-                    >
-                      {scent}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* İpucu */}
-            <div className="p-3 bg-[#EFECE6]/80 rounded-xs border border-[#E2DCD3] text-xs text-[#7A7067] leading-relaxed flex items-start gap-2">
-              <Sparkles className="w-4 h-4 text-[#C85A32] shrink-0 mt-0.5" />
-              <span>
-                Atölyemizde kişiye özel hazırlanan soya mumları, Japon Miyuki takılar ve epoksi sunumluklar için anahtar kelimelerle arayabilirsiniz.
-              </span>
-            </div>
+            )}
           </div>
 
-          {/* Sağ Sütun: Canlı Ürün Sonuçları */}
-          <div className="md:col-span-7 space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="font-serif text-lg font-normal text-[#231B18]">
-                {isFiltering ? (
-                  <span>
-                    Arama Sonuçları{' '}
-                    <span className="text-sm font-sans text-[#7A7067]">
-                      ({displayProducts.length})
-                    </span>
-                  </span>
-                ) : (
-                  <span>Öne Çıkan Parçalar</span>
-                )}
-              </h3>
-              {isFiltering && (
-                <span className="text-xs text-[#7A7067]">
-                  Canlı Sonuçlar
-                </span>
-              )}
-            </div>
+          {/* Ürün Listesi */}
+          {displayProducts.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3">
+              {displayProducts.map((prod) => {
+                const isAdded = addedId === prod.id;
+                const finalPrice = prod.discountPrice || prod.price;
+                const hasDiscount = Boolean(
+                  prod.discountPrice && prod.discountPrice < prod.price
+                );
 
-            {/* Ürün Listesi */}
-            {displayProducts.length > 0 ? (
-              <div className="space-y-3 max-h-[380px] overflow-y-auto pr-1">
-                {displayProducts.map((prod) => {
-                  const isAdded = addedId === prod.id;
-                  const finalPrice = prod.discountPrice || prod.price;
-                  const hasDiscount = Boolean(prod.discountPrice && prod.discountPrice < prod.price);
-
-                  return (
-                    <div
-                      key={prod.id}
-                      className="flex items-center gap-3.5 p-2 bg-[#EFECE6] rounded-xs border border-[#E2DCD3] hover:border-stone-400 group transition duration-200"
+                return (
+                  <div
+                    key={prod.id}
+                    className="flex items-center gap-3 p-2.5 bg-white rounded-xs border border-[#E2DCD3] hover:border-stone-400 group transition duration-200"
+                  >
+                    {/* Ürün Görseli */}
+                    <Link
+                      href={`/urunler/${prod.slug}`}
+                      onClick={() => setIsSearchOpen(false)}
+                      className="shrink-0 w-16 h-16 rounded-xs overflow-hidden bg-[#FAF8F5] border border-[#E2DCD3]"
                     >
-                      {/* Ürün Görseli */}
-                      <Link
-                        href={`/urunler/${prod.slug}`}
-                        onClick={() => setIsSearchOpen(false)}
-                        className="shrink-0 w-14 h-14 rounded-xs overflow-hidden bg-[#FAF8F5] border border-[#E2DCD3]"
-                      >
-                        <img
-                          src={prod.image}
-                          alt={`${prod.name} - Safirya`}
-                          loading="lazy"
-                          decoding="async"
-                          className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
-                        />
-                      </Link>
+                      <img
+                        src={prod.image}
+                        alt={`${prod.name} - Safirya`}
+                        loading="lazy"
+                        decoding="async"
+                        className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
+                      />
+                    </Link>
 
-                      {/* Ürün Bilgisi */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between gap-2">
-                          <Link
-                            href={`/urunler/${prod.slug}`}
-                            onClick={() => setIsSearchOpen(false)}
-                            className="font-serif text-xs sm:text-sm font-normal text-[#231B18] truncate group-hover:text-[#C85A32] transition block"
-                            title={prod.name}
-                          >
-                            {prod.name}
-                          </Link>
-                          <div className="flex items-center gap-1 text-[11px] font-semibold text-[#231B18] shrink-0">
-                            <Star className="w-3 h-3 text-amber-500 fill-amber-500" />
-                            <span>{prod.rating.toFixed(1)}</span>
-                          </div>
+                    {/* Ürün Bilgisi */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-1">
+                        <Link
+                          href={`/urunler/${prod.slug}`}
+                          onClick={() => setIsSearchOpen(false)}
+                          className="font-serif text-xs sm:text-sm font-normal text-[#231B18] truncate group-hover:text-[#C85A32] transition block"
+                          title={prod.name}
+                        >
+                          {prod.name}
+                        </Link>
+                        <div className="flex items-center gap-0.5 text-[10px] font-semibold text-[#231B18] shrink-0">
+                          <Star className="w-3 h-3 text-amber-500 fill-amber-500" />
+                          <span>{prod.rating.toFixed(1)}</span>
                         </div>
+                      </div>
 
-                        {/* Tagler ve Kategori */}
-                        <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-                          <span className="px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider bg-[#231B18] text-[#F6F3EC]">
-                            {prod.categoryName}
+                      {/* Kategori */}
+                      <div className="flex items-center gap-1.5 mt-0.5">
+                        <span className="px-1.5 py-0.2 text-[9px] font-semibold uppercase tracking-wider bg-[#231B18] text-[#F6F3EC]">
+                          {prod.categoryName}
+                        </span>
+                        {prod.scentNotes?.[0] && (
+                          <span className="text-[10px] text-[#7A7067] truncate">
+                            • {prod.scentNotes[0]}
                           </span>
-                          {prod.tags.slice(0, 2).map((tag) => (
-                            <span
-                              key={tag}
-                              className="px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-wider bg-[#F6F3EC] text-[#7A7067] border border-[#E2DCD3]"
-                            >
-                              {tag}
-                            </span>
-                          ))}
-                        </div>
+                        )}
+                      </div>
 
-                        {/* Fiyat */}
-                        <div className="flex items-baseline gap-2 mt-1">
+                      {/* Fiyat ve Buton */}
+                      <div className="flex items-center justify-between mt-1.5">
+                        <div className="flex items-baseline gap-1.5">
                           {hasDiscount && (
-                            <span className="text-xs text-[#7A7067] line-through">
+                            <span className="text-[11px] text-[#7A7067] line-through">
                               {prod.price} TL
                             </span>
                           )}
@@ -404,68 +407,68 @@ export function LiveSearchModal() {
                             {finalPrice} TL
                           </span>
                         </div>
-                      </div>
 
-                      {/* Sepete Ekle Butonu */}
-                      <button
-                        type="button"
-                        onClick={() => handleAddToCart(prod)}
-                        className={`shrink-0 px-2.5 py-1.5 rounded-xs text-[10px] font-medium uppercase tracking-wider transition flex items-center gap-1 ${
-                          isAdded
-                            ? 'bg-emerald-700 text-white border border-emerald-700'
-                            : 'border border-[#231B18] text-[#231B18] hover:bg-[#231B18] hover:text-[#F6F3EC]'
-                        }`}
-                      >
-                        {isAdded ? (
-                          <>
-                            <Check className="w-3 h-3" />
-                            <span>Eklendi</span>
-                          </>
-                        ) : (
-                          <span>+ Ekle</span>
-                        )}
-                      </button>
+                        {/* Sepete Ekle Butonu */}
+                        <button
+                          type="button"
+                          onClick={() => handleAddToCart(prod)}
+                          className={`shrink-0 px-2 py-1 rounded-xs text-[10px] font-medium uppercase tracking-wider transition flex items-center gap-1 ${
+                            isAdded
+                              ? 'bg-emerald-700 text-white border border-emerald-700'
+                              : 'border border-[#231B18] text-[#231B18] hover:bg-[#231B18] hover:text-[#F6F3EC]'
+                          }`}
+                        >
+                          {isAdded ? (
+                            <>
+                              <Check className="w-3 h-3" />
+                              <span>Eklendi</span>
+                            </>
+                          ) : (
+                            <span>+ Ekle</span>
+                          )}
+                        </button>
+                      </div>
                     </div>
-                  );
-                })}
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            /* Sonuç Bulunamadı */
+            <div className="py-10 px-4 text-center space-y-3 bg-white rounded-xs border border-[#E2DCD3]">
+              <div className="w-12 h-12 mx-auto rounded-full bg-[#FAF8F5] border border-[#E2DCD3] flex items-center justify-center text-[#7A7067]">
+                <AlertCircle className="w-6 h-6 text-[#C85A32]" />
               </div>
-            ) : (
-              /* Arama Sonucu Bulunamadı Durumu */
-              <div className="py-10 px-4 text-center space-y-3 bg-[#EFECE6]/50 rounded-xs border border-[#E2DCD3]">
-                <div className="w-12 h-12 mx-auto rounded-full bg-[#EFECE6] border border-[#E2DCD3] flex items-center justify-center text-[#7A7067]">
-                  <AlertCircle className="w-6 h-6 text-[#C85A32]" />
-                </div>
-                <div>
-                  <p className="font-serif text-base text-[#231B18]">
-                    {query ? `"${query}" ile eşleşen ürün bulunamadı` : 'Kriterlere uygun ürün bulunamadı'}
-                  </p>
-                  <p className="text-xs text-[#7A7067] max-w-xs mx-auto mt-1">
-                    Yazımı kontrol edebilir, koku notasını değiştirebilir veya aşağıdaki önerilere göz atabilirsiniz.
-                  </p>
-                </div>
-                <div className="flex flex-wrap justify-center gap-1.5 pt-2">
-                  {POPULAR_SEARCHES.slice(0, 4).map((item) => (
-                    <button
-                      key={item}
-                      type="button"
-                      onClick={() => {
-                        setQuery(item);
-                        setSelectedScent('');
-                        inputRef.current?.focus();
-                      }}
-                      className="px-2.5 py-1 text-xs bg-[#EFECE6] hover:bg-[#231B18] hover:text-[#F6F3EC] border border-[#E2DCD3] rounded-xs transition"
-                    >
-                      {item}
-                    </button>
-                  ))}
-                </div>
+              <div>
+                <p className="font-serif text-base text-[#231B18]">
+                  {query ? `"${query}" ile eşleşen ürün bulunamadı` : 'Kriterlere uygun ürün bulunamadı'}
+                </p>
+                <p className="text-xs text-[#7A7067] max-w-xs mx-auto mt-1">
+                  Yazımı kontrol edebilir veya aşağıdaki popüler kelimelerden birini seçebilirsiniz.
+                </p>
               </div>
-            )}
-          </div>
+              <div className="flex flex-wrap justify-center gap-1.5 pt-2">
+                {POPULAR_SEARCHES.map((item) => (
+                  <button
+                    key={item}
+                    type="button"
+                    onClick={() => {
+                      setQuery(item);
+                      setSelectedScent('');
+                      inputRef.current?.focus();
+                    }}
+                    className="px-2.5 py-1 text-xs bg-[#FAF8F5] hover:bg-[#231B18] hover:text-[#F6F3EC] border border-[#E2DCD3] rounded-xs transition"
+                  >
+                    {item}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
-        {/* Alt Kısım: Tüm Sonuçları Gör Linki */}
-        <div className="pt-3.5 border-t border-[#E2DCD3] flex items-center justify-between">
+        {/* 3. ALT ÇUBUK (Tüm Sonuçları Gör) */}
+        <div className="shrink-0 p-3 sm:p-4 border-t border-[#E2DCD3] bg-[#FAF8F5] flex items-center justify-between">
           {query.trim() ? (
             <Link
               href={`/arama?q=${encodeURIComponent(query.trim())}`}
@@ -473,7 +476,7 @@ export function LiveSearchModal() {
               className="inline-flex items-center gap-1.5 text-xs uppercase tracking-wider font-medium text-[#231B18] hover:text-[#C85A32] transition group"
             >
               <span>&ldquo;{query.trim()}&rdquo; İçin Tüm Sonuçları Gör ({filteredProducts.length})</span>
-              <span className="group-hover:translate-x-1 transition-transform">→</span>
+              <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
             </Link>
           ) : (
             <Link
@@ -482,12 +485,12 @@ export function LiveSearchModal() {
               className="inline-flex items-center gap-1.5 text-xs uppercase tracking-wider font-medium text-[#231B18] hover:text-[#C85A32] transition group"
             >
               <span>Tüm Koleksiyonlara Göz At</span>
-              <span className="group-hover:translate-x-1 transition-transform">→</span>
+              <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
             </Link>
           )}
 
           <span className="text-[11px] text-[#7A7067] hidden sm:inline">
-            Kapatmak için <kbd className="px-1.5 py-0.5 rounded-xs bg-[#EFECE6] border border-[#E2DCD3] text-[10px]">ESC</kbd>
+            Kapatmak için <kbd className="px-1.5 py-0.5 rounded-xs bg-white border border-[#E2DCD3] text-[10px]">ESC</kbd>
           </span>
         </div>
       </div>
