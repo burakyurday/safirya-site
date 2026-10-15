@@ -480,7 +480,9 @@ export interface ConceptBannerItem {
   imageUrl?: string;
   mobileImageUrl?: string;
   recommendedDimensions: string; // e.g. "1920 × 600 px"
+  mobileRecommendedDimensions?: string; // e.g. "800 × 800 px"
   aspectRatioLabel: string; // e.g. "16:5", "1:1 Kare", "4:3"
+  mobileAspectRatioLabel?: string; // e.g. "1:1 Kare", "4:5"
   categorySlug?: string;
   isActive: boolean;
 }

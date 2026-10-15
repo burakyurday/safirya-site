@@ -499,8 +499,11 @@ export const initialConceptBanners: ConceptBannersMap = {
     buttonText: 'ALIŞVERİŞE BAŞLA',
     buttonLink: '/cok-satanlar',
     imageUrl: '', // Kullanıcı sonradan ekleyecek, şuanlık boş
-    recommendedDimensions: '1920 × 600 px (Geniş Ekran) / Mobil: 800 × 800 px',
+    mobileImageUrl: '',
+    recommendedDimensions: '1920 × 600 px (16:5 Geniş Ekran)',
+    mobileRecommendedDimensions: '800 × 800 px (1:1 Kare) veya 750 × 1000 px',
     aspectRatioLabel: '16:5 (Geniş Ekran)',
+    mobileAspectRatioLabel: '1:1 Kare / 3:4 Dikey',
     isActive: true,
   },
   category_1: {
@@ -512,8 +515,11 @@ export const initialConceptBanners: ConceptBannersMap = {
     buttonText: 'KOLEKSİYONU KEŞFET',
     buttonLink: '/kategoriler/dogal-mumlar',
     imageUrl: '', // Şuanlık boş
+    mobileImageUrl: '',
     recommendedDimensions: '800 × 800 px (1:1 Kare)',
+    mobileRecommendedDimensions: '600 × 600 px (1:1 Kare)',
     aspectRatioLabel: '1:1 Kare',
+    mobileAspectRatioLabel: '1:1 Kare',
     isActive: true,
   },
   category_2: {
@@ -525,8 +531,11 @@ export const initialConceptBanners: ConceptBannersMap = {
     buttonText: 'KOLEKSİYONU KEŞFET',
     buttonLink: '/kategoriler/miyuki-taki',
     imageUrl: '', // Şuanlık boş
+    mobileImageUrl: '',
     recommendedDimensions: '800 × 800 px (1:1 Kare)',
+    mobileRecommendedDimensions: '600 × 600 px (1:1 Kare)',
     aspectRatioLabel: '1:1 Kare',
+    mobileAspectRatioLabel: '1:1 Kare',
     isActive: true,
   },
   category_3: {
@@ -538,8 +547,11 @@ export const initialConceptBanners: ConceptBannersMap = {
     buttonText: 'KOLEKSİYONU KEŞFET',
     buttonLink: '/kategoriler/epoksi-tasarimlar',
     imageUrl: '', // Şuanlık boş
+    mobileImageUrl: '',
     recommendedDimensions: '800 × 800 px (1:1 Kare)',
+    mobileRecommendedDimensions: '600 × 600 px (1:1 Kare)',
     aspectRatioLabel: '1:1 Kare',
+    mobileAspectRatioLabel: '1:1 Kare',
     isActive: true,
   },
   showcase_1: {
@@ -551,8 +563,11 @@ export const initialConceptBanners: ConceptBannersMap = {
     buttonText: 'KEŞFEDİN',
     buttonLink: '/kategoriler/dogal-mumlar',
     imageUrl: '', // Şuanlık boş
+    mobileImageUrl: '',
     recommendedDimensions: '1200 × 800 px (4:3 veya 3:2)',
+    mobileRecommendedDimensions: '800 × 800 px (1:1 Kare)',
     aspectRatioLabel: '4:3 Yatay',
+    mobileAspectRatioLabel: '1:1 Kare',
     categorySlug: 'dogal-mumlar',
     isActive: true,
   },
@@ -565,8 +580,11 @@ export const initialConceptBanners: ConceptBannersMap = {
     buttonText: 'KEŞFEDİN',
     buttonLink: '/kategoriler/epoksi-tasarimlar',
     imageUrl: '', // Şuanlık boş
+    mobileImageUrl: '',
     recommendedDimensions: '1200 × 800 px (4:3 veya 3:2)',
+    mobileRecommendedDimensions: '800 × 800 px (1:1 Kare)',
     aspectRatioLabel: '4:3 Yatay',
+    mobileAspectRatioLabel: '1:1 Kare',
     categorySlug: 'epoksi-tasarimlar',
     isActive: true,
   },

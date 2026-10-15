@@ -152,15 +152,23 @@ export default function HomePage() {
       <section className="w-full">
         <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 pt-4">
           
-          {hero.imageUrl ? (
+          {hero.imageUrl || hero.mobileImageUrl ? (
             /* Görsel Yüklüyse: Tam Ekran Konsept Banner */
-            <div className="relative w-full overflow-hidden rounded-xs bg-stone-100 min-h-[360px] sm:min-h-[480px] lg:min-h-[540px] flex items-center group">
-              <img
-                src={hero.imageUrl}
-                alt={hero.title || 'Safirya Banner'}
-                className="absolute inset-0 w-full h-full object-cover group-hover:scale-101 transition-transform duration-700"
-              />
-              <div className="absolute inset-0 bg-gradient-to-r from-white/70 via-white/40 to-transparent sm:w-2/3" />
+            <div className="relative w-full overflow-hidden rounded-xs bg-stone-100 min-h-[380px] sm:min-h-[480px] lg:min-h-[540px] flex items-center group">
+              <picture className="absolute inset-0 w-full h-full">
+                {hero.mobileImageUrl && (
+                  <source media="(max-width: 767px)" srcSet={hero.mobileImageUrl} />
+                )}
+                {hero.imageUrl && (
+                  <source media="(min-width: 768px)" srcSet={hero.imageUrl} />
+                )}
+                <img
+                  src={hero.imageUrl || hero.mobileImageUrl}
+                  alt={hero.title || 'Safirya Banner'}
+                  className="w-full h-full object-cover group-hover:scale-101 transition-transform duration-700"
+                />
+              </picture>
+              <div className="absolute inset-0 bg-gradient-to-t sm:bg-gradient-to-r from-white/80 via-white/40 to-transparent sm:w-2/3" />
               
               <div className="relative z-10 p-6 sm:p-14 max-w-xl space-y-3 sm:space-y-4">
                 {hero.tag && (
@@ -293,13 +301,21 @@ export default function HomePage() {
               
               {/* Kart Görsel Alanı (1:1 Kare) */}
               <div className="relative aspect-square w-full overflow-hidden rounded-xs bg-[#FAF8F5] border border-stone-200/80 flex items-center justify-center">
-                {banner.imageUrl ? (
+                {banner.imageUrl || banner.mobileImageUrl ? (
                   <>
-                    <img
-                      src={banner.imageUrl}
-                      alt={banner.title || fallbackTitle}
-                      className="w-full h-full object-cover group-hover:scale-103 transition-transform duration-700"
-                    />
+                    <picture className="w-full h-full">
+                      {banner.mobileImageUrl && (
+                        <source media="(max-width: 767px)" srcSet={banner.mobileImageUrl} />
+                      )}
+                      {banner.imageUrl && (
+                        <source media="(min-width: 768px)" srcSet={banner.imageUrl} />
+                      )}
+                      <img
+                        src={banner.imageUrl || banner.mobileImageUrl}
+                        alt={banner.title || fallbackTitle}
+                        className="w-full h-full object-cover group-hover:scale-103 transition-transform duration-700"
+                      />
+                    </picture>
                     <div className="absolute inset-0 bg-black/15 group-hover:bg-black/25 transition-colors" />
                     
                     {/* Görsel Üstü Buton */}
@@ -409,13 +425,21 @@ export default function HomePage() {
           {/* Sol: Büyük Konsept Afişi (%50 Genişlik) */}
           <div className="lg:col-span-6">
             <div className="relative aspect-[4/3] w-full overflow-hidden rounded-xs bg-[#FAF8F5] border border-stone-200/80 flex items-center justify-center group">
-              {show1.imageUrl ? (
+              {show1.imageUrl || show1.mobileImageUrl ? (
                 <>
-                  <img
-                    src={show1.imageUrl}
-                    alt={show1.title || 'Safirya Vitrin'}
-                    className="w-full h-full object-cover group-hover:scale-102 transition-transform duration-700"
-                  />
+                  <picture className="w-full h-full">
+                    {show1.mobileImageUrl && (
+                      <source media="(max-width: 767px)" srcSet={show1.mobileImageUrl} />
+                    )}
+                    {show1.imageUrl && (
+                      <source media="(min-width: 768px)" srcSet={show1.imageUrl} />
+                    )}
+                    <img
+                      src={show1.imageUrl || show1.mobileImageUrl}
+                      alt={show1.title || 'Safirya Vitrin'}
+                      className="w-full h-full object-cover group-hover:scale-102 transition-transform duration-700"
+                    />
+                  </picture>
                   <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/10 to-transparent flex flex-col justify-end p-5 sm:p-8 text-white">
                     {show1.subtitle && (
                       <span className="text-[10px] sm:text-[11px] font-sans uppercase tracking-[0.2em] text-white/90 font-medium">
@@ -482,13 +506,21 @@ export default function HomePage() {
           {/* Sol: Büyük Konsept Afişi (%50 Genişlik) */}
           <div className="lg:col-span-6">
             <div className="relative aspect-[4/3] w-full overflow-hidden rounded-xs bg-[#FAF8F5] border border-stone-200/80 flex items-center justify-center group">
-              {show2.imageUrl ? (
+              {show2.imageUrl || show2.mobileImageUrl ? (
                 <>
-                  <img
-                    src={show2.imageUrl}
-                    alt={show2.title || 'Safirya Vitrin'}
-                    className="w-full h-full object-cover group-hover:scale-102 transition-transform duration-700"
-                  />
+                  <picture className="w-full h-full">
+                    {show2.mobileImageUrl && (
+                      <source media="(max-width: 767px)" srcSet={show2.mobileImageUrl} />
+                    )}
+                    {show2.imageUrl && (
+                      <source media="(min-width: 768px)" srcSet={show2.imageUrl} />
+                    )}
+                    <img
+                      src={show2.imageUrl || show2.mobileImageUrl}
+                      alt={show2.title || 'Safirya Vitrin'}
+                      className="w-full h-full object-cover group-hover:scale-102 transition-transform duration-700"
+                    />
+                  </picture>
                   <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/10 to-transparent flex flex-col justify-end p-5 sm:p-8 text-white">
                     {show2.subtitle && (
                       <span className="text-[10px] sm:text-[11px] font-sans uppercase tracking-[0.2em] text-white/90 font-medium">
