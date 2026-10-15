@@ -450,6 +450,29 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   const applyCoupon = (code: string) => {
     const cleanCode = code.trim().toUpperCase();
+
+    // 1. "Numune Kiti Al, Toplu Siparişte Düş" Kurgusu
+    if (cleanCode.startsWith('NUMUNE-')) {
+      const totalUnits = cartItems.reduce((acc, it) => acc + it.quantity, 0);
+      if (totalUnits < 20 && cartTotal < 1000) {
+        return {
+          success: false,
+          message: 'Numune kiti indirimi en az 20 adet ürün veya ₺1.000 üzeri toplu siparişlerde geçerlidir.',
+        };
+      }
+      const coupon: AppliedCoupon = {
+        code: cleanCode,
+        label: 'Numune Kiti Bedeli İadesi (₺250 Nakit İndirim)',
+        discountType: 'fixed',
+        discountValue: 250,
+      };
+      setAppliedCoupon(coupon);
+      return {
+        success: true,
+        message: '🎉 Harika! Numune kiti ücretiniz (₺250) toplu siparişinizden başarıyla düşüldü!',
+      };
+    }
+
     if (cleanCode === 'SAFIRYA10') {
       const coupon: AppliedCoupon = {
         code: 'SAFIRYA10',
@@ -470,9 +493,37 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       setAppliedCoupon(coupon);
       return { success: true, message: '🎉 ₺25 Kupon İndirimi uygulandı!' };
     }
+
+    // 2. Dinamik Admin Kuponları Kontrolü
+    try {
+      if (typeof window !== 'undefined') {
+        const stored = localStorage.getItem('safirya_coupons');
+        if (stored) {
+          const list = JSON.parse(stored);
+          const found = list.find((c: any) => c.code?.toUpperCase() === cleanCode && c.isActive);
+          if (found) {
+            if (found.minCartTotal && cartTotal < found.minCartTotal) {
+              return {
+                success: false,
+                message: `Bu kupon minimum ₺${found.minCartTotal} sepet tutarında geçerlidir.`,
+              };
+            }
+            const coupon: AppliedCoupon = {
+              code: found.code,
+              label: found.label,
+              discountType: found.discountType,
+              discountValue: found.discountValue,
+            };
+            setAppliedCoupon(coupon);
+            return { success: true, message: `🎉 ${found.label} başarıyla uygulandı!` };
+          }
+        }
+      }
+    } catch {}
+
     return {
       success: false,
-      message: 'Geçersiz kupon kodu. Lütfen kontrol ediniz (Örn: SAFIRYA10)',
+      message: 'Geçersiz kupon kodu. Lütfen kontrol ediniz (Örn: SAFIRYA10 veya NUMUNE-...)',
     };
   };
 

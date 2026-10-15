@@ -38,6 +38,7 @@ import {
   Copy,
   Check,
   Bell,
+  History,
 } from 'lucide-react';
 import { useAdmin } from '@/context/AdminContext';
 import { addSiteNotification } from '@/lib/notifications/orderNotifications';
@@ -50,9 +51,22 @@ export default function AyarlarPage() {
     updateCmsPage,
     purgeAllDemoData,
     showToast,
+    webhookLogs,
+    triggerWebhook,
+    clearWebhookLogs,
   } = useAdmin();
 
-  const [activeTab, setActiveTab] = useState<'logo' | 'store' | 'payment' | 'cms'>('logo');
+  const [activeTab, setActiveTab] = useState<'logo' | 'store' | 'payment' | 'cms' | 'webhook'>('logo');
+
+  // Webhook Otomasyon State'leri
+  const [webhookEnabled, setWebhookEnabled] = useState<boolean>(settings.webhookEnabled ?? false);
+  const [webhookUrl, setWebhookUrl] = useState<string>(settings.webhookUrl || '');
+  const [webhookSecret, setWebhookSecret] = useState<string>(settings.webhookSecret || '');
+  const [webhookEvents, setWebhookEvents] = useState<string[]>(
+    settings.webhookEvents || ['order.stage_changed', 'order.photo_uploaded', 'order.contract_signed']
+  );
+  const [testWebhookStatus, setTestWebhookStatus] = useState<string | null>(null);
+  const [isTestingWebhook, setIsTestingWebhook] = useState(false);
 
   // PayTR Ödeme Altyapısı State'leri
   const [paytrMerchantId, setPaytrMerchantId] = useState(settings.paytrMerchantId || '');
@@ -152,6 +166,44 @@ export default function AyarlarPage() {
       setPageTitle(p.title);
       setPageSubtitle(p.subtitle);
       setPageContent(p.content);
+    }
+  };
+
+  const handleSaveWebhookSettings = (e: React.FormEvent) => {
+    e.preventDefault();
+    updateSettings({
+      webhookEnabled,
+      webhookUrl: webhookUrl.trim(),
+      webhookSecret: webhookSecret.trim(),
+      webhookEvents,
+    });
+    showToast('Webhook entegrasyon ayarları başarıyla kaydedildi.');
+  };
+
+  const handleTestWebhook = async () => {
+    if (!webhookUrl.trim()) {
+      alert('Lütfen önce geçerli bir Webhook URL giriniz.');
+      return;
+    }
+    setIsTestingWebhook(true);
+    setTestWebhookStatus(null);
+    try {
+      const res = await triggerWebhook('order.stage_changed', 'TEST-SFR-2026', {
+        event: 'order.stage_changed',
+        orderNumber: 'TEST-SFR-2026',
+        customerName: 'Test Müşteri',
+        previousStage: 'SIPARIS_ALINDI',
+        newStage: 'ATOLYEDE_URETIMDE',
+        itemSummary: 'Doğal Kehribar Soya Mumu (x50 Adet)',
+        note: 'Bu bir test webhook iletisidir.',
+      });
+      if (res.success) {
+        setTestWebhookStatus(`✅ Webhook Başarılı! Hedef yanıt kodu: ${res.statusCode || 200}`);
+      } else {
+        setTestWebhookStatus(`❌ Webhook Başarısız: ${res.message || 'Hedef sunucu yanıt vermedi'}`);
+      }
+    } finally {
+      setIsTestingWebhook(false);
     }
   };
 
@@ -392,6 +444,18 @@ export default function AyarlarPage() {
         >
           <FileEdit className="w-3.5 h-3.5 text-[#C85A32]" />
           <span>Kurumsal Sayfalar (CMS)</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('webhook')}
+          className={`px-4 py-2 rounded-md text-xs font-medium transition flex items-center gap-2 ${
+            activeTab === 'webhook'
+              ? 'bg-[#231B18] text-white shadow-xs'
+              : 'bg-[#FAF8F5] text-stone-700 hover:bg-[#EFECE6]'
+          }`}
+        >
+          <Bell className="w-3.5 h-3.5 text-[#C85A32]" />
+          <span>Webhook & API Otomasyonu</span>
         </button>
 
         <Link
@@ -1478,6 +1542,230 @@ export default function AyarlarPage() {
               </div>
             </div>
 
+          </div>
+        </div>
+      )}
+
+      {/* 5. SEKME: WEBHOOK & API OTOMASYONU */}
+      {activeTab === 'webhook' && (
+        <div className="space-y-6">
+          <div className="bg-white p-6 sm:p-8 rounded-2xl border border-[#E2DCD3] shadow-2xs space-y-6">
+            <div className="border-b border-[#E2DCD3] pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <span className="text-[11px] font-semibold text-[#C85A32] uppercase tracking-wider block">
+                  Kanban & Atölye Olay Tetikleyicileri
+                </span>
+                <h2 className="font-serif text-xl font-normal text-[#231B18] mt-1">
+                  Webhook & Dış Sistem Entegrasyonu
+                </h2>
+                <p className="text-xs text-stone-500 mt-1">
+                  Atölyede sipariş aşaması güncellendiğinde, canlı fotoğraf yüklendiğinde veya sözleşme imzalandığında Discord, Slack, Zapier veya WhatsApp gateway sunucunuza anında HTTP POST isteği gönderin.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleTestWebhook}
+                  disabled={isTestingWebhook}
+                  className="px-4 py-2 rounded-xl border border-gray-300 bg-gray-50 hover:bg-gray-100 text-[#1B2A4A] text-xs font-bold transition flex items-center gap-2 shadow-xs cursor-pointer disabled:opacity-50"
+                >
+                  <Send className="w-3.5 h-3.5 text-[#C85A32]" />
+                  <span>{isTestingWebhook ? 'Test Gönderiliyor...' : 'Test Webhook Gönder'}</span>
+                </button>
+              </div>
+            </div>
+
+            {testWebhookStatus && (
+              <div className={`p-3.5 rounded-xl text-xs font-bold ${testWebhookStatus.includes('✅') ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : 'bg-red-50 text-red-800 border border-red-200'}`}>
+                {testWebhookStatus}
+              </div>
+            )}
+
+            <form onSubmit={handleSaveWebhookSettings} className="space-y-5">
+              {/* Webhook Aktif/Pasif */}
+              <div className="flex items-center justify-between p-4 bg-[#FAF8F5] rounded-xl border border-stone-200">
+                <div>
+                  <h4 className="text-xs font-bold text-[#1B2A4A]">Webhook Servisini Aktifleştir</h4>
+                  <p className="text-[11px] text-gray-500">
+                    Açık olduğunda Kanban hareketleri ve fotoğraflar otomatik olarak hedef URL&apos;ye post edilir.
+                  </p>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={webhookEnabled}
+                    onChange={(e) => setWebhookEnabled(e.target.checked)}
+                    className="sr-only peer"
+                  />
+                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#C85A32]"></div>
+                </label>
+              </div>
+
+              {/* Endpoint URL */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-[#1B2A4A] block">
+                  Webhook Hedef URL (Endpoint)
+                </label>
+                <input
+                  type="url"
+                  placeholder="https://discord.com/api/webhooks/... veya https://api.siteniz.com/webhook"
+                  value={webhookUrl}
+                  onChange={(e) => setWebhookUrl(e.target.value)}
+                  className="w-full px-3.5 py-2.5 text-xs bg-[#FAF8F5] border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#C85A32]"
+                />
+                <p className="text-[11px] text-gray-400">
+                  💡 Discord Webhook URL&apos;si girerseniz zengin görsel embed kartı olarak; Slack girerseniz Slack formatında; diğer adreslerde standart JSON olarak iletilir.
+                </p>
+              </div>
+
+              {/* HMAC Secret */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-[#1B2A4A]">
+                    Güvenlik İmzası Anahtarı (HMAC Secret - Opsiyonel)
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setWebhookSecret(`whsec_${Math.random().toString(36).substring(2, 12)}`)}
+                    className="text-[10px] text-[#C85A32] hover:underline font-bold cursor-pointer"
+                  >
+                    Rastgele Anahtar Üret
+                  </button>
+                </div>
+                <input
+                  type="text"
+                  placeholder="whsec_..."
+                  value={webhookSecret}
+                  onChange={(e) => setWebhookSecret(e.target.value)}
+                  className="w-full px-3.5 py-2.5 text-xs bg-[#FAF8F5] border border-gray-200 rounded-xl font-mono focus:outline-none focus:ring-2 focus:ring-[#C85A32]"
+                />
+                <p className="text-[10px] text-gray-400">
+                  Her istekte `X-Safirya-Signature` başlığında SHA-256 doğrulama imzası gönderilir.
+                </p>
+              </div>
+
+              {/* Tetiklenecek Olaylar */}
+              <div className="space-y-2 pt-2">
+                <label className="text-xs font-bold text-[#1B2A4A] block">
+                  Abone Olunacak Atölye Olayları
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                  <label className="flex items-center gap-2 p-3 bg-gray-50 rounded-xl border border-gray-200 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={webhookEvents.includes('order.stage_changed')}
+                      onChange={(e) => {
+                        if (e.target.checked) setWebhookEvents([...webhookEvents, 'order.stage_changed']);
+                        else setWebhookEvents(webhookEvents.filter((ev) => ev !== 'order.stage_changed'));
+                      }}
+                      className="rounded text-[#C85A32] focus:ring-[#C85A32]"
+                    />
+                    <div>
+                      <span className="font-bold block">order.stage_changed</span>
+                      <span className="text-[10px] text-gray-500">Sipariş Kanban bandında sütun değiştirdiğinde</span>
+                    </div>
+                  </label>
+
+                  <label className="flex items-center gap-2 p-3 bg-gray-50 rounded-xl border border-gray-200 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={webhookEvents.includes('order.photo_uploaded')}
+                      onChange={(e) => {
+                        if (e.target.checked) setWebhookEvents([...webhookEvents, 'order.photo_uploaded']);
+                        else setWebhookEvents(webhookEvents.filter((ev) => ev !== 'order.photo_uploaded'));
+                      }}
+                      className="rounded text-[#C85A32] focus:ring-[#C85A32]"
+                    />
+                    <div>
+                      <span className="font-bold block">order.photo_uploaded</span>
+                      <span className="text-[10px] text-gray-500">Atölyeden canlı aşama fotoğrafı yüklendiğinde</span>
+                    </div>
+                  </label>
+
+                  <label className="flex items-center gap-2 p-3 bg-gray-50 rounded-xl border border-gray-200 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={webhookEvents.includes('order.contract_signed')}
+                      onChange={(e) => {
+                        if (e.target.checked) setWebhookEvents([...webhookEvents, 'order.contract_signed']);
+                        else setWebhookEvents(webhookEvents.filter((ev) => ev !== 'order.contract_signed'));
+                      }}
+                      className="rounded text-[#C85A32] focus:ring-[#C85A32]"
+                    />
+                    <div>
+                      <span className="font-bold block">order.contract_signed</span>
+                      <span className="text-[10px] text-gray-500">Müşteri özel üretim sözleşmesini imzaladığında</span>
+                    </div>
+                  </label>
+                </div>
+              </div>
+
+              {/* Kaydet Butonu */}
+              <div className="pt-3 border-t border-gray-100 flex justify-end">
+                <button
+                  type="submit"
+                  className="px-6 py-2.5 rounded-xl bg-[#231B18] hover:bg-[#382B27] text-white text-xs font-bold shadow-md transition flex items-center gap-2 cursor-pointer"
+                >
+                  <Save className="w-4 h-4 text-[#C85A32]" />
+                  <span>Webhook Ayarlarını Kaydet</span>
+                </button>
+              </div>
+            </form>
+          </div>
+
+          {/* Webhook Teslimat Geçmişi Tablosu */}
+          <div className="bg-white p-6 rounded-2xl border border-[#E2DCD3] shadow-2xs space-y-4">
+            <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+              <div className="flex items-center gap-2">
+                <History className="w-4 h-4 text-[#C85A32]" />
+                <h3 className="font-bold text-sm text-[#1B2A4A]">Webhook Teslimat Günlüğü (Son Olaylar)</h3>
+              </div>
+              {webhookLogs.length > 0 && (
+                <button
+                  type="button"
+                  onClick={clearWebhookLogs}
+                  className="text-xs text-red-600 hover:underline font-bold cursor-pointer"
+                >
+                  Logları Temizle
+                </button>
+              )}
+            </div>
+
+            {webhookLogs.length === 0 ? (
+              <div className="text-center py-8 text-xs text-gray-400">
+                Henüz bir webhook teslimat kaydı bulunmuyor. Kanban&apos;da kart taşıdığınızda veya test gönderdiğinizde burada listelenir.
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead>
+                    <tr className="border-b border-gray-100 text-[11px] font-bold text-gray-400 uppercase">
+                      <th className="py-2.5 px-3">Tarih</th>
+                      <th className="py-2.5 px-3">Olay</th>
+                      <th className="py-2.5 px-3">Sipariş</th>
+                      <th className="py-2.5 px-3 text-center">Durum</th>
+                      <th className="py-2.5 px-3">Yanıt Mesajı</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {webhookLogs.map((log) => (
+                      <tr key={log.id} className="hover:bg-gray-50/70">
+                        <td className="py-2.5 px-3 text-gray-500 font-mono text-[11px]">{log.sentAt}</td>
+                        <td className="py-2.5 px-3 font-mono font-bold text-[#1B2A4A]">{log.event}</td>
+                        <td className="py-2.5 px-3 font-mono text-[#C85A32]">#{log.orderNumber}</td>
+                        <td className="py-2.5 px-3 text-center">
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${log.status === 'SUCCESS' ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'}`}>
+                            {log.status} ({log.statusCode || 'Err'})
+                          </span>
+                        </td>
+                        <td className="py-2.5 px-3 text-gray-600 truncate max-w-xs">{log.responseMessage || '-'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         </div>
       )}

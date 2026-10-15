@@ -12,9 +12,15 @@ import {
   AlertCircle,
   ShieldCheck,
   Truck,
+  ShoppingBag,
+  PackageCheck,
+  Gift,
 } from 'lucide-react';
+import { useStore } from '@/context/StoreContext';
 
 export function CustomQuoteClient() {
+  const { addToCart, setIsCartOpen } = useStore();
+  const [sampleKitAdded, setSampleKitAdded] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -86,6 +92,20 @@ export function CustomQuoteClient() {
     }, 600);
   };
 
+  const handleAddSampleKit = () => {
+    addToCart({
+      id: 'sfr-cat-numune',
+      name: 'Söz & Nişan Toplu Sipariş Numune Deneyim Kiti',
+      price: 250,
+      image: 'https://images.unsplash.com/photo-1603006905003-be475563bc59?auto=format&fit=crop&w=800&q=80',
+      variantTitle: '4 Adet Koku Testerı + Mini Mum + Etiket Örnekleri',
+      quantity: 1,
+    });
+    setSampleKitAdded(true);
+    setIsCartOpen(true);
+    setTimeout(() => setSampleKitAdded(false), 3000);
+  };
+
   return (
     <div className="bg-white min-h-screen text-[#231B18]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-16">
@@ -104,7 +124,7 @@ export function CustomQuoteClient() {
         </div>
 
         {/* Toplu İndirim Baremleri (3 Sütun) */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-16">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
           <div className="bg-[#FAF8F5] p-6 rounded-xs border border-stone-200/80 text-center">
             <span className="text-[11px] font-mono uppercase tracking-wider text-[#7A7067] block mb-1">
               25 - 49 Adet
@@ -136,6 +156,79 @@ export function CustomQuoteClient() {
             <p className="text-xs text-[#7A7067] leading-relaxed">
               Büyük düğünler ve kurumsal etkinlikler için ücretsiz numune kiti ve kargo desteği.
             </p>
+          </div>
+        </div>
+
+        {/* ÖZEL KURGU: "NUMUNE KİTİ AL, TOPLU SİPARİŞTE DÜŞ" */}
+        <div className="mb-16 bg-gradient-to-br from-[#FAF8F5] via-[#FFFDFB] to-[#F5EFE6] border-2 border-[#D96B27]/30 rounded-2xl p-6 sm:p-8 lg:p-10 shadow-sm relative overflow-hidden">
+          <div className="absolute -right-12 -top-12 w-48 h-48 bg-[#D96B27]/5 rounded-full blur-2xl pointer-events-none" />
+
+          <div className="flex flex-col lg:flex-row items-center justify-between gap-8 relative z-10">
+            <div className="flex-1 space-y-3 text-center lg:text-left">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#D96B27]/10 text-[#D96B27] text-xs font-bold uppercase tracking-wider">
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>Safirya Atölye Güvencesi</span>
+              </div>
+              <h2 className="font-serif text-2xl sm:text-3xl text-[#231B18] font-normal leading-tight">
+                Önce Numune Kiti Alın (₺250), <br className="hidden sm:inline" />
+                <span className="text-[#C85A32] font-semibold">Toplu Siparişinizde Ücretini Birebir Düşelim!</span>
+              </h2>
+              <p className="text-xs sm:text-sm text-[#7A7067] max-w-2xl leading-relaxed">
+                Yüzlerce davetlinize hediye dağıtmadan önce kokuların zarafetini ve el yapımı dokuyu evinizde deneyimleyin. 
+                Numune kitinizle birlikte size özel bir <strong>₺250 indirim kodu</strong> gönderilir. 
+                Beğenip 20+ adet toplu sipariş verdiğinizde bu ₺250 sepetinizden otomatik mahsup edilir — <em>numune kiti tamamen ÜCRETSİZE gelir!</em>
+              </p>
+            </div>
+
+            <div className="w-full sm:w-auto shrink-0 flex flex-col items-center gap-2.5 relative z-10">
+              <button
+                type="button"
+                onClick={handleAddSampleKit}
+                className="w-full sm:w-auto px-6 py-4 rounded-xl bg-[#231B18] hover:bg-[#3A2E29] text-white text-xs font-bold uppercase tracking-widest transition flex items-center justify-center gap-2.5 shadow-lg shadow-black/10 group cursor-pointer"
+              >
+                <PackageCheck className="w-4 h-4 text-[#D96B27] group-hover:scale-110 transition" />
+                <span>
+                  {sampleKitAdded ? 'Sepete Eklendi! ✓' : 'Numune Kitini Sepete Ekle • ₺250'}
+                </span>
+              </button>
+              <span className="text-[11px] text-[#7A7067] flex items-center gap-1.5">
+                <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                <span>20+ Adet Alımda %100 Mahsup Garantisi</span>
+              </span>
+            </div>
+          </div>
+
+          {/* 3 Adımlı Süreç Akışı */}
+          <div className="mt-8 pt-8 border-t border-stone-200/60 grid grid-cols-1 md:grid-cols-3 gap-6 relative z-10">
+            <div className="bg-white/80 p-4 rounded-xl border border-stone-200/60 space-y-1.5">
+              <div className="flex items-center gap-2 text-xs font-bold text-[#1B2A4A]">
+                <span className="w-5 h-5 rounded-full bg-[#D96B27] text-white text-[10px] flex items-center justify-center font-bold">1</span>
+                <span>Deneyim Kiti Kapınıza Gelsin</span>
+              </div>
+              <p className="text-[11px] text-[#7A7067] leading-relaxed">
+                Kutu içerisinde 4 farklı esans testerı, mini soya mumu dökümü ve kraft/kuşe etiket örnekleri yer alır.
+              </p>
+            </div>
+
+            <div className="bg-white/80 p-4 rounded-xl border border-stone-200/60 space-y-1.5">
+              <div className="flex items-center gap-2 text-xs font-bold text-[#1B2A4A]">
+                <span className="w-5 h-5 rounded-full bg-[#1B2A4A] text-white text-[10px] flex items-center justify-center font-bold">2</span>
+                <span>Evinizde İnceleyin & Karar Verin</span>
+              </div>
+              <p className="text-[11px] text-[#7A7067] leading-relaxed">
+                Mumun yanış kalitesini, kokuların odaya yayılımını ve isim baskısının dokusunu ailenizle birlikte hissedin.
+              </p>
+            </div>
+
+            <div className="bg-white/80 p-4 rounded-xl border border-stone-200/60 space-y-1.5">
+              <div className="flex items-center gap-2 text-xs font-bold text-[#1B2A4A]">
+                <span className="w-5 h-5 rounded-full bg-emerald-600 text-white text-[10px] flex items-center justify-center font-bold">3</span>
+                <span>₺250 Otomatik İndirim Kazanın</span>
+              </div>
+              <p className="text-[11px] text-[#7A7067] leading-relaxed">
+                Siparişinizle verilen kupon koduyla 20+ adet toplu siparişinizde ₺250 anında düşülür, kargo bedava olur!
+              </p>
+            </div>
           </div>
         </div>
 

@@ -1,3 +1,5 @@
+import { EMAIL_BRAND, emailPreheader, escapeHtml } from '@/lib/email/brand';
+
 export function generateAuthVerificationEmailHtml({
   code,
   email,
@@ -10,107 +12,55 @@ export function generateAuthVerificationEmailHtml({
   type: 'register' | 'reset_password' | 'login';
 }): string {
   const currentYear = new Date().getFullYear();
+  const safeCode = escapeHtml(code);
+  const recipient = userName ? `Merhaba ${escapeHtml(userName)},` : 'Merhaba,';
+  const content = {
+    register: {
+      title: 'Safirya hesabınızı doğrulayın',
+      eyebrow: 'HESAP KURULUMU',
+      heading: 'Atölyeye hoş geldiniz',
+      description: 'Üyeliğinizi tamamlamak için aşağıdaki tek kullanımlık doğrulama kodunu girin.',
+    },
+    reset_password: {
+      title: 'Safirya şifre sıfırlama kodu',
+      eyebrow: 'HESAP GÜVENLİĞİ',
+      heading: 'Şifrenizi yenileyin',
+      description: 'Yeni şifrenizi belirlemek için aşağıdaki tek kullanımlık doğrulama kodunu girin.',
+    },
+    login: {
+      title: 'Safirya giriş doğrulama kodu',
+      eyebrow: 'GÜVENLİ GİRİŞ',
+      heading: 'Girişinizi doğrulayın',
+      description: 'Safirya hesabınıza güvenli şekilde devam etmek için aşağıdaki kodu kullanın.',
+    },
+  }[type];
 
-  let title = 'Safirya E-Posta Doğrulama Kodu';
-  let heading = 'Hesabınızı Doğrulayın';
-  let description =
-    'Safirya Atölyesi’ne hoş geldiniz! Üyeliğinizi tamamlamak ve atölye ayrıcalıklarından yararlanmak için aşağıdaki 6 haneli doğrulama kodunu kullanın:';
-
-  if (type === 'reset_password') {
-    title = 'Safirya Şifre Sıfırlama Kodu';
-    heading = 'Şifre Sıfırlama Talebi';
-    description =
-      'Safirya hesabınız için şifre sıfırlama talebinde bulundunuz. Yeni şifrenizi belirlemek için aşağıdaki 6 haneli doğrulama kodunu giriniz:';
-  } else if (type === 'login') {
-    title = 'Safirya Giriş Doğrulama Kodu';
-    heading = 'Giriş Doğrulama';
-    description =
-      'Safirya hesabınıza güvenli giriş yapmak için aşağıdaki 6 haneli kodu kullanınız:';
-  }
-
-  // Kodun her bir rakamını şık kutucuklar halinde diz
-  const formattedCode = code.split('').join(' ');
-
-  return `
-<!DOCTYPE html>
-<html lang="tr">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${title}</title>
-</head>
-<body style="margin: 0; padding: 0; background-color: #F6F3EC; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #231B18;">
-  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color: #F6F3EC; padding: 30px 10px;">
-    <tr>
-      <td align="center">
-        <table role="presentation" width="560" cellspacing="0" cellpadding="0" style="background-color: #FFFFFF; border-radius: 8px; border: 1px solid #E2DCD3; overflow: hidden; box-shadow: 0 4px 16px rgba(35, 27, 24, 0.05);">
-          
-          <!-- Üst Başlık & Logo -->
-          <tr>
-            <td style="background-color: #231B18; padding: 28px 36px; text-align: center;">
-              <div style="font-family: Georgia, serif; font-size: 24px; font-weight: 500; letter-spacing: 4px; color: #F6F3EC; text-transform: uppercase;">
-                SAFİRYA
-              </div>
-              <div style="font-size: 10px; font-weight: 600; letter-spacing: 2px; color: #C85A32; margin-top: 4px; text-transform: uppercase;">
-                El Yapımı Tasarım Atölyesi
-              </div>
-            </td>
-          </tr>
-
-          <!-- Ana Gövde -->
-          <tr>
-            <td style="padding: 36px 36px 28px;">
-              <div style="font-size: 11px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: #C85A32; margin-bottom: 8px;">
-                🔐 GÜVENLİK VE KİMLİK DOĞRULAMA
-              </div>
-
-              <h1 style="margin: 0 0 16px; font-family: Georgia, serif; font-size: 22px; font-weight: normal; color: #231B18;">
-                ${userName ? `Merhaba ${userName},` : 'Merhaba,'}
-              </h1>
-
-              <p style="margin: 0 0 24px; font-size: 14px; line-height: 1.6; color: #54473F;">
-                ${description}
-              </p>
-
-              <!-- Kod Kutusu -->
-              <div style="background-color: #FAF8F5; border: 1.5px dashed #C85A32; border-radius: 6px; padding: 22px 20px; text-align: center; margin: 24px 0;">
-                <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; color: #7A7067; margin-bottom: 8px; font-weight: 600;">
-                  6 Haneli Doğrulama Kodunuz
-                </div>
-                <div style="font-family: 'Courier New', Courier, monospace, monospace; font-size: 34px; font-weight: 800; letter-spacing: 10px; color: #231B18;">
-                  ${formattedCode}
-                </div>
-                <div style="font-size: 11px; color: #C85A32; margin-top: 8px; font-weight: 500;">
-                  ⏱ Bu kod 10 dakika boyunca geçerlidir.
-                </div>
-              </div>
-
-              <p style="margin: 20px 0 0; font-size: 12px; line-height: 1.5; color: #8C827A;">
-                Eğer bu işlemi siz başlatmadıysanız lütfen bu e-postayı dikkate almayınız. Hesabınız güvendedir.
-              </p>
-            </td>
-          </tr>
-
-          <!-- Footer -->
-          <tr>
-            <td style="background-color: #FAF8F5; border-top: 1px solid #E2DCD3; padding: 20px 36px; text-align: center;">
-              <div style="font-size: 11px; font-weight: 600; color: #231B18;">
-                Safirya Zanaat & Tasarım Atölyesi
-              </div>
-              <div style="font-size: 10px; color: #7A7067; margin-top: 4px;">
-                Caferağa Mah. Şair Nefi Sk. No:18 Kadıköy / İstanbul &bull; info@safirya.tr
-              </div>
-              <div style="font-size: 10px; color: #A89F91; margin-top: 10px;">
-                &copy; ${currentYear} Safirya. Tüm hakları saklıdır.
-              </div>
-            </td>
-          </tr>
-
-        </table>
-      </td>
-    </tr>
-  </table>
-</body>
-</html>
-  `;
+  return `<!doctype html>
+<html lang="tr"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>${content.title}</title></head>
+<body style="margin:0;padding:0;background:${EMAIL_BRAND.cream};font-family:Arial,Helvetica,sans-serif;color:${EMAIL_BRAND.ink};">
+${emailPreheader(content.description)}
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:${EMAIL_BRAND.cream};padding:28px 12px 40px;"><tr><td align="center">
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:600px;background:${EMAIL_BRAND.paper};border:1px solid ${EMAIL_BRAND.line};border-radius:22px;overflow:hidden;">
+<tr><td style="background:${EMAIL_BRAND.navy};padding:30px 36px 28px;text-align:center;">
+  <div style="font-family:Georgia,serif;font-size:27px;letter-spacing:5px;color:#fff;font-weight:bold;">SAFİRYA</div>
+  <div style="margin-top:8px;color:#E9B69C;font-size:10px;font-weight:bold;letter-spacing:2px;text-transform:uppercase;">El yapımı tasarım atölyesi</div>
+</td></tr>
+<tr><td style="padding:40px 44px 34px;">
+  <div style="font-size:10px;letter-spacing:1.8px;color:${EMAIL_BRAND.terracotta};font-weight:bold;text-transform:uppercase;margin-bottom:14px;">${content.eyebrow}</div>
+  <h1 style="font-family:Georgia,serif;font-size:30px;line-height:1.2;font-weight:normal;color:${EMAIL_BRAND.navy};margin:0 0 14px;">${content.heading}</h1>
+  <p style="font-size:15px;line-height:1.7;color:${EMAIL_BRAND.muted};margin:0 0 8px;">${recipient}</p>
+  <p style="font-size:15px;line-height:1.7;color:${EMAIL_BRAND.muted};margin:0 0 28px;">${content.description}</p>
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:${EMAIL_BRAND.terracottaSoft};border:1px solid #EFCFBE;border-radius:16px;"><tr><td style="padding:26px 18px;text-align:center;">
+    <div style="font-size:10px;letter-spacing:1.7px;text-transform:uppercase;color:${EMAIL_BRAND.terracotta};font-weight:bold;">DOĞRULAMA KODUNUZ</div>
+    <div style="font-family:'Courier New',monospace;font-size:36px;line-height:1.2;letter-spacing:8px;color:${EMAIL_BRAND.navy};font-weight:bold;margin:13px 0 10px;padding-left:8px;">${safeCode}</div>
+    <div style="font-size:12px;color:${EMAIL_BRAND.muted};">Bu kod 10 dakika boyunca geçerlidir.</div>
+  </td></tr></table>
+  <p style="font-size:12px;line-height:1.6;color:#8A93A3;margin:24px 0 0;">Bu işlemi siz başlatmadıysanız e-postayı yok sayın. Hesabınızda değişiklik yapılmaz.</p>
+</td></tr>
+<tr><td style="border-top:1px solid ${EMAIL_BRAND.line};background:${EMAIL_BRAND.cream};padding:24px 36px;text-align:center;">
+  <div style="font-size:12px;color:${EMAIL_BRAND.navy};font-weight:bold;">Safirya Zanaat &amp; Tasarım Atölyesi</div>
+  <div style="font-size:11px;color:${EMAIL_BRAND.muted};margin-top:7px;">Caferağa Mah. Şair Nefi Sk. No:18 · Kadıköy / İstanbul</div>
+  <div style="font-size:10px;color:#9AA2AE;margin-top:13px;">${escapeHtml(email)} · © ${currentYear} Safirya</div>
+</td></tr>
+</table></td></tr></table></body></html>`;
 }

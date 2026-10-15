@@ -95,6 +95,27 @@ export interface CatalogProductItem {
 
 export const ALL_CATALOG_PRODUCTS: CatalogProductItem[] = [
   {
+    id: 'sfr-cat-numune',
+    name: 'Söz & Nişan Toplu Sipariş Numune Deneyim Kiti',
+    slug: 'soz-nisan-numune-deneyim-kiti',
+    categoryName: 'Özel Tasarım & Hediyelik',
+    categorySlug: 'ozel-hediyelik',
+    brand: 'SAFİRYA',
+    price: 250,
+    discountPrice: 250,
+    discountRate: 0,
+    preparationDays: 1,
+    isCustomizable: false,
+    scentNotes: ['Lavanta & Sandal', 'Madagaskar Vanilyası', 'İncir & Sedir'],
+    tags: ['Numune Kiti', 'Toplu Sipariş', 'Söz & Nişan', 'Geri İadeli Kupon'],
+    rating: 5.0,
+    reviewCount: 88,
+    image: 'https://images.unsplash.com/photo-1608571423902-eed4a5ad8108?auto=format&fit=crop&w=800&q=80',
+    isBestSeller: true,
+    isFeatured: true,
+    description: '3 adet mini doğal soya mumu, 2 kokulu taş numunesi, gerçek kraft ve şeffaf etiket örnekleri ve toplu siparişinizde birebir düşebileceğiniz ₺250 değerinde VIP hediye çeki içerir.',
+  },
+  {
     id: 'sfr-cat-1',
     name: 'Doğal Kehribar Cam Kavanoz Soya Mumu (210g)',
     slug: 'dogal-kehribar-cam-kavanoz-soya-mumu',

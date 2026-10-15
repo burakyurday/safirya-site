@@ -25,6 +25,13 @@ import {
   MessageSquare,
   Mail,
   Palette,
+  Printer,
+  FileCheck,
+  FileSignature,
+  Webhook,
+  Check,
+  Copy,
+  ShieldCheck,
 } from 'lucide-react';
 import { useAdmin } from '@/context/AdminContext';
 import { AdminOrder, KanbanColumn, OrderStagePhoto } from '@/types/admin';
@@ -102,6 +109,10 @@ export default function UretimBandiPage() {
     updateOrderSortOrder,
     addStagePhotoToOrder,
     settings,
+    siliconeMolds,
+    recordMoldCast,
+    customContracts,
+    showToast,
   } = useAdmin();
 
   // State'ler
@@ -110,6 +121,16 @@ export default function UretimBandiPage() {
   const [isColumnModalOpen, setIsColumnModalOpen] = useState(false);
   const [draggedOrderId, setDraggedOrderId] = useState<string | null>(null);
   const [dragOverColumnId, setDragOverColumnId] = useState<string | null>(null);
+
+  // Sözleşme Kopyalama Bildirimi
+  const [copiedOrderId, setCopiedOrderId] = useState<string | null>(null);
+
+  // Hızlı Kalıp Döküm Kaydı Modalı State
+  const [quickCastOrder, setQuickCastOrder] = useState<AdminOrder | null>(null);
+  const [selectedMoldId, setSelectedMoldId] = useState<string>('');
+  const [castRounds, setCastRounds] = useState<number>(1);
+  const [castNotes, setCastNotes] = useState<string>('');
+  const [castOperator, setCastOperator] = useState<string>('Atölye Ustası');
 
   // Aşama Fotoğrafı Yükleme Modalı State
   const [photoModalOrder, setPhotoModalOrder] = useState<AdminOrder | null>(null);
@@ -251,6 +272,46 @@ export default function UretimBandiPage() {
     if (!editColTitle.trim()) return;
     updateKanbanColumn(id, editColTitle.trim(), editColColor);
     setEditingColId(null);
+  };
+
+  // Sözleşme Linkini Panoya Kopyala
+  const handleCopyContractLink = (orderId: string) => {
+    if (typeof window === 'undefined') return;
+    const url = `${window.location.origin}/sozlesme-onay/${orderId}`;
+    navigator.clipboard.writeText(url);
+    setCopiedOrderId(orderId);
+    showToast('Sözleşme onay bağlantısı panoya kopyalandı! Müşteriye iletebilirsiniz.');
+    setTimeout(() => setCopiedOrderId(null), 2500);
+  };
+
+  // Hızlı Kalıp Dökümü Modalını Aç
+  const handleOpenQuickCast = (order: AdminOrder) => {
+    setQuickCastOrder(order);
+    // Ürün ismine göre kalıp eşleştir veya ilk kalıbı seç
+    const matchedMold = siliconeMolds.find((m) =>
+      order.items.some((it) =>
+        it.productName.toLowerCase().includes(m.name.toLowerCase().split(' ')[0])
+      )
+    );
+    setSelectedMoldId(matchedMold ? matchedMold.id : siliconeMolds[0]?.id || '');
+    setCastRounds(1);
+    setCastNotes(`Sipariş #${order.orderNumber} (${order.customerName}) üretimi için.`);
+    setCastOperator('Atölye Ustası');
+  };
+
+  // Hızlı Kalıp Dökümünü Kaydet
+  const handleSaveQuickCast = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!quickCastOrder || !selectedMoldId) return;
+    recordMoldCast(
+      selectedMoldId,
+      Number(castRounds) || 1,
+      quickCastOrder.orderNumber,
+      castNotes,
+      castOperator
+    );
+    showToast(`Kalıp dökümü başarıyla işlendi! (#${quickCastOrder.orderNumber})`);
+    setQuickCastOrder(null);
   };
 
   return (
@@ -525,6 +586,102 @@ export default function UretimBandiPage() {
                             </div>
                           </div>
 
+                          {/* 4 Ana Entegrasyon: Etiket Montaj + Dijital Sözleşme + Kalıp Döküm */}
+                          {(() => {
+                            const hasCustomization = order.items.some(
+                              (i) => i.customization?.customText
+                            );
+                            const contract = customContracts.find(
+                              (c) =>
+                                c.orderId === order.id ||
+                                c.orderNumber === order.orderNumber
+                            );
+                            const isContractApproved =
+                              contract?.status === 'ONAYLANDI' ||
+                              order.contractStatus === 'ONAYLANDI';
+                            const isContractPending =
+                              contract?.status === 'BEKLIYOR' ||
+                              order.contractStatus === 'BEKLIYOR';
+                            const isCastingStage =
+                              col.id === 'col-casting' ||
+                              col.title.toLowerCase().includes('döküm') ||
+                              col.title.toLowerCase().includes('kalıp');
+
+                            return (
+                              <div className="py-2 border-t border-gray-100 flex flex-wrap items-center gap-1.5 text-[10px]">
+                                {/* 1. Etiket Montajla Butonu */}
+                                <Link
+                                  href={`/admin/etiket-montaj?orderId=${order.id}`}
+                                  title="Bu siparişin isim ve baskı bilgileriyle Web-to-Print etiket tabakası oluştur"
+                                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded font-bold transition shadow-2xs ${
+                                    hasCustomization
+                                      ? 'bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200'
+                                      : 'bg-gray-50 hover:bg-gray-100 text-gray-700 border border-gray-200'
+                                  }`}
+                                >
+                                  <Printer className="w-3 h-3 text-amber-700" />
+                                  <span>Etiket Montajla</span>
+                                </Link>
+
+                                {/* 2. Dijital Onaylı Sözleşme Rozeti */}
+                                {isContractApproved ? (
+                                  <Link
+                                    href={`/sozlesme-onay/${order.id}`}
+                                    title="Sözleşme müşteri tarafından onaylandı ve imzalandı. Belgeyi görüntüle."
+                                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 border border-emerald-200 font-bold hover:bg-emerald-100 transition"
+                                  >
+                                    <ShieldCheck className="w-3 h-3 text-emerald-600" />
+                                    <span>Sözleşme Onaylı</span>
+                                  </Link>
+                                ) : isContractPending ? (
+                                  <div className="inline-flex items-center gap-1 bg-amber-50 border border-amber-200 rounded px-1.5 py-0.5">
+                                    <Link
+                                      href={`/sozlesme-onay/${order.id}`}
+                                      title="Müşteri onayı bekleniyor. Sözleşme onay sayfasına git."
+                                      className="text-amber-800 font-bold hover:underline"
+                                    >
+                                      İmza Bekliyor
+                                    </Link>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleCopyContractLink(order.id)}
+                                      title="Sözleşme imza linkini kopyala (WhatsApp'tan iletmek için)"
+                                      className="p-0.5 text-amber-700 hover:text-amber-900 hover:bg-amber-100 rounded transition"
+                                    >
+                                      {copiedOrderId === order.id ? (
+                                        <Check className="w-3 h-3 text-emerald-600" />
+                                      ) : (
+                                        <Copy className="w-3 h-3" />
+                                      )}
+                                    </button>
+                                  </div>
+                                ) : hasCustomization ? (
+                                  <Link
+                                    href={`/sozlesme-onay/${order.id}`}
+                                    title="Özel baskı için dijital onay sözleşmesi oluştur"
+                                    className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-gray-50 hover:bg-gray-100 text-gray-600 border border-gray-200 transition"
+                                  >
+                                    <FileSignature className="w-3 h-3 text-gray-500" />
+                                    <span>+ Sözleşme</span>
+                                  </Link>
+                                ) : null}
+
+                                {/* 3. Kalıp Döküm Aşamasında Hızlı Döküm Kaydet */}
+                                {isCastingStage && siliconeMolds.length > 0 && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleOpenQuickCast(order)}
+                                    title="Bu sipariş için silikon kalıp dökümü kaydet (aşınma ve ömür düşümü yapar)"
+                                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-indigo-50 hover:bg-indigo-100 text-indigo-900 border border-indigo-200 font-bold transition ml-auto"
+                                  >
+                                    <Layers className="w-3 h-3 text-indigo-600" />
+                                    <span>+ Döküm</span>
+                                  </button>
+                                )}
+                              </div>
+                            );
+                          })()}
+
                           {/* Teslimat Tarihi ve Fotoğraf Durumu */}
                           <div className="pt-2 border-t border-gray-100 flex items-center justify-between text-[10px]">
                             {/* Teslimat Geri Sayımı */}
@@ -747,6 +904,28 @@ export default function UretimBandiPage() {
                           Devre dışı (Vitrin & CMS ayarlarından aktif edilebilir)
                         </span>
                       )}
+                    </span>
+                  </div>
+
+                  {/* Webhook & Canlı ERP Entegrasyonu Bildirimi */}
+                  <div className="flex items-center justify-between gap-2 text-[11px] bg-indigo-50/70 p-2.5 rounded-lg border border-indigo-100 text-indigo-950">
+                    <div className="flex items-center gap-1.5">
+                      <Webhook className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+                      <span>
+                        <strong>Webhook (Discord / Slack / Harici ERP):</strong>{' '}
+                        {settings.webhookEnabled ? (
+                          <span className="text-emerald-700 font-bold">
+                            Aktif (order.photo_uploaded olayı tetiklenecek)
+                          </span>
+                        ) : (
+                          <span className="text-gray-400">
+                            Devre dışı (Ayarlar &gt; Webhook sekmesinden açılabilir)
+                          </span>
+                        )}
+                      </span>
+                    </div>
+                    <span className="text-[10px] bg-white px-1.5 py-0.5 rounded border border-indigo-200 font-mono text-indigo-700 shrink-0">
+                      HMAC-SHA256
                     </span>
                   </div>
                 </div>
@@ -1014,6 +1193,129 @@ export default function UretimBandiPage() {
                 Tamam
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* 7. MODAL: HIZLI KALIP DÖKÜMÜ KAYDET */}
+      {quickCastOrder && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-gray-200 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between pb-4 border-b border-gray-200">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center">
+                  <Layers className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-[#1B2A4A]">
+                    Hızlı Silikon Kalıp Dökümü Kaydet
+                  </h3>
+                  <p className="text-xs text-gray-500">
+                    Sipariş #{quickCastOrder.orderNumber} - {quickCastOrder.customerName}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setQuickCastOrder(null)}
+                className="p-1.5 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveQuickCast} className="mt-4 space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-[#1B2A4A] mb-1">
+                  Kullanılan Silikon Kalıp
+                </label>
+                <select
+                  value={selectedMoldId}
+                  onChange={(e) => setSelectedMoldId(e.target.value)}
+                  className="w-full px-3 py-2 text-xs bg-[#F6F4F0] border border-gray-200 rounded-lg text-[#1B2A4A] font-medium focus:outline-none focus:ring-2 focus:ring-[#D96B27]"
+                  required
+                >
+                  {siliconeMolds.map((mold) => (
+                    <option key={mold.id} value={mold.id}>
+                      {mold.name} ({mold.cavityCount} Gözlü) - Kalan: {mold.maxCasts - mold.currentCasts} döküm (%{Math.round((mold.currentCasts / mold.maxCasts) * 100)} yıpranma)
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-[#1B2A4A] mb-1">
+                    Tur / Döküm Sayısı
+                  </label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={100}
+                    value={castRounds}
+                    onChange={(e) => setCastRounds(Math.max(1, parseInt(e.target.value) || 1))}
+                    className="w-full px-3 py-2 text-xs bg-[#F6F4F0] border border-gray-200 rounded-lg text-[#1B2A4A] font-bold focus:outline-none focus:ring-2 focus:ring-[#D96B27]"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-[#1B2A4A] mb-1">
+                    Dökümü Yapan Usta
+                  </label>
+                  <input
+                    type="text"
+                    value={castOperator}
+                    onChange={(e) => setCastOperator(e.target.value)}
+                    className="w-full px-3 py-2 text-xs bg-[#F6F4F0] border border-gray-200 rounded-lg text-[#1B2A4A] focus:outline-none focus:ring-2 focus:ring-[#D96B27]"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-[#1B2A4A] mb-1">
+                  Not / Parti Açıklaması
+                </label>
+                <input
+                  type="text"
+                  value={castNotes}
+                  onChange={(e) => setCastNotes(e.target.value)}
+                  className="w-full px-3 py-2 text-xs bg-[#F6F4F0] border border-gray-200 rounded-lg text-[#1B2A4A] focus:outline-none focus:ring-2 focus:ring-[#D96B27]"
+                />
+              </div>
+
+              {selectedMoldId && (() => {
+                const m = siliconeMolds.find((x) => x.id === selectedMoldId);
+                if (!m) return null;
+                const producedUnits = (m.cavityCount || 1) * castRounds;
+                return (
+                  <div className="bg-amber-50 p-3 rounded-xl border border-amber-200/80 text-xs text-amber-900 space-y-1">
+                    <div className="flex items-center justify-between font-bold">
+                      <span>Üretilecek Net Adet:</span>
+                      <span className="text-amber-800 text-sm font-black">{producedUnits} Adet</span>
+                    </div>
+                    <p className="text-[11px] text-amber-700">
+                      Bu işlem sonrası kalıbın toplam döküm sayısı <strong>{m.currentCasts + castRounds} / {m.maxCasts}</strong> olacak ve ömür çubuğu güncellenecektir.
+                    </p>
+                  </div>
+                );
+              })()}
+
+              <div className="flex items-center justify-end gap-3 pt-3 border-t border-gray-200">
+                <button
+                  type="button"
+                  onClick={() => setQuickCastOrder(null)}
+                  className="px-4 py-2 rounded-xl text-xs font-bold text-gray-600 hover:bg-gray-100 transition"
+                >
+                  Vazgeç
+                </button>
+                <button
+                  type="submit"
+                  className="flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-md shadow-indigo-600/20 transition"
+                >
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  <span>Kalıp Dökümünü Kaydet</span>
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

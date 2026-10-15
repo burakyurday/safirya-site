@@ -254,6 +254,10 @@ export interface AdminOrder {
   invoiceNo?: string;
   cargoCompany?: string;
   trackingCode?: string;
+  contractStatus?: 'ONAYLANDI' | 'BEKLIYOR' | 'GEREKLI_DEGIL';
+  contractId?: string;
+  contractSignedAt?: string;
+  contractVerificationCode?: string;
   createdAt: string;
   items: AdminOrderItem[];
 }
@@ -286,6 +290,8 @@ export interface CustomQuoteRequest {
   quotedTotalPrice?: number;
   adminNote?: string;
   convertedOrderId?: string;
+  contractStatus?: 'ONAYLANDI' | 'BEKLIYOR';
+  contractId?: string;
   createdAt: string;
 }
 
@@ -323,6 +329,10 @@ export interface MarketingCoupon {
   usageCount: number;
   expiryDate?: string;
   isActive: boolean;
+  isSampleKitVoucher?: boolean;
+  sampleKitOrderNumber?: string;
+  customerEmail?: string;
+  minOrderQuantity?: number;
 }
 
 export interface CrossSellRule {
@@ -415,6 +425,12 @@ export interface AdminSettings {
   notifyOnOrderDelivered?: boolean;
   notifyChannelSite?: boolean;
   notifyChannelEmail?: boolean;
+
+  // Webhook Entegrasyonu (Kanban & Bildirimler)
+  webhookEnabled?: boolean;
+  webhookUrl?: string;
+  webhookSecret?: string;
+  webhookEvents?: string[];
 }
 
 export interface MarketingCampaign {
@@ -489,4 +505,92 @@ export interface ConceptBannerItem {
 
 export type ConceptBannersMap = Record<ConceptSlotKey, ConceptBannerItem>;
 
+// ==========================================
+// YENİ ATÖLYE & ERP MODÜLLERİ
+// ==========================================
 
+// 1. Silikon Kalıp Kapasite & Ömür Modeli
+export type MoldCategory =
+  | 'Mum Kalıbı'
+  | 'Kokulu Taş Kalıbı'
+  | 'Epoksi Reçine Kalıbı'
+  | 'Beton & Alçı Kalıbı';
+
+export type MoldMaterialType =
+  | 'Platin RTV-2'
+  | 'Kalay Esaslı RTV'
+  | 'Şeffaf Reçine Silikonu'
+  | 'Poliüretan Kauçuk';
+
+export interface SiliconeMold {
+  id: string;
+  code: string; // örn: "KLP-BUBBLE-01"
+  name: string; // örn: "Bubble Küp Mum Kalıbı (Geniş)"
+  category: MoldCategory;
+  materialType: MoldMaterialType;
+  cavityCount: number; // Kalıbın göz sayısı (örn: 6)
+  activeMoldCount: number; // Atölyedeki fiziki kalıp adedi (örn: 3)
+  curingMinutes: number; // Kürlenme süresi (örn: 240 dk)
+  currentCasts: number; // Yapılan toplam döküm sayısı
+  maxCasts: number; // Maksimum sağlıklı döküm ömrü (örn: 120)
+  targetProductName?: string; // İlgili ürün (örn: "SFR-MUM-01")
+  notes?: string;
+  lastUsedAt?: string;
+  createdAt: string;
+}
+
+export interface MoldCastLog {
+  id: string;
+  moldId: string;
+  moldName: string;
+  orderNumber?: string;
+  castCountDelta: number; // Eklenen döküm turu sayısı (örn: 1 veya 3)
+  totalItemsProduced: number; // Üretilen net adet
+  operatorName?: string;
+  notes?: string;
+  createdAt: string;
+}
+
+// 2. Dijital Onaylı Özel Üretim Sözleşmesi Modeli
+export interface CustomContract {
+  id: string;
+  orderId?: string;
+  orderNumber: string;
+  quoteRequestId?: string;
+  customerName: string;
+  customerEmail: string;
+  customerPhone?: string;
+  productName: string;
+  quantity: number;
+  totalAmount: number;
+  customText: string;
+  scentNote?: string;
+  colorPalette?: string;
+  tagDesignType?: string;
+  extraNotes?: string;
+  eventDate?: string;
+  agreedDeliveryDate: string;
+  status: 'BEKLIYOR' | 'ONAYLANDI' | 'IPTAL';
+  signedAt?: string;
+  signedBy?: string;
+  signatureDataUrl?: string; // Dokunmatik el imzası (base64 PNG)
+  ipAddress?: string;
+  userAgent?: string;
+  verificationCode?: string; // örn: "SOZ-SFR-2026-9812"
+  legalConsentChecked: boolean;
+  createdAt: string;
+}
+
+// 3. Webhook Entegrasyonu & Loglama Modeli
+export interface WebhookDeliveryLog {
+  id: string;
+  event: string;
+  orderNumber: string;
+  endpointUrl: string;
+  status: 'SUCCESS' | 'FAILED';
+  statusCode?: number;
+  payloadPreview: string;
+  responseMessage?: string;
+  attemptCount: number;
+  sentAt: string;
+}

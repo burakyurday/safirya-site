@@ -20,6 +20,7 @@ import {
   X,
   ShoppingBag,
   ShieldCheck,
+  ArrowRight,
 } from 'lucide-react';
 import { useStore } from '@/context/StoreContext';
 import { ALL_CATALOG_PRODUCTS } from '@/lib/catalog';
@@ -380,6 +381,31 @@ export default function ProductDetailPage() {
                       </button>
                     );
                   })}
+                </div>
+              </div>
+
+              {/* Numune Kiti Al, Toplu Siparişte Düş Callout */}
+              <div className="bg-[#FAF8F5] border border-amber-200/80 rounded-xs p-3 space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-mono uppercase tracking-wider font-bold text-[#C85A32] flex items-center gap-1">
+                    <Sparkles className="w-3.5 h-3.5" />
+                    Numune Kiti Al, Toplu Siparişte Düş!
+                  </span>
+                  <span className="text-[9px] font-bold bg-amber-100 text-amber-900 px-2 py-0.5 rounded-full">
+                    ₺250 İade
+                  </span>
+                </div>
+                <p className="text-[11px] text-[#7A7067] leading-relaxed">
+                  Toplu sipariş öncesi 4 koku testerı, mum dökümü ve etiket numunesi içeren deneyim kitimizi alın. Tanımlanan <strong>₺250 kupon kodu</strong> 20+ adet siparişinizde anında faturanızdan düşülür.
+                </p>
+                <div className="pt-0.5">
+                  <Link
+                    href="/kisiye-ozel-toplu-siparis"
+                    className="text-[10px] font-bold text-[#C85A32] hover:underline inline-flex items-center gap-1"
+                  >
+                    <span>Numune Kiti ve Toplu Sipariş Avantajları</span>
+                    <ArrowRight className="w-3 h-3" />
+                  </Link>
                 </div>
               </div>
 

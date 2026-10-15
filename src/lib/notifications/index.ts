@@ -1,6 +1,7 @@
 import { sendStageNotificationEmail, StageEmailPayload } from './email';
 import { sendWhatsAppStageNotification, WhatsAppNotificationPayload } from './whatsapp';
-import { AdminSettings } from '@/types/admin';
+import { AdminSettings, WebhookDeliveryLog } from '@/types/admin';
+import { dispatchWebhookEvent } from '@/lib/webhooks';
 
 export interface DispatchStageNotificationParams {
   orderNumber: string;
@@ -25,6 +26,7 @@ export interface DispatchResult {
     message: string;
     simulated: boolean;
   };
+  webhook?: WebhookDeliveryLog;
 }
 
 export async function dispatchStageNotification({
@@ -82,8 +84,32 @@ export async function dispatchStageNotification({
     whatsappResult = await sendWhatsAppStageNotification(whatsappPayload);
   }
 
+  // 3. Webhook Gönderimi (Fotoğraflı Aşama Güncellemesi)
+  let webhookResult: WebhookDeliveryLog | undefined = undefined;
+  if (settings?.webhookEnabled && settings?.webhookUrl) {
+    try {
+      webhookResult = await dispatchWebhookEvent(settings, {
+        event: 'order.photo_uploaded',
+        timestamp: new Date().toISOString(),
+        orderNumber,
+        customerName,
+        customerEmail,
+        customerPhone,
+        data: {
+          stageName,
+          photoUrl,
+          caption,
+          trackingUrl: safeTrackingUrl,
+        },
+      });
+    } catch (whErr) {
+      console.warn('Webhook dispatch error:', whErr);
+    }
+  }
+
   return {
     email: emailResult,
     whatsapp: whatsappResult,
+    webhook: webhookResult,
   };
 }

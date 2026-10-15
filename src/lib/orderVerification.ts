@@ -167,6 +167,14 @@ export function verifyCartAndCalculateTotal(params: {
       } else {
         couponDiscount = Math.min(subtotal, couponRule.value);
       }
+    } else if (cleanCoupon.startsWith('NUMUNE-')) {
+      // "Numune Kiti Al, Toplu Siparişte Düş" Kurgusu:
+      // Numune kuponu toplu siparişlerde (en az 20 adet veya ₺1000 sepet tutarı) ₺250 kiti birebir düşer!
+      const totalQuantity = verifiedItems.reduce((acc, it) => acc + it.quantity, 0);
+      if (totalQuantity >= 20 || subtotal >= 1000) {
+        appliedCouponKey = cleanCoupon;
+        couponDiscount = Math.min(subtotal, 250); // ₺250 Numune Kit bedeli iadesi
+      }
     }
   }
 

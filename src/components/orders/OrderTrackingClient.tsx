@@ -47,6 +47,10 @@ interface OrderTrackingData {
   isGiftWrapped?: boolean;
   giftNote?: string;
   atelierNote: string;
+  orderId?: string;
+  contractStatus?: 'BEKLIYOR' | 'ONAYLANDI' | 'IPTAL';
+  contractVerificationCode?: string;
+  contractSignedAt?: string;
   photos: StagePhoto[];
   items: Array<{
     name: string;
@@ -239,8 +243,33 @@ function OrderTrackingContent() {
                 colorPalette: it.customization?.selectedColor,
               }));
 
+              let contractStatus = match.contractStatus;
+              let contractVerificationCode = match.contractVerificationCode;
+              let contractSignedAt = match.contractSignedAt;
+
+              try {
+                const contractsRaw =
+                  typeof window !== 'undefined'
+                    ? localStorage.getItem('safirya_admin_contracts')
+                    : null;
+                if (contractsRaw) {
+                  const contracts = JSON.parse(contractsRaw);
+                  const cMatch = contracts.find(
+                    (c: any) =>
+                      c.orderId === match.id ||
+                      (c.orderNumber && c.orderNumber.toUpperCase() === match.orderNumber.toUpperCase())
+                  );
+                  if (cMatch) {
+                    contractStatus = cMatch.status;
+                    contractVerificationCode = cMatch.verificationCode;
+                    contractSignedAt = cMatch.signedAt;
+                  }
+                }
+              } catch {}
+
               setActiveOrder({
                 orderNumber: match.orderNumber,
+                orderId: match.id,
                 customerName: match.customerName,
                 email: orderEmail,
                 phone: match.customerPhone || '',
@@ -260,6 +289,9 @@ function OrderTrackingContent() {
                   : undefined,
                 isGiftWrapped: match.isGiftWrapped,
                 giftNote: match.giftNote,
+                contractStatus,
+                contractVerificationCode,
+                contractSignedAt,
                 atelierNote:
                   photos.length > 0
                     ? `${photos[photos.length - 1].caption} (Son aşama: ${photos[photos.length - 1].stageName})`
@@ -519,6 +551,80 @@ function OrderTrackingContent() {
                   </div>
                 </div>
               </div>
+
+              {/* DİJİTAL ONAYLI ÖZEL ÜRETİM SÖZLEŞMESİ (TKHK 6502 Md. 15/b) */}
+              {(() => {
+                const hasCustomText = activeOrder.items.some((it) => it.customText);
+                const isApproved = activeOrder.contractStatus === 'ONAYLANDI';
+                const isPending =
+                  activeOrder.contractStatus === 'BEKLIYOR' ||
+                  (!activeOrder.contractStatus && hasCustomText);
+
+                if (isApproved) {
+                  return (
+                    <div className="mt-4 p-4 rounded-xl bg-emerald-50/80 border border-emerald-200/90 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
+                      <div className="flex items-start gap-2.5">
+                        <div className="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0 mt-0.5">
+                          <ShieldCheck className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-emerald-950">
+                              Dijital Özel İmalat Sözleşmesi Onaylandı
+                            </span>
+                            <span className="px-2 py-0.5 rounded text-[10px] bg-emerald-100 text-emerald-800 font-mono font-bold">
+                              {activeOrder.contractVerificationCode || 'ONAYLANDI'}
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-emerald-800/80 mt-0.5">
+                            TKHK 6502 Md. 15/b uyarınca kişiye özel üretim ve isim baskısı onayınız dijital imzanızla güvence altına alınmıştır.
+                            {activeOrder.contractSignedAt && ` (${activeOrder.contractSignedAt})`}
+                          </p>
+                        </div>
+                      </div>
+                      <Link
+                        href={`/sozlesme-onay/${activeOrder.orderId || activeOrder.orderNumber}`}
+                        className="px-3.5 py-1.5 rounded-lg bg-white hover:bg-emerald-100 text-emerald-900 border border-emerald-300 font-bold text-xs transition shrink-0 shadow-2xs"
+                      >
+                        Sözleşme Sertifikasını Gör →
+                      </Link>
+                    </div>
+                  );
+                }
+
+                if (isPending) {
+                  return (
+                    <div className="mt-4 p-4 rounded-xl bg-amber-50/80 border border-amber-200/90 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
+                      <div className="flex items-start gap-2.5">
+                        <div className="w-8 h-8 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center shrink-0 mt-0.5">
+                          <AlertCircle className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-amber-950">
+                              Dijital Özel İmalat Sözleşmesi Onayı Bekleniyor
+                            </span>
+                            <span className="px-2 py-0.5 rounded text-[10px] bg-amber-200/80 text-amber-900 font-bold">
+                              İmza Gerekli
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-amber-800/90 mt-0.5">
+                            Kişiselleştirilmiş ürünlerinizin hatasız hazırlanabilmesi için lütfen isim, tarih ve metin onayınızı dijital imzanızla tamamlayınız.
+                          </p>
+                        </div>
+                      </div>
+                      <Link
+                        href={`/sozlesme-onay/${activeOrder.orderId || activeOrder.orderNumber}`}
+                        className="px-4 py-2 rounded-lg bg-[#D96B27] hover:bg-[#c25a1e] text-white font-bold text-xs transition shrink-0 shadow-sm"
+                      >
+                        Sözleşmeyi İncele & İmzala →
+                      </Link>
+                    </div>
+                  );
+                }
+
+                return null;
+              })()}
 
               {/* 5 AŞAMALI GÖRSEL ZAMAN ÇİZELGESİ */}
               <div className="py-8">

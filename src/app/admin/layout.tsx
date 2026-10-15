@@ -20,6 +20,8 @@ import {
   Image as ImageIcon,
   LogOut,
   ShieldCheck,
+  Printer,
+  Boxes,
 } from 'lucide-react';
 
 import { AdminProvider, useAdmin } from '@/context/AdminContext';
@@ -81,6 +83,19 @@ function AdminShell({ children }: { children: React.ReactNode }) {
       icon: Layers,
       badge: inProductionCount > 0 ? `${inProductionCount}` : null,
       badgeColor: 'bg-[#5F6F52] text-white',
+    },
+    {
+      title: 'Etiket Montajlama',
+      href: '/admin/etiket-montaj',
+      icon: Printer,
+      badge: 'A4',
+      badgeColor: 'bg-orange-600 text-white',
+    },
+    {
+      title: 'Silikon Kalıp & Kapasite',
+      href: '/admin/kalip-takip',
+      icon: Boxes,
+      badge: null,
     },
     {
       title: 'Özel Talepler & Teklifler',

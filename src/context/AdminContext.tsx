@@ -30,9 +30,14 @@ import {
   ConceptBannerItem,
   ConceptSlotKey,
   ConceptBannersMap,
+  SiliconeMold,
+  MoldCastLog,
+  CustomContract,
+  WebhookDeliveryLog,
 } from '@/types/admin';
 import { dispatchStageNotification } from '@/lib/notifications';
 import { triggerOrderStageNotification } from '@/lib/notifications/orderNotifications';
+import { dispatchWebhookEvent } from '@/lib/webhooks';
 
 
 // Başlangıç Atölye Hammaddeleri (Demo veriler temizlendi - Gerçek stoklar eklenebilir)
@@ -316,8 +321,311 @@ const initialKanbanColumns: KanbanColumn[] = [
   { id: 'col-qc', title: 'Kalite Kontrol & Paketleme', color: 'emerald', sortOrder: 5 },
 ];
 
-// Siparişler Listesi (Demo veriler temizlendi)
-const initialOrders: AdminOrder[] = [];
+// Siparişler Listesi
+const initialOrders: AdminOrder[] = [
+  {
+    id: 'ord-1',
+    orderNumber: 'SFR-2026-8921',
+    channel: 'WEB',
+    customerName: 'Selin & Emre Demir',
+    customerEmail: 'selin.demir@example.com',
+    customerPhone: '+90 532 987 6543',
+    shippingAddress: {
+      fullName: 'Selin Demir',
+      phone: '+90 532 987 6543',
+      city: 'İstanbul',
+      district: 'Kadıköy',
+      address: 'Caferağa Mah. Sakız Sk. No:14 D:3',
+      zipCode: '34710',
+    },
+    subtotal: 13550,
+    discountTotal: 1600,
+    shippingFee: 0,
+    isGiftWrapped: true,
+    giftWrapFee: 30,
+    giftNote: 'Özel gününüz kutlu olsun!',
+    totalAmount: 11980,
+    stage: 'ATOLYEDE_URETIMDE',
+    kanbanColumnId: 'col-casting',
+    sortOrder: 1,
+    dueDate: '2026-10-18',
+    paymentStatus: 'ODENDI',
+    paymentMethod: 'KREDI_KARTI',
+    invoiceStatus: 'OLUSTURULDU',
+    invoiceNo: 'SFR2026000001',
+    contractStatus: 'ONAYLANDI',
+    contractId: 'cnt-1',
+    contractSignedAt: '2026-10-14 14:32',
+    contractVerificationCode: 'SOZ-SFR-2026-8921-OK',
+    createdAt: '2026-10-14',
+    items: [
+      {
+        productId: 'p-2',
+        productName: 'Kişiye Özel İsimli Söz/Nişan Hediyelik Mumu',
+        variantTitle: 'Fildişi Krem - 50 Adet Baremi',
+        unitPrice: 239.0,
+        quantity: 50,
+        totalAmount: 11950.0,
+        customization: {
+          customText: 'Selin & Emre 18.06.2026',
+          selectedScent: 'Madagaskar Vanilyası',
+          selectedColor: 'Fildişi Krem',
+          tagDesignType: 'RUSTIK-KRAFT-01',
+          extraNote: 'Keten ipli ve lavanta dallı süsleme.',
+        },
+      },
+    ],
+  },
+  {
+    id: 'ord-2',
+    orderNumber: 'SFR-2026-8922',
+    channel: 'WHATSAPP',
+    customerName: 'Ayşe & Burak Yıldız',
+    customerEmail: 'ayse.yildiz@example.com',
+    customerPhone: '+90 533 123 4567',
+    shippingAddress: {
+      fullName: 'Ayşe Yıldız',
+      phone: '+90 533 123 4567',
+      city: 'İzmir',
+      district: 'Karşıyaka',
+      address: 'Bostanlı Mah. 1785 Sk. No:8',
+      zipCode: '35540',
+    },
+    subtotal: 21200,
+    discountTotal: 2800,
+    shippingFee: 0,
+    isGiftWrapped: false,
+    giftWrapFee: 0,
+    totalAmount: 18400,
+    stage: 'SIPARIS_ALINDI',
+    kanbanColumnId: 'col-prep',
+    sortOrder: 2,
+    dueDate: '2026-10-21',
+    paymentStatus: 'ODENDI',
+    paymentMethod: 'HAVALE_EFT',
+    invoiceStatus: 'BEKLIYOR',
+    contractStatus: 'BEKLIYOR',
+    contractId: 'cnt-2',
+    createdAt: '2026-10-15',
+    items: [
+      {
+        productId: 'p-1',
+        productName: 'Bubble Küp Mum (Geniş Boy)',
+        variantTitle: 'Kehribar Amber - 80 Adet Baremi',
+        unitPrice: 230.0,
+        quantity: 80,
+        totalAmount: 18400.0,
+        customization: {
+          customText: 'Ayşe & Burak 24.08.2026',
+          selectedScent: 'Lavanta & Sandal Ağacı',
+          selectedColor: 'Kehribar Amber',
+          tagDesignType: 'MINIMALIST-GOLD-02',
+        },
+      },
+    ],
+  },
+  {
+    id: 'ord-3',
+    orderNumber: 'SFR-2026-8924',
+    channel: 'WEB',
+    customerName: 'Merve Yılmaz',
+    customerEmail: 'merve.yilmaz@example.com',
+    customerPhone: '+90 554 999 8877',
+    shippingAddress: {
+      fullName: 'Merve Yılmaz',
+      phone: '+90 554 999 8877',
+      city: 'Ankara',
+      district: 'Çankaya',
+      address: 'Tunalı Hilmi Cad. No:45 D:12',
+      zipCode: '06680',
+    },
+    subtotal: 250,
+    discountTotal: 0,
+    shippingFee: 0,
+    isGiftWrapped: true,
+    giftWrapFee: 0,
+    totalAmount: 250,
+    stage: 'TESLIM_EDILDI',
+    kanbanColumnId: 'col-qc',
+    sortOrder: 3,
+    paymentStatus: 'ODENDI',
+    paymentMethod: 'KREDI_KARTI',
+    invoiceStatus: 'OLUSTURULDU',
+    invoiceNo: 'SFR2026000002',
+    contractStatus: 'GEREKLI_DEGIL',
+    createdAt: '2026-10-12',
+    items: [
+      {
+        productId: 'sfr-cat-numune',
+        productName: 'Söz & Nişan Toplu Sipariş Numune Deneyim Kiti',
+        unitPrice: 250.0,
+        quantity: 1,
+        totalAmount: 250.0,
+      },
+    ],
+  },
+];
+
+// Başlangıç Silikon Kalıpları
+const initialSiliconeMolds: SiliconeMold[] = [
+  {
+    id: 'mold-1',
+    code: 'KLP-BUBBLE-01',
+    name: 'Bubble Küp Soya Mum Kalıbı (Geniş Boy)',
+    category: 'Mum Kalıbı',
+    materialType: 'Platin RTV-2',
+    cavityCount: 6,
+    activeMoldCount: 3,
+    curingMinutes: 240,
+    currentCasts: 82,
+    maxCasts: 120,
+    targetProductName: 'SFR-MUM-01',
+    notes: 'Yüksek elastikiyetli platin silikon. Yüzey dokusu pürüzsüz.',
+    lastUsedAt: '2026-10-14',
+    createdAt: '2026-09-01',
+  },
+  {
+    id: 'mold-2',
+    code: 'KLP-SILINDIR-02',
+    name: 'Yivli İskandinav Silindir Mum Kalıbı',
+    category: 'Mum Kalıbı',
+    materialType: 'Platin RTV-2',
+    cavityCount: 4,
+    activeMoldCount: 2,
+    curingMinutes: 180,
+    currentCasts: 104,
+    maxCasts: 120,
+    targetProductName: 'SFR-MUM-02',
+    notes: 'Yıpranma oranı %86. Çizgilerde esneme var, yakında yenilenmeli.',
+    lastUsedAt: '2026-10-13',
+    createdAt: '2026-08-15',
+  },
+  {
+    id: 'mold-3',
+    code: 'KLP-TAS-MELEK',
+    name: 'Heykelsi Kanatlı Melek Kokulu Taş Kalıbı',
+    category: 'Kokulu Taş Kalıbı',
+    materialType: 'Kalay Esaslı RTV',
+    cavityCount: 2,
+    activeMoldCount: 4,
+    curingMinutes: 45,
+    currentCasts: 45,
+    maxCasts: 80,
+    targetProductName: 'SFR-TAS-01',
+    notes: 'Bebek & mevlüt hediyelikleri için hızlı donan taş tozu kalıbı.',
+    lastUsedAt: '2026-10-14',
+    createdAt: '2026-09-10',
+  },
+  {
+    id: 'mold-4',
+    code: 'KLP-TAS-TABAK',
+    name: 'Oval Dalgalı Takı & Mum Sunum Tabağı',
+    category: 'Beton & Alçı Kalıbı',
+    materialType: 'Poliüretan Kauçuk',
+    cavityCount: 1,
+    activeMoldCount: 5,
+    curingMinutes: 60,
+    currentCasts: 128,
+    maxCasts: 150,
+    targetProductName: 'SFR-ALT-01',
+    notes: 'Mermer dokulu beton altlıklar için dayanıklı kalıp.',
+    lastUsedAt: '2026-10-12',
+    createdAt: '2026-07-20',
+  },
+  {
+    id: 'mold-5',
+    code: 'KLP-EPOK-SUNUM',
+    name: 'Doğal Ceviz Ağacı & Epoksi Sunumluk Kalıbı',
+    category: 'Epoksi Reçine Kalıbı',
+    materialType: 'Şeffaf Reçine Silikonu',
+    cavityCount: 1,
+    activeMoldCount: 2,
+    curingMinutes: 1440,
+    currentCasts: 36,
+    maxCasts: 40,
+    targetProductName: 'SFR-EPOK-01',
+    notes: 'Ultra parlak ayna yüzey. 36 döküm yapıldı (%90 kritik ömür).',
+    lastUsedAt: '2026-10-11',
+    createdAt: '2026-08-01',
+  },
+];
+
+const initialMoldCastLogs: MoldCastLog[] = [
+  {
+    id: 'mcl-1',
+    moldId: 'mold-1',
+    moldName: 'Bubble Küp Soya Mum Kalıbı (Geniş Boy)',
+    orderNumber: 'SFR-2026-8921',
+    castCountDelta: 3,
+    totalItemsProduced: 18,
+    operatorName: 'Atölye Ustası Emre',
+    notes: '3 tur döküm yapıldı, yüzeyler pürüzsüz.',
+    createdAt: '2026-10-14 11:30',
+  },
+  {
+    id: 'mcl-2',
+    moldId: 'mold-3',
+    moldName: 'Heykelsi Kanatlı Melek Kokulu Taş Kalıbı',
+    orderNumber: 'SFR-2026-8923',
+    castCountDelta: 5,
+    totalItemsProduced: 40,
+    operatorName: 'Zanaatkar Zeynep',
+    notes: 'Taş tozu karışımı 45 dk kurutuldu.',
+    createdAt: '2026-10-13 16:15',
+  },
+];
+
+// Başlangıç Özel Üretim Sözleşmeleri
+const initialContracts: CustomContract[] = [
+  {
+    id: 'cnt-1',
+    orderId: 'ord-1',
+    orderNumber: 'SFR-2026-8921',
+    customerName: 'Selin & Emre Demir',
+    customerEmail: 'selin.demir@example.com',
+    customerPhone: '+90 532 987 6543',
+    productName: 'Kişiye Özel İsimli Söz/Nişan Hediyelik Mumu',
+    quantity: 50,
+    totalAmount: 11950,
+    customText: 'Selin & Emre 18.06.2026',
+    scentNote: 'Madagaskar Vanilyası',
+    colorPalette: 'Fildişi Krem',
+    tagDesignType: 'RUSTIK-KRAFT-01',
+    extraNotes: 'Keten ip ve kurutulmuş lavanta dalı bağlamalı.',
+    eventDate: '2026-06-18',
+    agreedDeliveryDate: '2026-10-18',
+    status: 'ONAYLANDI',
+    signedAt: '2026-10-14 14:32',
+    signedBy: 'Selin Demir',
+    signatureDataUrl: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="60"><path d="M10 40 Q 50 10 90 35 T 180 25" fill="none" stroke="%231B2A4A" stroke-width="2.5"/></svg>',
+    ipAddress: '176.234.89.12',
+    userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_4)',
+    verificationCode: 'SOZ-SFR-2026-8921-OK',
+    legalConsentChecked: true,
+    createdAt: '2026-10-14 14:20',
+  },
+  {
+    id: 'cnt-2',
+    orderId: 'ord-2',
+    orderNumber: 'SFR-2026-8922',
+    customerName: 'Ayşe & Burak Yıldız',
+    customerEmail: 'ayse.yildiz@example.com',
+    customerPhone: '+90 533 123 4567',
+    productName: 'Bubble Küp Mum (Geniş Boy)',
+    quantity: 80,
+    totalAmount: 18400,
+    customText: 'Ayşe & Burak 24.08.2026',
+    scentNote: 'Lavanta & Sandal Ağacı',
+    colorPalette: 'Kehribar Amber',
+    tagDesignType: 'MINIMALIST-GOLD-02',
+    extraNotes: 'Altın varaklı etiket ve saten kurdele.',
+    eventDate: '2026-08-24',
+    agreedDeliveryDate: '2026-10-21',
+    status: 'BEKLIYOR',
+    legalConsentChecked: false,
+    createdAt: '2026-10-15 09:15',
+  },
+];
 
 // Özel Teklif / Toplu Talep Talepleri (Demo veriler temizlendi)
 const initialQuoteRequests: CustomQuoteRequest[] = [];
@@ -327,6 +635,20 @@ const initialInvoices: AdminInvoice[] = [];
 
 // Kuponlar
 const initialCoupons: MarketingCoupon[] = [
+  {
+    id: 'cp-numune-1',
+    code: 'NUMUNE-SFR8924',
+    label: 'Numune Kiti Bedeli İadesi (₺250 Düşüldü)',
+    discountType: 'fixed',
+    discountValue: 250,
+    minCartTotal: 1000,
+    usageCount: 0,
+    isActive: true,
+    isSampleKitVoucher: true,
+    sampleKitOrderNumber: 'SFR-2026-8924',
+    customerEmail: 'merve.yilmaz@example.com',
+    minOrderQuantity: 20,
+  },
   {
     id: 'cp-1',
     code: 'SAFIRYA10',
@@ -749,6 +1071,29 @@ interface AdminContextType {
   resetConceptBanners: () => void;
   saveConceptBannersToCloud: (customBanners?: ConceptBannersMap) => Promise<{ success: boolean; message?: string; error?: string }>;
 
+  // 10. Silikon Kalıp Kapasite & Ömür Takibi
+  siliconeMolds: SiliconeMold[];
+  moldCastLogs: MoldCastLog[];
+  addSiliconeMold: (mold: Omit<SiliconeMold, 'id' | 'createdAt'>) => SiliconeMold;
+  updateSiliconeMold: (id: string, updates: Partial<SiliconeMold>) => void;
+  deleteSiliconeMold: (id: string) => void;
+  recordMoldCast: (moldId: string, rounds: number, orderNumber?: string, notes?: string, operatorName?: string) => void;
+
+  // 11. Dijital Onaylı Özel Üretim Sözleşmeleri
+  customContracts: CustomContract[];
+  createCustomContract: (contract: Omit<CustomContract, 'id' | 'createdAt' | 'status' | 'verificationCode' | 'legalConsentChecked'>) => CustomContract;
+  signCustomContract: (contractId: string, signatureDataUrl: string, signedBy: string) => Promise<CustomContract>;
+  cancelCustomContract: (contractId: string) => void;
+  getContractByOrderId: (orderId: string) => CustomContract | undefined;
+
+  // 12. Webhook Tetikleme ve Loglama
+  webhookLogs: WebhookDeliveryLog[];
+  triggerWebhook: (event: string, orderNumber: string, payload: Record<string, any>) => Promise<{ success: boolean; statusCode?: number; message?: string }>;
+  clearWebhookLogs: () => void;
+
+  // 13. Numune Kiti Kurgusu
+  generateSampleKitVoucher: (customerEmail: string, orderNumber: string, amount?: number) => MarketingCoupon;
+
   // Demo verileri sıfırlama
   purgeAllDemoData: () => void;
 
@@ -954,6 +1299,38 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
     return initialConceptBanners;
   });
 
+  // Yeni Modüller: Silikon Kalıplar, Sözleşmeler, Webhook Logları
+  const [siliconeMolds, setSiliconeMolds] = useState<SiliconeMold[]>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('safirya_silicone_molds');
+      if (saved) try { return JSON.parse(saved); } catch {}
+    }
+    return initialSiliconeMolds;
+  });
+
+  const [moldCastLogs, setMoldCastLogs] = useState<MoldCastLog[]>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('safirya_mold_cast_logs');
+      if (saved) try { return JSON.parse(saved); } catch {}
+    }
+    return initialMoldCastLogs;
+  });
+
+  const [customContracts, setCustomContracts] = useState<CustomContract[]>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('safirya_custom_contracts');
+      if (saved) try { return JSON.parse(saved); } catch {}
+    }
+    return initialContracts;
+  });
+
+  const [webhookLogs, setWebhookLogs] = useState<WebhookDeliveryLog[]>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('safirya_webhook_logs');
+      if (saved) try { return JSON.parse(saved); } catch {}
+    }
+    return [];
+  });
 
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
@@ -1250,6 +1627,30 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
       localStorage.setItem('safirya_concept_banners', JSON.stringify(conceptBanners));
     }
   }, [conceptBanners]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('safirya_silicone_molds', JSON.stringify(siliconeMolds));
+    }
+  }, [siliconeMolds]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('safirya_mold_cast_logs', JSON.stringify(moldCastLogs));
+    }
+  }, [moldCastLogs]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('safirya_custom_contracts', JSON.stringify(customContracts));
+    }
+  }, [customContracts]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('safirya_webhook_logs', JSON.stringify(webhookLogs));
+    }
+  }, [webhookLogs]);
 
 
   // Kritik Stok Sayacı
@@ -1697,6 +2098,17 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
         newStage: stageMapping,
         settings,
       });
+
+      if (settings?.webhookEnabled && settings?.webhookUrl) {
+        triggerWebhook('order.stage_changed', orderToMove.orderNumber, {
+          previousStage: orderToMove.stage,
+          newStage: stageMapping,
+          targetColumnId,
+          customerName: orderToMove.customerName,
+          customerEmail: orderToMove.customerEmail,
+          customerPhone: orderToMove.customerPhone,
+        });
+      }
     }
   };
 
@@ -1769,7 +2181,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
 
     showToast(`Aşama fotoğrafı yüklendi: "${stageName}"`);
 
-    // Müşteriye bildirim gönder (E-posta + WhatsApp)
+    // Müşteriye bildirim gönder (E-posta + WhatsApp + Webhook)
     if (notifyCustomer) {
       showToast(`Müşteriye aşama bildirimi gönderiliyor...`);
       try {
@@ -1786,6 +2198,13 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
 
         if (result.email.success) {
           showToast(`✅ E-posta iletildi: ${result.email.message}`);
+        }
+
+        if (result.webhook) {
+          setWebhookLogs((prev) => [result.webhook!, ...prev.slice(0, 49)]);
+          if (result.webhook.status === 'SUCCESS') {
+            showToast(`🔔 Webhook iletildi (${result.webhook.statusCode})`);
+          }
         }
       } catch (err: any) {
         console.error('Bildirim gönderim hatası:', err);
@@ -2170,6 +2589,240 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
     showToast('Konsept tasarımları boş şablon durumuna sıfırlandı.');
   };
 
+  // 10. Silikon Kalıp Kapasite & Ömür Takibi
+  const addSiliconeMold = (moldData: Omit<SiliconeMold, 'id' | 'createdAt'>): SiliconeMold => {
+    const newMold: SiliconeMold = {
+      ...moldData,
+      id: createUniqueId('mold'),
+      createdAt: getFormattedDate(),
+    };
+    setSiliconeMolds((prev) => [newMold, ...prev]);
+    showToast(`"${newMold.name}" kalıbı envantere eklendi.`);
+    return newMold;
+  };
+
+  const updateSiliconeMold = (id: string, updates: Partial<SiliconeMold>) => {
+    setSiliconeMolds((prev) =>
+      prev.map((m) => (m.id === id ? { ...m, ...updates } : m))
+    );
+    showToast('Kalıp bilgileri güncellendi.');
+  };
+
+  const deleteSiliconeMold = (id: string) => {
+    setSiliconeMolds((prev) => prev.filter((m) => m.id !== id));
+    showToast('Kalıp silindi.');
+  };
+
+  const recordMoldCast = (
+    moldId: string,
+    rounds: number,
+    orderNumber?: string,
+    notes?: string,
+    operatorName?: string
+  ) => {
+    const target = siliconeMolds.find((m) => m.id === moldId);
+    if (!target) return;
+
+    const roundCount = Math.max(1, rounds);
+    const newCastTotal = target.currentCasts + roundCount;
+    const totalItems = roundCount * target.cavityCount * target.activeMoldCount;
+
+    setSiliconeMolds((prev) =>
+      prev.map((m) =>
+        m.id === moldId
+          ? {
+              ...m,
+              currentCasts: newCastTotal,
+              lastUsedAt: getFormattedDate(),
+            }
+          : m
+      )
+    );
+
+    const newLog: MoldCastLog = {
+      id: createUniqueId('cast-log'),
+      moldId,
+      moldName: target.name,
+      orderNumber,
+      castCountDelta: roundCount,
+      totalItemsProduced: totalItems,
+      operatorName: operatorName || 'Atölye Sorumlusu',
+      notes: notes || `${roundCount} tur döküm yapıldı (${totalItems} adet çıktı).`,
+      createdAt: getFormattedDateTime(),
+    };
+    setMoldCastLogs((prev) => [newLog, ...prev]);
+
+    const wearRate = (newCastTotal / target.maxCasts) * 100;
+    if (wearRate >= 90) {
+      showToast(`⚠️ DİKKAT: "${target.name}" %${Math.round(wearRate)} yıprandı! Kalıbı yenilemeniz önerilir.`);
+    } else {
+      showToast(`✅ Döküm kaydedildi: +${roundCount} tur (${totalItems} adet).`);
+    }
+  };
+
+  // 11. Dijital Onaylı Özel Üretim Sözleşmeleri
+  const createCustomContract = (
+    contractData: Omit<CustomContract, 'id' | 'createdAt' | 'status' | 'verificationCode' | 'legalConsentChecked'>
+  ): CustomContract => {
+    const randomSuffix = Math.floor(1000 + Math.random() * 9000);
+    const newContract: CustomContract = {
+      ...contractData,
+      id: createUniqueId('cnt'),
+      status: 'BEKLIYOR',
+      verificationCode: `SOZ-${contractData.orderNumber}-${randomSuffix}`,
+      legalConsentChecked: false,
+      createdAt: getFormattedDateTime(),
+    };
+
+    setCustomContracts((prev) => [newContract, ...prev]);
+
+    if (contractData.orderId || contractData.orderNumber) {
+      setOrders((prev) =>
+        prev.map((o) =>
+          o.id === contractData.orderId || o.orderNumber === contractData.orderNumber
+            ? {
+                ...o,
+                contractId: newContract.id,
+                contractStatus: 'BEKLIYOR',
+              }
+            : o
+        )
+      );
+    }
+
+    showToast(`Sözleşme taslağı oluşturuldu: #${contractData.orderNumber}`);
+    return newContract;
+  };
+
+  const signCustomContract = async (
+    contractId: string,
+    signatureDataUrl: string,
+    signedBy: string
+  ): Promise<CustomContract> => {
+    const contract = customContracts.find((c) => c.id === contractId);
+    if (!contract) throw new Error('Sözleşme bulunamadı.');
+
+    const signedAt = getFormattedDateTime();
+    const verificationCode = contract.verificationCode || `SOZ-${contract.orderNumber}-${Math.floor(1000 + Math.random() * 9000)}-OK`;
+
+    const updatedContract: CustomContract = {
+      ...contract,
+      status: 'ONAYLANDI',
+      signedAt,
+      signedBy,
+      signatureDataUrl,
+      verificationCode,
+      legalConsentChecked: true,
+    };
+
+    setCustomContracts((prev) =>
+      prev.map((c) => (c.id === contractId ? updatedContract : c))
+    );
+
+    setOrders((prev) =>
+      prev.map((o) =>
+        o.orderNumber === contract.orderNumber || o.id === contract.orderId
+          ? {
+              ...o,
+              contractStatus: 'ONAYLANDI',
+              contractId: contract.id,
+              contractSignedAt: signedAt,
+              contractVerificationCode: verificationCode,
+            }
+          : o
+      )
+    );
+
+    if (settings.webhookEnabled && settings.webhookUrl) {
+      triggerWebhook('order.contract_signed', contract.orderNumber, {
+        customerName: contract.customerName,
+        signedBy,
+        signedAt,
+        verificationCode,
+        customText: contract.customText,
+        quantity: contract.quantity,
+        totalAmount: contract.totalAmount,
+      });
+    }
+
+    showToast(`✅ Özel üretim sözleşmesi dijital olarak onaylandı!`);
+    return updatedContract;
+  };
+
+  const cancelCustomContract = (contractId: string) => {
+    setCustomContracts((prev) =>
+      prev.map((c) => (c.id === contractId ? { ...c, status: 'IPTAL' } : c))
+    );
+    showToast('Sözleşme iptal edildi.');
+  };
+
+  const getContractByOrderId = (orderId: string) => {
+    return customContracts.find((c) => c.orderId === orderId || c.orderNumber === orderId);
+  };
+
+  // 12. Webhook Tetikleme ve Loglama
+  const triggerWebhook = async (
+    event: string,
+    orderNumber: string,
+    payload: Record<string, any>
+  ): Promise<{ success: boolean; statusCode?: number; message?: string }> => {
+    const delivery = await dispatchWebhookEvent(settings, {
+      event: event as any,
+      timestamp: new Date().toISOString(),
+      orderNumber,
+      customerName: payload.customerName,
+      customerEmail: payload.customerEmail,
+      customerPhone: payload.customerPhone,
+      data: payload,
+    });
+
+    setWebhookLogs((prev) => [delivery, ...prev.slice(0, 49)]);
+
+    if (delivery.status === 'SUCCESS') {
+      showToast(`🔔 Webhook iletildi (${event} -> #${orderNumber})`);
+      return { success: true, statusCode: delivery.statusCode, message: delivery.responseMessage };
+    } else {
+      return { success: false, statusCode: delivery.statusCode, message: delivery.responseMessage };
+    }
+  };
+
+  const clearWebhookLogs = () => {
+    setWebhookLogs([]);
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('safirya_webhook_logs');
+    }
+    showToast('Webhook logları temizlendi.');
+  };
+
+  // 13. Numune Kiti Kurgusu
+  const generateSampleKitVoucher = (
+    customerEmail: string,
+    orderNumber: string,
+    amount: number = 250
+  ): MarketingCoupon => {
+    const randomSuffix = Math.random().toString(36).substring(2, 6).toUpperCase();
+    const code = `NUMUNE-${randomSuffix}`;
+
+    const newCoupon: MarketingCoupon = {
+      id: createUniqueId('cp-numune'),
+      code,
+      label: `Numune Kiti İadesi (₺${amount} Nakit İndirim)`,
+      discountType: 'fixed',
+      discountValue: amount,
+      minCartTotal: 1000,
+      usageCount: 0,
+      isActive: true,
+      isSampleKitVoucher: true,
+      sampleKitOrderNumber: orderNumber,
+      customerEmail,
+      minOrderQuantity: 20,
+    };
+
+    setCoupons((prev) => [newCoupon, ...prev]);
+    showToast(`Numune nakit indirim kuponu üretildi: ${code}`);
+    return newCoupon;
+  };
+
   return (
 
     <AdminContext.Provider
@@ -2240,6 +2893,22 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
         updateConceptBanner,
         resetConceptBanners,
         saveConceptBannersToCloud,
+        // Yeni Sistemler
+        siliconeMolds,
+        moldCastLogs,
+        addSiliconeMold,
+        updateSiliconeMold,
+        deleteSiliconeMold,
+        recordMoldCast,
+        customContracts,
+        createCustomContract,
+        signCustomContract,
+        cancelCustomContract,
+        getContractByOrderId,
+        webhookLogs,
+        triggerWebhook,
+        clearWebhookLogs,
+        generateSampleKitVoucher,
         toastMessage,
         purgeAllDemoData,
         showToast,
