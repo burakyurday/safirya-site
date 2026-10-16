@@ -286,6 +286,7 @@ export async function GET(req: NextRequest) {
         include: {
           items: true,
           stagePhotos: true,
+          user: true,
         },
       });
 
@@ -315,7 +316,7 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// PATCH /api/orders - Sipariş Aşaması ve Kargo Takip Bilgilerini Güncelleme
+// PATCH /api/orders - Sipariş Aşaması ve Kargo Takip Bilgilerini Güncelleme (+ Otomatik Müşteri Bildirimi)
 export async function PATCH(req: NextRequest) {
   try {
     const session = await getAdminSessionServer();
@@ -327,7 +328,17 @@ export async function PATCH(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { orderNumber, stage, cargoCompany, trackingCode } = body;
+    const {
+      orderNumber,
+      stage,
+      stageTitle,
+      cargoCompany,
+      trackingCode,
+      customerEmail: reqEmail,
+      customerName: reqName,
+      notifyCustomer = true,
+      settings,
+    } = body;
 
     if (!orderNumber || !stage) {
       return NextResponse.json(
@@ -336,16 +347,25 @@ export async function PATCH(req: NextRequest) {
       );
     }
 
+    let customerEmail = reqEmail;
+    let customerName = reqName;
+
     // 1. Prisma Veritabanında Güncelle
     try {
-      await prisma.order.update({
+      const updatedDbOrder = await prisma.order.update({
         where: { orderNumber },
         data: {
           stage,
           cargoCompany: cargoCompany || undefined,
           trackingCode: trackingCode || undefined,
         },
+        include: { user: true },
       });
+
+      if (updatedDbOrder) {
+        customerEmail = customerEmail || updatedDbOrder.guestEmail || updatedDbOrder.user?.email;
+        customerName = customerName || updatedDbOrder.guestName || updatedDbOrder.user?.name;
+      }
     } catch {}
 
     // 2. Supabase Storage orders/all.json dosyasını güncelle
@@ -357,16 +377,19 @@ export async function PATCH(req: NextRequest) {
           const text = await data.text();
           const list = JSON.parse(text);
           if (Array.isArray(list)) {
-            const updated = list.map((ord: any) =>
-              ord.orderNumber === orderNumber
-                ? {
-                    ...ord,
-                    stage,
-                    ...(cargoCompany ? { cargoCompany } : {}),
-                    ...(trackingCode !== undefined ? { trackingCode, cargoTrackingNo: trackingCode } : {}),
-                  }
-                : ord
-            );
+            const updated = list.map((ord: any) => {
+              if (ord.orderNumber === orderNumber) {
+                customerEmail = customerEmail || ord.customerEmail || ord.guestEmail || ord.email;
+                customerName = customerName || ord.customerName || ord.guestName;
+                return {
+                  ...ord,
+                  stage,
+                  ...(cargoCompany ? { cargoCompany } : {}),
+                  ...(trackingCode !== undefined ? { trackingCode, cargoTrackingNo: trackingCode } : {}),
+                };
+              }
+              return ord;
+            });
             await supabaseAdmin.storage.from(BUCKET_NAME).upload(
               allPath,
               Buffer.from(JSON.stringify(updated, null, 2), 'utf-8'),
@@ -377,9 +400,40 @@ export async function PATCH(req: NextRequest) {
       } catch {}
     }
 
+    // 3. Müşteriye Aşama Bildirim E-Postası Gönder (Sunucu Garantili)
+    let emailStatus = 'skipped';
+    if (notifyCustomer && customerEmail && !String(customerEmail).includes('example.com')) {
+      try {
+        const STAGE_LABELS: Record<string, string> = {
+          SIPARIS_ALINDI: 'Siparişiniz Başarıyla Alındı',
+          ATOLYEDE_URETIMDE: 'Siparişiniz Atölyede Üretimde',
+          KALITE_KONTROL_PAKETLEME: 'Kalite Kontrol ve Paketleme Aşamasında',
+          KARGOYA_VERILDI: 'Siparişiniz Kargoya Verildi',
+          TESLIM_EDILDI: 'Siparişiniz Teslim Edildi',
+        };
+
+        const effectiveStageName = stageTitle || STAGE_LABELS[stage] || stage;
+
+        const { sendStageNotificationEmail } = await import('@/lib/notifications/email');
+        const emailRes = await sendStageNotificationEmail({
+          to: customerEmail,
+          customerName: customerName || 'Değerli Müşterimiz',
+          orderNumber,
+          stageName: effectiveStageName,
+          settings,
+        });
+
+        emailStatus = emailRes.success ? 'sent' : `failed: ${emailRes.message}`;
+      } catch (emailErr: any) {
+        console.warn(`[Safirya PATCH Order] Müşteri bildirim e-postası uyarısı:`, emailErr?.message);
+        emailStatus = `error: ${emailErr?.message}`;
+      }
+    }
+
     return NextResponse.json({
       success: true,
       message: `Sipariş #${orderNumber} aşaması "${stage}" olarak güncellendi.`,
+      notification: emailStatus,
     });
   } catch (err: any) {
     return NextResponse.json(

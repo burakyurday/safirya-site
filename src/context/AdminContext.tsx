@@ -2021,11 +2021,16 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
       fetch('/api/orders', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({
           orderNumber: orderToUpdate.orderNumber,
           stage,
           cargoCompany: cargoInfo?.cargoCompany,
           trackingCode: cargoInfo?.cargoTrackingNo,
+          customerEmail: orderToUpdate.customerEmail,
+          customerName: orderToUpdate.customerName,
+          notifyCustomer: true,
+          settings,
         }),
       }).catch((err) => console.warn('Sunucu sipariş güncelleme uyarısı:', err));
 
@@ -2039,8 +2044,10 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
         newStage: stage,
         settings,
       }).then(({ siteNotified, emailSent }) => {
-        if (siteNotified || emailSent) {
-          showToast(`🔔 Müşteri bildirimi iletildi (${siteNotified ? 'Çan Bildirimi' : ''}${siteNotified && emailSent ? ' + ' : ''}${emailSent ? 'E-posta' : ''})`);
+        if (emailSent) {
+          showToast(`🔔 Müşteriye (${orderToUpdate.customerEmail}) e-posta bildirimi başarıyla iletildi.`);
+        } else if (siteNotified) {
+          showToast(`🔔 Site içi bildirim eklendi${orderToUpdate.customerEmail ? ' (E-posta iletimi bekleniyor)' : ''}`);
         }
       });
     }
@@ -2217,14 +2224,33 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
     const targetTitle = targetCol?.title || 'Üretim Aşaması';
 
     if (orderToMove && (orderToMove.kanbanColumnId !== targetColumnId || orderToMove.stage !== stageMapping)) {
+      // 1. Sunucuya PATCH isteği gönder (Veritabanı güncellemesi ve sunucu garantili e-posta)
+      fetch('/api/orders', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          orderNumber: orderToMove.orderNumber,
+          stage: stageMapping,
+          stageTitle: targetTitle,
+          customerEmail: orderToMove.customerEmail,
+          customerName: orderToMove.customerName,
+          notifyCustomer: true,
+          settings,
+        }),
+      }).catch((err) => console.warn('Sunucu sipariş güncelleme uyarısı:', err));
+
+      // 2. Tarayıcı içi çan bildirimi ve e-posta kontrolü
       triggerOrderStageNotification({
         order: { ...orderToMove, stage: stageMapping, kanbanColumnId: targetColumnId },
         newStage: stageMapping,
         stageTitle: targetTitle,
         settings,
       }).then(({ siteNotified, emailSent }) => {
-        if (siteNotified || emailSent) {
-          showToast(`Sipariş "${targetTitle}" aşamasına taşındı ve müşteriye bildirim iletildi.`);
+        if (emailSent) {
+          showToast(`Sipariş "${targetTitle}" aşamasına taşındı ve müşteriye (${orderToMove.customerEmail}) e-posta iletildi.`);
+        } else if (siteNotified) {
+          showToast(`Sipariş "${targetTitle}" aşamasına taşındı (Bildirim oluşturuldu).`);
         }
       });
 

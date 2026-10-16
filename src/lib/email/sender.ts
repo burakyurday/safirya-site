@@ -5,7 +5,7 @@ export const DEFAULT_REPLY_TO = 'destek@safirya.tr';
 
 /**
  * Resend API anahtarını güvenli şekilde çözer:
- * 1. Fonksiyona parametre olarak verilen anahtar
+ * 1. Fonksiyona parametre / istek gövdesinde verilen anahtar
  * 2. process.env.RESEND_API_KEY
  * 3. process.env.SMTP_PASS (re_ ile başlıyorsa)
  */
@@ -174,35 +174,43 @@ export async function sendEmail(options: SendEmailOptions): Promise<SendEmailRes
         }
       }
 
-      // SMTP yapılandırılmışsa yedek olarak dene
-      if (!smtpSettings?.host || smtpSettings.host.includes('resend')) {
+      // Resend REST API başarısız olduysa veya alan adı hatası alındıysa
+      // Eğer özel SMTP veya Resend SMTP (smtp.resend.com) tanımlıysa yedek olarak dene!
+      const fallbackHost = smtpSettings?.host || process.env.SMTP_HOST;
+      const fallbackUser = smtpSettings?.user || process.env.SMTP_USER;
+      const fallbackPass = smtpSettings?.pass || process.env.SMTP_PASS || activeApiKey;
+
+      if (!fallbackHost || !fallbackUser || !fallbackPass) {
         return {
           success: false,
-          error: `Resend Hatası: ${resendError}`,
+          error: `Resend API Hatası: ${resendError}`,
           provider: 'resend',
         };
       }
+      console.warn(`[Safirya Mail] Resend REST API başarısız (${resendError}). SMTP üzerinden deneniyor...`);
     } catch (err: any) {
-      console.error('[Safirya Mail] Resend istek hatası:', err.message);
-      if (!smtpSettings?.host) {
+      console.error('[Safirya Mail] Resend REST istek hatası:', err.message);
+      const fallbackHost = smtpSettings?.host || process.env.SMTP_HOST;
+      if (!fallbackHost) {
         return {
           success: false,
           error: `Bağlantı hatası: ${err.message}`,
           provider: 'resend',
         };
       }
+      console.warn(`[Safirya Mail] Resend REST istisnası (${err.message}). SMTP üzerinden deneniyor...`);
     }
   }
 
-  // 2. Özel SMTP (Nodemailer) Gönderimi (Yedek)
-  const host = smtpSettings?.host || process.env.SMTP_HOST;
-  const user = smtpSettings?.user || process.env.SMTP_USER;
-  const pass = smtpSettings?.pass || process.env.SMTP_PASS;
+  // 2. Özel SMTP / Resend SMTP (Nodemailer) Gönderimi (Yedek veya Doğrudan)
+  const host = smtpSettings?.host || process.env.SMTP_HOST || 'smtp.resend.com';
+  const user = smtpSettings?.user || process.env.SMTP_USER || 'resend';
+  const pass = smtpSettings?.pass || process.env.SMTP_PASS || activeApiKey;
   const port = Number(smtpSettings?.port || process.env.SMTP_PORT || 465);
 
-  if (host && user && pass && !host.includes('resend')) {
+  if (host && user && pass) {
     try {
-      console.log(`[Safirya Mail] SMTP üzerinden deneniyor: ${host}:${port}`);
+      console.log(`[Safirya Mail] SMTP üzerinden deneniyor: ${host}:${port} (${user})`);
       const transporter = nodemailer.createTransport({
         host,
         port,
@@ -238,7 +246,7 @@ export async function sendEmail(options: SendEmailOptions): Promise<SendEmailRes
 
   return {
     success: false,
-    error: 'E-posta servisi yapılandırılamadı.',
+    error: 'E-posta servisi yapılandırılamadı. Lütfen SMTP veya Resend API anahtarlarını kontrol ediniz.',
     provider: 'none',
   };
 }

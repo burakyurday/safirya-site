@@ -22,7 +22,20 @@ export async function POST(req: Request) {
       );
     }
 
-    const cleanEmail = email.toLowerCase().trim();
+    const cleanEmail = email
+      .trim()
+      .replace(/İ/g, 'i')
+      .replace(/I/g, 'ı')
+      .toLowerCase()
+      .replace(/[\u200B-\u200D\uFEFF\s]/g, '');
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(cleanEmail)) {
+      return NextResponse.json(
+        { success: false, error: 'Lütfen geçerli bir e-posta formatı giriniz (örn: isim@domain.com).' },
+        { status: 400 }
+      );
+    }
 
     // Rate limiting: 10 dakika içinde en fazla 3 kod talebi
     const rateLimit = checkCodeRequestRateLimit(cleanEmail);
@@ -69,21 +82,29 @@ export async function POST(req: Request) {
       replyTo: 'destek@safirya.tr',
       senderName: 'Safirya Atölyesi',
       from: process.env.SMTP_FROM || 'Safirya Atölyesi <bildirim@safirya.tr>',
+      apiKey: process.env.RESEND_API_KEY || process.env.SMTP_PASS,
       smtpSettings: {
-        host: process.env.SMTP_HOST,
+        host: process.env.SMTP_HOST || 'smtp.resend.com',
         port: Number(process.env.SMTP_PORT || 465),
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
+        user: process.env.SMTP_USER || 'resend',
+        pass: process.env.SMTP_PASS || process.env.RESEND_API_KEY,
       },
     });
 
     if (!emailResult.success) {
       console.error(`[Safirya Auth Hatası] ${cleanEmail} için e-posta gönderilemedi. Hata: ${emailResult.error}`);
+      
+      let userFriendlyError = 'Doğrulama e-postası şu anda iletilemedi. Lütfen e-posta adresinizi kontrol ediniz veya 2 dakika sonra tekrar deneyiniz.';
+      if (emailResult.error?.includes('Invalid `to` field') || emailResult.error?.includes('invalid')) {
+        userFriendlyError = 'Girdiğiniz e-posta adresine teslimat yapılamadı. Lütfen geçerli bir e-posta adresi girdiğinizden emin olunuz.';
+      } else if (emailResult.error?.includes('rate limit') || emailResult.error?.includes('Too many requests')) {
+        userFriendlyError = 'Çok fazla istek gönderildi. Lütfen birkaç dakika sonra tekrar deneyiniz.';
+      }
+
       return NextResponse.json(
         {
           success: false,
-          error:
-            'Doğrulama e-postası şu anda iletilemedi. Lütfen e-posta adresinizi kontrol ediniz veya 2 dakika sonra tekrar deneyiniz.',
+          error: userFriendlyError,
         },
         { status: 500 }
       );

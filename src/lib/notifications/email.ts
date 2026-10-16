@@ -22,13 +22,48 @@ export function generateSafiryaEmailHtml({ customerName, orderNumber, stageName,
 
 export async function sendStageNotificationEmail(payload: StageEmailPayload): Promise<EmailDispatchResult> {
   try {
-    const baseUrl =
-      typeof window !== 'undefined'
-        ? ''
-        : process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
-    const res = await fetch(`${baseUrl}/api/notifications/stage`, {
+    // 1. Sunucu tarafındaysak (SSR, API route, Server Action): Kendi kendimize HTTP fetch atmayıp doğrudan gönderelim!
+    if (typeof window === 'undefined') {
+      const { sendEmail } = await import('@/lib/email/sender');
+      const htmlContent = generateSafiryaEmailHtml({
+        to: payload.to,
+        customerName: payload.customerName || 'Değerli Müşterimiz',
+        orderNumber: payload.orderNumber,
+        stageName: payload.stageName || 'Üretim Aşaması',
+        photoUrl: payload.photoUrl,
+        caption: payload.caption,
+        trackingUrl: payload.trackingUrl,
+      });
+
+      const s = (payload.settings as any) || {};
+      const result = await sendEmail({
+        to: payload.to,
+        subject: `🎨 Siparişiniz ${payload.stageName} Aşamasında! (#${payload.orderNumber}) - Safirya Atölyesi`,
+        html: htmlContent,
+        from: s?.smtpFrom || process.env.SMTP_FROM || 'Safirya Atölyesi <bildirim@safirya.tr>',
+        apiKey: s?.smtpPass || process.env.RESEND_API_KEY || process.env.SMTP_PASS,
+        smtpSettings: {
+          host: s?.smtpHost || process.env.SMTP_HOST || 'smtp.resend.com',
+          port: Number(s?.smtpPort || process.env.SMTP_PORT || 465),
+          user: s?.smtpUser || process.env.SMTP_USER || 'resend',
+          pass: s?.smtpPass || process.env.SMTP_PASS || process.env.RESEND_API_KEY,
+        },
+      });
+
+      return {
+        success: result.success,
+        message: result.success
+          ? `E-posta ${result.provider === 'resend' ? 'Resend' : 'SMTP'} üzerinden iletildi (${result.messageId || ''})`
+          : result.error || 'Aşama e-postası iletilemedi.',
+        simulated: false,
+      };
+    }
+
+    // 2. Tarayıcı tarafındaysak (Client Component): /api/notifications/stage endpoint'ine yetkili çerezlerle gönder
+    const res = await fetch('/api/notifications/stage', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       body: JSON.stringify({
         orderNumber: payload.orderNumber,
         customerName: payload.customerName,
@@ -53,7 +88,7 @@ export async function sendStageNotificationEmail(payload: StageEmailPayload): Pr
       simulated: false,
     };
   } catch (err: unknown) {
-    console.warn('[Safirya Bildirim Servisi] API çağrısı başarısız:', err);
+    console.warn('[Safirya Bildirim Servisi] Aşama bildirimi gönderim hatası:', err);
     return {
       success: false,
       message: err instanceof Error ? err.message : 'Bağlantı hatası',

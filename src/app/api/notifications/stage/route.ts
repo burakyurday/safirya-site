@@ -39,24 +39,31 @@ export async function POST(req: Request) {
       caption,
     });
 
+    const cleanCustomerEmail = String(customerEmail)
+      .trim()
+      .replace(/İ/g, 'i')
+      .replace(/I/g, 'ı')
+      .toLowerCase()
+      .replace(/[\u200B-\u200D\uFEFF\s]/g, '');
+
     const emailResult = await sendEmail({
-      to: customerEmail,
+      to: cleanCustomerEmail,
       subject: `🎨 Siparişiniz ${stageName} Aşamasında! (#${orderNumber}) - Safirya Atölyesi`,
       html: htmlContent,
-      from: settings?.smtpFrom,
-      apiKey: settings?.smtpPass,
+      from: settings?.smtpFrom || process.env.SMTP_FROM || 'Safirya Atölyesi <bildirim@safirya.tr>',
+      apiKey: settings?.smtpPass || process.env.RESEND_API_KEY || process.env.SMTP_PASS,
       smtpSettings: {
-        host: settings?.smtpHost,
-        port: Number(settings?.smtpPort),
-        user: settings?.smtpUser,
-        pass: settings?.smtpPass,
+        host: settings?.smtpHost || process.env.SMTP_HOST || 'smtp.resend.com',
+        port: Number(settings?.smtpPort || process.env.SMTP_PORT || 465),
+        user: settings?.smtpUser || process.env.SMTP_USER || 'resend',
+        pass: settings?.smtpPass || process.env.SMTP_PASS || process.env.RESEND_API_KEY,
       },
     });
 
     if (emailResult.success) {
       return NextResponse.json({
         success: true,
-        message: `E-posta ${emailResult.provider === 'resend' ? 'Resend' : 'SMTP'} üzerinden iletildi (${emailResult.messageId})`,
+        message: `E-posta ${emailResult.provider === 'resend' ? 'Resend' : 'SMTP'} üzerinden iletildi (${emailResult.messageId || ''})`,
         simulated: false,
         messageId: emailResult.messageId,
       });

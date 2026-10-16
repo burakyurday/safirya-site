@@ -919,16 +919,24 @@ export default function AyarlarPage() {
                   </div>
 
                   <div>
-                    <label className="block text-stone-700 font-medium mb-1">
-                      E-Posta Servis Anahtarı (API Key / Şifre)
-                    </label>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="block text-stone-700 font-medium">
+                        Resend API Anahtarı (veya SMTP Şifresi)
+                      </label>
+                      <span className="text-[10px] text-stone-500">
+                        Doğrulanmış Gönderici: <strong className="text-[#231B18]">safirya.tr</strong>
+                      </span>
+                    </div>
                     <input
                       type="password"
-                      placeholder="re_•••••••••••• (Varsayılan Safirya Anahtarı Aktif)"
+                      placeholder="re_xxxxxxxxxxxxxxxxxxxxxxxx"
                       value={smtpPass}
-                      onChange={(e) => setSmtpPass(e.target.value)}
-                      className="w-full px-3 py-1.5 rounded-md border border-[#E2DCD3] bg-white font-mono text-xs"
+                      onChange={(e) => setSmtpPass(e.target.value.trim())}
+                      className="w-full px-3 py-1.5 rounded-md border border-[#E2DCD3] bg-white font-mono text-xs focus:outline-none focus:border-[#231B18]"
                     />
+                    <p className="text-[10px] text-stone-500 mt-1">
+                      Sunucu ortam değişkeni veya Resend anahtarınızı (<a href="https://resend.com/api-keys" target="_blank" rel="noreferrer" className="text-[#C85A32] underline">resend.com</a>) buraya girerek aşağıdaki butondan test edebilirsiniz.
+                    </p>
                   </div>
 
                   {/* Teknik Detayları İhtiyaç Halinde Açılır Akordiyona Gizledik */}

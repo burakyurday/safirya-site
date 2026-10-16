@@ -43,16 +43,43 @@ export async function POST(req: Request) {
       from,
     } = body;
 
+    const effectiveApiKey =
+      (typeof apiKey === 'string' && apiKey.trim() ? apiKey.trim() : null) ||
+      process.env.RESEND_API_KEY ||
+      process.env.SMTP_PASS;
+
+    const effectiveHost =
+      (smtpSettings?.host && typeof smtpSettings.host === 'string' && smtpSettings.host.trim()
+        ? smtpSettings.host.trim()
+        : null) ||
+      process.env.SMTP_HOST ||
+      'smtp.resend.com';
+
+    const effectiveUser =
+      (smtpSettings?.user && typeof smtpSettings.user === 'string' && smtpSettings.user.trim()
+        ? smtpSettings.user.trim()
+        : null) ||
+      process.env.SMTP_USER ||
+      'resend';
+
+    const effectivePass =
+      (smtpSettings?.pass && typeof smtpSettings.pass === 'string' && smtpSettings.pass.trim()
+        ? smtpSettings.pass.trim()
+        : null) ||
+      effectiveApiKey;
+
+    const effectivePort = Number(smtpSettings?.port || process.env.SMTP_PORT || 465);
+
     const emailResult = await sendEmail({
       to: targetEmail,
       subject: `Safirya Atölye - Resend Altyapı Bağlantı Testi (${new Date().toLocaleTimeString('tr-TR')})`,
       from: from || process.env.SMTP_FROM || 'Safirya Atölyesi <bildirim@safirya.tr>',
-      apiKey: apiKey || process.env.RESEND_API_KEY || process.env.SMTP_PASS,
-      smtpSettings: smtpSettings || {
-        host: process.env.SMTP_HOST || 'smtp.resend.com',
-        port: Number(process.env.SMTP_PORT || 465),
-        user: process.env.SMTP_USER || 'resend',
-        pass: process.env.SMTP_PASS || process.env.RESEND_API_KEY,
+      apiKey: effectiveApiKey || undefined,
+      smtpSettings: {
+        host: effectiveHost,
+        port: effectivePort,
+        user: effectiveUser,
+        pass: effectivePass || undefined,
       },
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 550px; margin: 0 auto; padding: 24px; border: 1px solid #E2DCD3; border-radius: 12px; background: #FFFCF9;">
