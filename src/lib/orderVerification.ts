@@ -1,5 +1,6 @@
 import { ALL_CATALOG_PRODUCTS, CatalogProductItem } from '@/lib/catalog';
 import { CartItem } from '@/context/StoreContext';
+import { calculatePointsDiscount, calculatePointsEarned } from '@/lib/loyalty';
 
 export interface VerifiedOrderItem {
   productId: string;
@@ -22,6 +23,9 @@ export interface OrderVerificationResult {
   subtotal: number;
   bulkDiscount: number;
   couponDiscount: number;
+  pointsDiscount: number;
+  usedPoints: number;
+  pointsToEarn: number;
   shippingFee: number;
   giftWrapFee: number;
   grandTotal: number;
@@ -52,8 +56,9 @@ export function verifyCartAndCalculateTotal(params: {
   cartItems: CartItem[];
   couponCode?: string;
   isGiftWrapped?: boolean;
+  usedPoints?: number;
 }): OrderVerificationResult {
-  const { cartItems, couponCode, isGiftWrapped = false } = params;
+  const { cartItems, couponCode, isGiftWrapped = false, usedPoints = 0 } = params;
 
   if (!Array.isArray(cartItems) || cartItems.length === 0) {
     return {
@@ -63,6 +68,9 @@ export function verifyCartAndCalculateTotal(params: {
       subtotal: 0,
       bulkDiscount: 0,
       couponDiscount: 0,
+      pointsDiscount: 0,
+      usedPoints: 0,
+      pointsToEarn: 0,
       shippingFee: 0,
       giftWrapFee: 0,
       grandTotal: 0,
@@ -90,6 +98,9 @@ export function verifyCartAndCalculateTotal(params: {
         subtotal: 0,
         bulkDiscount: 0,
         couponDiscount: 0,
+        pointsDiscount: 0,
+        usedPoints: 0,
+        pointsToEarn: 0,
         shippingFee: 0,
         giftWrapFee: 0,
         grandTotal: 0,
@@ -117,6 +128,9 @@ export function verifyCartAndCalculateTotal(params: {
           subtotal: 0,
           bulkDiscount: 0,
           couponDiscount: 0,
+          pointsDiscount: 0,
+          usedPoints: 0,
+          pointsToEarn: 0,
           shippingFee: 0,
           giftWrapFee: 0,
           grandTotal: 0,
@@ -185,11 +199,23 @@ export function verifyCartAndCalculateTotal(params: {
       ? 0
       : STANDARD_SHIPPING_FEE;
 
+  // Puan İndirimi (Maksimum %50 kuralı ve geçerli puan)
+  let pointsDiscount = 0;
+  let finalUsedPoints = 0;
+  if (usedPoints && usedPoints > 0) {
+    const requestedDiscount = calculatePointsDiscount(usedPoints);
+    const maxDiscountAllowed = Number((discountedSubtotal * 0.5).toFixed(2));
+    pointsDiscount = Math.min(requestedDiscount, maxDiscountAllowed);
+    finalUsedPoints = Math.round(pointsDiscount / 0.5);
+  }
+
   // Hediye Paketi
   const giftWrapFee = isGiftWrapped ? GIFT_WRAP_FEE : 0;
 
   // Nihai Tutar
-  const grandTotal = Number((discountedSubtotal + shippingFee + giftWrapFee).toFixed(2));
+  const payableSubtotal = Math.max(0, Number((discountedSubtotal - pointsDiscount).toFixed(2)));
+  const grandTotal = Number((payableSubtotal + shippingFee + giftWrapFee).toFixed(2));
+  const pointsToEarn = calculatePointsEarned(grandTotal);
 
   return {
     isValid: true,
@@ -197,6 +223,9 @@ export function verifyCartAndCalculateTotal(params: {
     subtotal,
     bulkDiscount,
     couponDiscount,
+    pointsDiscount,
+    usedPoints: finalUsedPoints,
+    pointsToEarn,
     shippingFee,
     giftWrapFee,
     grandTotal,

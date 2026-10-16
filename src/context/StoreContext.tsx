@@ -2,6 +2,8 @@
 
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { UserProfile, StoreNotification } from '@/types/user';
+import { LoyaltyAccount } from '@/types/loyalty';
+import { calculatePointsDiscount, calculatePointsEarned, createInitialLoyaltyAccount } from '@/lib/loyalty';
 
 export interface CartItem {
   id: string;
@@ -91,6 +93,15 @@ interface StoreContextType {
   addNotification: (
     notif: Omit<StoreNotification, 'id' | 'createdAt' | 'isRead'>
   ) => StoreNotification;
+
+  // Müşteri Sadakat & Atölye Kulübü
+  loyaltyAccount: LoyaltyAccount | null;
+  appliedPoints: number;
+  pointsDiscount: number;
+  pointsToEarn: number;
+  applyPoints: (points: number) => { success: boolean; message: string };
+  removePoints: () => void;
+  refreshLoyalty: () => Promise<void>;
 }
 
 const StoreContext = createContext<StoreContextType | undefined>(undefined);
@@ -143,6 +154,10 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   // Kupon Durumu
   const [appliedCoupon, setAppliedCoupon] = useState<AppliedCoupon | null>(null);
+
+  // Müşteri Sadakat & Atölye Kulübü
+  const [loyaltyAccount, setLoyaltyAccount] = useState<LoyaltyAccount | null>(null);
+  const [appliedPoints, setAppliedPoints] = useState<number>(0);
 
   // Kullanıcı Durumu & Modal State
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
@@ -529,6 +544,86 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     setAppliedCoupon(null);
   };
 
+  // ══════════════════════════════════════════════
+  // MÜŞTERİ SADAKAT VE ATÖLYE KULÜBÜ
+  // ══════════════════════════════════════════════
+
+  useEffect(() => {
+    if (!currentUser) {
+      setLoyaltyAccount(null);
+      setAppliedPoints(0);
+      return;
+    }
+
+    fetch('/api/loyalty/me')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data?.success && data?.account) {
+          setLoyaltyAccount(data.account);
+        } else {
+          setLoyaltyAccount(createInitialLoyaltyAccount(currentUser.id, currentUser.name));
+        }
+      })
+      .catch(() => {
+        setLoyaltyAccount(createInitialLoyaltyAccount(currentUser.id, currentUser.name));
+      });
+  }, [currentUser]);
+
+  const pointsDiscount = calculatePointsDiscount(appliedPoints);
+  const couponDiscountVal = appliedCoupon
+    ? appliedCoupon.discountType === 'percentage'
+      ? (cartTotal * appliedCoupon.discountValue) / 100
+      : appliedCoupon.discountValue
+    : 0;
+  const payableCartSubtotal = Math.max(0, cartTotal - couponDiscountVal);
+  const pointsToEarn = calculatePointsEarned(
+    Math.max(0, payableCartSubtotal - pointsDiscount),
+    loyaltyAccount?.currentTier || 'BRONZ'
+  );
+
+  const applyPoints = (points: number): { success: boolean; message: string } => {
+    if (!currentUser) {
+      setIsAuthModalOpen(true);
+      setAuthModalView('login');
+      return { success: false, message: 'Safir Puan kullanabilmek için lütfen üye girişi yapın.' };
+    }
+    if (!loyaltyAccount || loyaltyAccount.pointsBalance <= 0) {
+      return { success: false, message: 'Kullanılabilir Safir Puan bakiyeniz bulunmuyor.' };
+    }
+    if (points < 50) {
+      return { success: false, message: 'En az 50 Safir Puan (₺25) kullanılabilir.' };
+    }
+    if (points > loyaltyAccount.pointsBalance) {
+      return { success: false, message: `Mevcut bakiyeniz (${loyaltyAccount.pointsBalance} puan) aşılamaz.` };
+    }
+    const maxDiscountAllowed = payableCartSubtotal * 0.5;
+    const maxPointsAllowed = Math.floor(maxDiscountAllowed / 0.5);
+    if (maxPointsAllowed <= 0) {
+      return { success: false, message: 'Sepet tutarınız puan kullanımı için yetersiz.' };
+    }
+    const validPoints = Math.min(points, maxPointsAllowed);
+    setAppliedPoints(validPoints);
+    return {
+      success: true,
+      message: `${validPoints} Safir Puan (₺${calculatePointsDiscount(validPoints)}) sepetinize indirim olarak uygulandı!`,
+    };
+  };
+
+  const removePoints = () => {
+    setAppliedPoints(0);
+  };
+
+  const refreshLoyalty = async () => {
+    if (!currentUser) return;
+    try {
+      const res = await fetch('/api/loyalty/me');
+      const data = await res.json();
+      if (data?.success && data?.account) {
+        setLoyaltyAccount(data.account);
+      }
+    } catch {}
+  };
+
   const toggleFavorite = (productId: string) => {
     setFavorites((prev) =>
       prev.includes(productId) ? prev.filter((id) => id !== productId) : [...prev, productId]
@@ -843,6 +938,15 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         markNotificationAsRead,
         markAllNotificationsAsRead,
         addNotification,
+
+        // Müşteri Sadakat & Atölye Kulübü
+        loyaltyAccount,
+        appliedPoints,
+        pointsDiscount,
+        pointsToEarn,
+        applyPoints,
+        removePoints,
+        refreshLoyalty,
       }}
     >
       {children}

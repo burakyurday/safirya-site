@@ -4,6 +4,7 @@ import {
   createAdminToken,
   ADMIN_COOKIE_NAME,
 } from '@/lib/adminAuth';
+import { supabase } from '@/lib/supabase';
 
 interface LoginAttemptRecord {
   count: number;
@@ -45,7 +46,44 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const isValid = validateAdminCredentials(username, password);
+    let isValid = false;
+    let adminDisplayName = 'Safirya Yönetim';
+
+    // A. Önce Supabase Auth ile Şifreli Doğrulama
+    if (supabase) {
+      try {
+        const { data: sbData, error: sbError } = await supabase.auth.signInWithPassword({
+          email: cleanUser,
+          password: password,
+        });
+
+        if (!sbError && sbData?.user) {
+          const userMeta = sbData.user.user_metadata || {};
+          const appMeta = sbData.user.app_metadata || {};
+          const userRole = userMeta.role || appMeta.role;
+
+          // Admin yetkisi kontrolü: role admin veya admin@safirya.tr veya env ADMIN_USERNAME
+          const configuredAdminUser = (process.env.ADMIN_USERNAME || 'admin@safirya.tr').trim().toLowerCase();
+          const isEligibleAdmin =
+            userRole === 'admin' ||
+            userRole === 'ADMIN' ||
+            cleanUser === configuredAdminUser ||
+            cleanUser === 'admin@safirya.tr';
+
+          if (isEligibleAdmin) {
+            isValid = true;
+            adminDisplayName = userMeta.name || 'Safirya Atölye Yönetici';
+          }
+        }
+      } catch (sbErr) {
+        console.warn('Supabase auth sign-in warning:', sbErr);
+      }
+    }
+
+    // B. Eğer Supabase Auth ile doğrulanmadıysa, .env Fallback Kontrolü
+    if (!isValid) {
+      isValid = validateAdminCredentials(username, password);
+    }
 
     if (!isValid) {
       const currentAttempts = (attemptRecord && attemptRecord.lockedUntil <= now ? 0 : attemptRecord?.count || 0) + 1;
@@ -78,9 +116,9 @@ export async function POST(req: NextRequest) {
     loginAttempts.delete(rateLimitKey);
 
     const token = await createAdminToken({
-      username: username.trim().toLowerCase(),
+      username: cleanUser,
       role: 'ADMIN',
-      name: 'Safirya Yönetim',
+      name: adminDisplayName,
     });
 
     const response = NextResponse.json({
@@ -99,9 +137,10 @@ export async function POST(req: NextRequest) {
     });
 
     return response;
-  } catch (error) {
+  } catch (error: any) {
+    console.error('Admin login error:', error);
     return NextResponse.json(
-      { error: 'Sunucu hatası oluştu. Lütfen tekrar deneyiniz.' },
+      { error: error?.message || 'Giriş yapılırken sunucu hatası oluştu. Lütfen tekrar deneyiniz.' },
       { status: 500 }
     );
   }
