@@ -419,20 +419,6 @@ function OrderTrackingContent() {
       performLookup(paramOrderNumber, currentUser.email);
     } else if (currentUser?.email) {
       setEmailInput(currentUser.email);
-      try {
-        const storedRaw = typeof window !== 'undefined' ? localStorage.getItem('safirya_orders') : null;
-        if (storedRaw) {
-          const list = JSON.parse(storedRaw);
-          const userOrder = list.find((o: any) =>
-            (o.email || o.guestEmail || o.customerEmail || '').toLowerCase().trim() === currentUser.email.toLowerCase().trim()
-          );
-          if (userOrder && userOrder.orderNumber) {
-            setOrderQuery(userOrder.orderNumber);
-            performLookup(userOrder.orderNumber, currentUser.email);
-            return;
-          }
-        }
-      } catch {}
       setOrderQuery('');
       setActiveOrder(null);
       setSearchError(null);
@@ -474,97 +460,71 @@ function OrderTrackingContent() {
           </p>
         </div>
 
-        {/* 1. SORGULAMA VEYA HESAP DURUMU ALANI */}
-        {currentUser ? (
-          <div className="bg-[#FAF8F5] p-5 sm:p-6 rounded-xs border border-stone-200 mb-8 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-700 shrink-0">
-                <CheckCircle2 className="w-5 h-5" />
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-semibold text-[#231B18]">{currentUser.name}</span>
-                  <span className="text-[10px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full font-medium">Hesap Açık</span>
-                </div>
-                <p className="text-xs text-[#7A7067] mt-0.5">
-                  Hesabınız açık olduğu için kod veya e-posta girmenize gerek yoktur. Tüm siparişlerinizi ve canlı üretim bandı durumlarını Siparişlerim sayfasından doğrudan izleyebilirsiniz.
-                </p>
-              </div>
-            </div>
-            <Link
-              href="/hesabim/siparislerim"
-              className="px-4 py-2.5 rounded-xs bg-[#231B18] hover:bg-[#3A2E29] text-white text-xs uppercase tracking-wider font-medium flex items-center justify-center gap-1.5 shrink-0 transition"
-            >
-              <span>Siparişlerime Git</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </Link>
-          </div>
-        ) : (
-          <div className="bg-white p-6 sm:p-8 rounded-xs border border-stone-200 mb-8 shadow-xs">
-            <form onSubmit={handleSearchSubmit} className="grid grid-cols-1 sm:grid-cols-12 gap-4">
-              <div className="sm:col-span-6">
-                <label className="block text-[11px] uppercase tracking-wider font-medium text-[#231B18] mb-1.5">
-                  Sipariş Numarası *
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="Örn: SFR-2026-1001"
-                  value={orderQuery}
-                  onChange={(e) => setOrderQuery(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xs border border-stone-300 bg-white text-sm font-medium text-[#231B18] focus:outline-none focus:border-[#231B18]"
-                />
-              </div>
-
-              <div className="sm:col-span-4">
-                <label className="block text-[11px] uppercase tracking-wider font-medium text-[#231B18] mb-1.5">
-                  E-posta Adresi *
-                </label>
-                <input
-                  type="email"
-                  required
-                  placeholder="ornek@alanadi.com"
-                  value={emailInput}
-                  onChange={(e) => setEmailInput(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xs border border-stone-300 bg-white text-sm text-[#231B18] focus:outline-none focus:border-[#231B18]"
-                />
-              </div>
-
-              <div className="sm:col-span-2 flex items-end">
-                <button
-                  type="submit"
-                  disabled={isLoading}
-                  className="w-full py-3 px-4 rounded-xs bg-[#231B18] hover:bg-[#3A2E29] disabled:opacity-50 text-white flex items-center justify-center gap-2 text-xs uppercase tracking-widest font-medium transition cursor-pointer"
-                >
-                  {isLoading ? (
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  ) : (
-                    <>
-                      <Search className="w-3.5 h-3.5" />
-                      <span>Sorgula</span>
-                    </>
-                  )}
-                </button>
-              </div>
-            </form>
-
-            {/* Güvenlik Bilgilendirme Notu */}
-            <div className="mt-4 pt-3 border-t border-stone-100 flex items-center gap-2 text-[11px] text-[#7A7067]">
-              <ShieldCheck className="w-3.5 h-3.5 text-[#5F6F52] shrink-0" />
-              <span>Kişisel verilerinizin ve sipariş gizliliğinizin korunması amacıyla yalnızca eşleşen e-posta adresiyle sorgulama yapılabilir.</span>
+        {/* 1. SORGULAMA ALANI */}
+        <div className="bg-white p-6 sm:p-8 rounded-xs border border-stone-200 mb-8 shadow-xs">
+          <form onSubmit={handleSearchSubmit} className="grid grid-cols-1 sm:grid-cols-12 gap-4">
+            <div className="sm:col-span-6">
+              <label className="block text-[11px] uppercase tracking-wider font-medium text-[#231B18] mb-1.5">
+                Sipariş Numarası *
+              </label>
+              <input
+                type="text"
+                required
+                placeholder="Örn: SFR-2026-1001"
+                value={orderQuery}
+                onChange={(e) => setOrderQuery(e.target.value)}
+                className="w-full px-3.5 py-2.5 rounded-xs border border-stone-300 bg-white text-sm font-medium text-[#231B18] focus:outline-none focus:border-[#231B18]"
+              />
             </div>
 
-            {searchError && (
-              <div className="mt-4 p-3 bg-red-50 text-red-700 rounded-xs text-xs font-medium border border-red-200 flex items-start gap-2">
-                <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
-                <span>{searchError}</span>
-              </div>
-            )}
+            <div className="sm:col-span-4">
+              <label className="block text-[11px] uppercase tracking-wider font-medium text-[#231B18] mb-1.5">
+                E-posta Adresi *
+              </label>
+              <input
+                type="email"
+                required
+                placeholder="ornek@alanadi.com"
+                value={emailInput}
+                onChange={(e) => setEmailInput(e.target.value)}
+                className="w-full px-3.5 py-2.5 rounded-xs border border-stone-300 bg-white text-sm text-[#231B18] focus:outline-none focus:border-[#231B18]"
+              />
+            </div>
+
+            <div className="sm:col-span-2 flex items-end">
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="w-full py-3 px-4 rounded-xs bg-[#231B18] hover:bg-[#3A2E29] disabled:opacity-50 text-white flex items-center justify-center gap-2 text-xs uppercase tracking-widest font-medium transition cursor-pointer"
+              >
+                {isLoading ? (
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <>
+                    <Search className="w-3.5 h-3.5" />
+                    <span>Sorgula</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </form>
+
+          {/* Güvenlik Bilgilendirme Notu */}
+          <div className="mt-4 pt-3 border-t border-stone-100 flex items-center gap-2 text-[11px] text-[#7A7067]">
+            <ShieldCheck className="w-3.5 h-3.5 text-[#5F6F52] shrink-0" />
+            <span>Kişisel verilerinizin ve sipariş gizliliğinizin korunması amacıyla yalnızca eşleşen e-posta adresiyle sorgulama yapılabilir.</span>
           </div>
-        )}
+
+          {searchError && (
+            <div className="mt-4 p-3 bg-red-50 text-red-700 rounded-xs text-xs font-medium border border-red-200 flex items-start gap-2">
+              <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
+              <span>{searchError}</span>
+            </div>
+          )}
+        </div>
 
         {/* Sipariş Henüz Sorgulanmadığında Bilgilendirme Kartı */}
-        {!activeOrder && !searchError && !currentUser && (
+        {!activeOrder && !searchError && (
           <div className="bg-[#FAF8F5] border border-stone-200 rounded-xs p-8 text-center max-w-xl mx-auto space-y-3 mb-12">
             <div className="w-12 h-12 rounded-full bg-white border border-stone-200 flex items-center justify-center mx-auto text-[#231B18]">
               <PackageCheck className="w-6 h-6 text-[#C85A32]" />
