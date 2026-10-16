@@ -821,7 +821,7 @@ export default function AyarlarPage() {
               </div>
 
               <div className="sm:col-span-2">
-                <label className="block font-medium text-stone-800 mb-1">Kadıköy Atölye Açık Adresi</label>
+                <label className="block font-medium text-stone-800 mb-1">Atölye Açık Adresi (İzmir / Karşıyaka - Online)</label>
                 <textarea
                   rows={2}
                   value={atelierAddress}

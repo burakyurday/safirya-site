@@ -30,6 +30,12 @@ export async function POST(req: NextRequest) {
       companyName,
       taxOffice,
       vkn,
+      contractId,
+      contractStatus,
+      contractVerificationCode,
+      contractSignedAt,
+      contractSignedBy,
+      signatureDataUrl,
     } = body;
 
     // 1. Temel Doğrulamalar
@@ -121,6 +127,12 @@ export async function POST(req: NextRequest) {
       stage: 'SIPARIS_ALINDI',
       paymentStatus: 'BEKLIYOR',
       paymentMethod: 'PAYTR_KREDI_KARTI',
+      contractId: contractId || undefined,
+      contractStatus: contractStatus || (verification.verifiedItems.some((it) => it.customText) ? 'ONAYLANDI' : undefined),
+      contractVerificationCode: contractVerificationCode || undefined,
+      contractSignedAt: contractSignedAt || undefined,
+      contractSignedBy: contractSignedBy || undefined,
+      signatureDataUrl: signatureDataUrl || undefined,
       createdAt: new Date().toISOString(),
       userIp,
     };

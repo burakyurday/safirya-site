@@ -38,18 +38,18 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: {
-    default: 'Safirya | El Yapımı Tasarım Atölyesi Kadıköy',
+    default: 'Safirya | El Yapımı Tasarım Atölyesi',
     template: '%s | Safirya Atölye',
   },
   description:
-    'İstanbul Kadıköy merkezli zanaat atölyesi. %100 doğal soya mumları, kalıcı kokulu taş objeler, masif ceviz epoksi sunumluk tepsiler ve el dokuması Japon Miyuki boncuk takılar. Türkiye geneli sigortalı hasarsız teslimat.',
+    'İzmir Karşıyaka merkezli bağımsız online zanaat atölyesi. %100 doğal soya mumları, kalıcı kokulu taş objeler, masif ceviz epoksi sunumluk tepsiler ve el dokuması Japon Miyuki boncuk takılar. Türkiye geneli sigortalı hasarsız teslimat.',
   keywords: [
     'Safirya',
     'Safirya Atölye',
     'El Yapımı Mum',
     'Doğal Soya Mumu',
-    'Kadıköy Mum Atölyesi',
-    'Moda Tasarım Hediyelik',
+    'İzmir Mum Atölyesi',
+    'Karşıyaka Zanaat Tasarım',
     'Kokulu Taş Figür',
     'Epoksi Ahşap Tepsi',
     'Miyuki Boncuk Bileklik',
@@ -59,8 +59,8 @@ export const metadata: Metadata = {
     'Nikah Şekeri Alternatifi',
     'Kurumsal Hediye Seti',
     'Kişiye Özel İsimli Mum',
-    'Kadıköy Zanaat Atölyesi',
-    'İstanbul El Sanatları',
+    'İzmir Zanaat Atölyesi',
+    'İzmir El Sanatları',
   ],
   authors: [{ name: 'Safirya Tasarım Atölyesi', url: siteUrl }],
   creator: 'Safirya',
@@ -84,22 +84,22 @@ export const metadata: Metadata = {
     locale: 'tr_TR',
     url: siteUrl,
     siteName: 'Safirya El Yapımı Tasarım Atölyesi',
-    title: 'Safirya | El Yapımı Tasarım Atölyesi Kadıköy',
+    title: 'Safirya | El Yapımı Tasarım Atölyesi',
     description:
-      'Doğal soya mumları, kalıcı kokulu taşlar, ahşap epoksi sunumluklar ve el dokuması Miyuki takılar. Kadıköy atölyemizden zarafet ve el emeğiyle.',
+      'Doğal soya mumları, kalıcı kokulu taşlar, ahşap epoksi sunumluklar ve el dokuması Miyuki takılar. İzmir Karşıyaka atölyemizden zarafet ve el emeğiyle.',
     images: [
       {
         url: `${siteUrl}/opengraph-image`,
         width: 1200,
         height: 630,
-        alt: 'Safirya El Yapımı Tasarım Atölyesi Kadıköy',
+        alt: 'Safirya El Yapımı Tasarım Atölyesi',
         type: 'image/png',
       },
     ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Safirya | El Yapımı Tasarım Atölyesi Kadıköy',
+    title: 'Safirya | El Yapımı Tasarım Atölyesi',
     description:
       'Doğal soya mumları, kokulu taşlar, ahşap epoksi sunumluklar ve el dokuması Miyuki takılar. %100 el yapımı zanaat.',
     images: [`${siteUrl}/opengraph-image`],
@@ -124,19 +124,19 @@ export const metadata: Metadata = {
     },
   },
   other: {
-    'geo.region': 'TR-34',
-    'geo.placename': 'Kadıköy, İstanbul, Türkiye',
-    'geo.position': '40.9880;29.0260',
-    ICBM: '40.9880, 29.0260',
+    'geo.region': 'TR-35',
+    'geo.placename': 'Karşıyaka, İzmir, Türkiye',
+    'geo.position': '38.4559;27.1105',
+    ICBM: '38.4559, 27.1105',
     'DC.title': 'Safirya El Yapımı Tasarım Atölyesi',
     'DC.creator': 'Safirya',
     'DC.subject':
-      'Doğal Soya Mumu, Kokulu Taş, Epoksi Ahşap Tepsi, Miyuki Boncuk Takı, Kadıköy Atölyesi',
+      'Doğal Soya Mumu, Kokulu Taş, Epoksi Ahşap Tepsi, Miyuki Boncuk Takı, Karşıyaka İzmir Atölyesi',
     'DC.description':
-      'Kadıköy atölyemizde özenle üretilen doğal soya mumları, kokulu taşlar, epoksi sunumluklar ve Miyuki takılar.',
+      'İzmir Karşıyaka atölyemizde özenle üretilen doğal soya mumları, kokulu taşlar, epoksi sunumluklar ve Miyuki takılar.',
     'DC.publisher': 'Safirya Atölye',
     'DC.language': 'tr',
-    'DC.coverage': 'Kadıköy, İstanbul, Türkiye',
+    'DC.coverage': 'Karşıyaka, İzmir, Türkiye',
   },
 };
 

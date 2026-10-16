@@ -63,9 +63,9 @@ export default function CustomQuotePage() {
       url: siteUrl,
       address: {
         '@type': 'PostalAddress',
-        streetAddress: 'Caferağa Mah. Şair Nefi Sk. No:18',
-        addressLocality: 'Kadıköy',
-        addressRegion: 'İstanbul',
+        streetAddress: 'Karşıyaka (Online Zanaat Atölyesi)',
+        addressLocality: 'Karşıyaka',
+        addressRegion: 'İzmir',
         addressCountry: 'TR',
       },
     },

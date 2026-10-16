@@ -31,8 +31,8 @@ export default function YeniManuelSiparisPage() {
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [customerEmail, setCustomerEmail] = useState('');
-  const [city, setCity] = useState('İstanbul');
-  const [district, setDistrict] = useState('Kadıköy');
+  const [city, setCity] = useState('İzmir');
+  const [district, setDistrict] = useState('Karşıyaka');
   const [address, setAddress] = useState('');
 
   // 3. Sipariş Kalemleri
@@ -61,7 +61,7 @@ export default function YeniManuelSiparisPage() {
   // 5. Ödeme & Kargo
   const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>('ODENDI');
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('HAVALE_EFT');
-  const [cargoCompany, setCargoCompany] = useState<string>('Yurtiçi Kargo');
+  const [cargoCompany, setCargoCompany] = useState<string>('');
 
   // Hesaplamalar
   const subtotal = items.reduce((acc, i) => acc + i.totalAmount, 0);
@@ -307,7 +307,7 @@ export default function YeniManuelSiparisPage() {
                 type="text"
                 value={district}
                 onChange={(e) => setDistrict(e.target.value)}
-                placeholder="Kadıköy"
+                placeholder="Karşıyaka"
                 className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-xs focus:ring-2 focus:ring-[#D96B27]"
               />
             </div>
@@ -321,10 +321,14 @@ export default function YeniManuelSiparisPage() {
                 onChange={(e) => setCargoCompany(e.target.value)}
                 className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-xs font-semibold"
               >
+                <option value="">Henüz Belirlenmedi (Kargoya Verildiğinde Girilecek)</option>
                 <option value="Yurtiçi Kargo">Yurtiçi Kargo</option>
-                <option value="MNG Kargo">MNG Kargo</option>
                 <option value="Aras Kargo">Aras Kargo</option>
-                <option value="Atölyeden Elden Teslim">Atölyeden Elden Teslim</option>
+                <option value="MNG Kargo">MNG Kargo</option>
+                <option value="Sürat Kargo">Sürat Kargo</option>
+                <option value="PTT Kargo">PTT Kargo</option>
+                <option value="HepsiJet">HepsiJet</option>
+                <option value="Kolay Gelsin">Kolay Gelsin</option>
               </select>
             </div>
           </div>

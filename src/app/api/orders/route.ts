@@ -35,6 +35,12 @@ export async function POST(req: NextRequest) {
       couponCode,
       isGiftWrapped = false,
       giftNote,
+      contractId,
+      contractStatus,
+      contractVerificationCode,
+      contractSignedAt,
+      contractSignedBy,
+      signatureDataUrl,
     } = body;
 
     // 1. Temel Girdi Doğrulamaları
@@ -119,6 +125,12 @@ export async function POST(req: NextRequest) {
       stage: 'SIPARIS_ALINDI',
       paymentMethod,
       paymentStatus,
+      contractId: contractId || undefined,
+      contractStatus: contractStatus || (verification.verifiedItems.some((it) => it.customText) ? 'ONAYLANDI' : undefined),
+      contractVerificationCode: contractVerificationCode || undefined,
+      contractSignedAt: contractSignedAt || undefined,
+      contractSignedBy: contractSignedBy || undefined,
+      signatureDataUrl: signatureDataUrl || undefined,
       createdAt: new Date().toISOString(),
     };
 
@@ -205,8 +217,8 @@ export async function POST(req: NextRequest) {
       if (resendApiKey) {
         const emailCaption =
           paymentMethod === 'HAVALE_EFT'
-            ? `₺${verification.grandTotal.toFixed(2)} tutarındaki Havale/EFT siparişiniz başarıyla alındı. Lütfen açıklama alanına #${orderNumber} yazarak banka transferinizi tamamlayınız. Ustalarımız siparişinizi hazırlığa aldı.`
-            : `₺${verification.grandTotal.toFixed(2)} tutarındaki siparişiniz onaylandı. Zanaatkar ustalarımız Kadıköy atölyemizde hazırlığa başladı.`;
+            ? `₺${verification.grandTotal.toFixed(2)} tutarındaki Havale/EFT siparişiniz başarıyla alındı. Lütfen açıklama alanına #${orderNumber} yazarak banka transferinizi tamamlayınız ve dekontunuzu WhatsApp destek hattımıza (+90 532 555 72 34) iletiniz. Dekont onayının ardından siparişiniz derhal üretime alınacaktır.`
+            : `₺${verification.grandTotal.toFixed(2)} tutarındaki siparişiniz onaylandı. Zanaatkar ustalarımız atölyemizde hazırlığa başladı.`;
 
         const emailHtml = generateSafiryaEmailHtml({
           to: cleanEmail,

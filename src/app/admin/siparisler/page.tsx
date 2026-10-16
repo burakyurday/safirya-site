@@ -45,6 +45,31 @@ export default function SiparislerPage() {
   const [selectedInvoice, setSelectedInvoice] = useState<AdminInvoice | null>(null);
   const [isInvoicePdfModalOpen, setIsInvoicePdfModalOpen] = useState(false);
 
+  // Kargo Modal Durumu
+  const [cargoModalOrder, setCargoModalOrder] = useState<AdminOrder | null>(null);
+  const [cargoCompanyInput, setCargoCompanyInput] = useState('Yurtiçi Kargo');
+  const [cargoTrackingCodeInput, setCargoTrackingCodeInput] = useState('');
+
+  const handleStageChange = (order: AdminOrder, newStage: OrderStage) => {
+    if (newStage === 'KARGOYA_VERILDI') {
+      setCargoModalOrder(order);
+      setCargoCompanyInput(order.cargoCompany || 'Yurtiçi Kargo');
+      setCargoTrackingCodeInput(order.cargoTrackingNo || '');
+    } else {
+      updateOrderStage(order.id, newStage);
+    }
+  };
+
+  const handleConfirmCargo = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!cargoModalOrder) return;
+    updateOrderStage(cargoModalOrder.id, 'KARGOYA_VERILDI', {
+      cargoCompany: cargoCompanyInput.trim(),
+      cargoTrackingNo: cargoTrackingCodeInput.trim() || undefined,
+    });
+    setCargoModalOrder(null);
+  };
+
   // Filtreleme
   const filteredOrders = orders.filter((o) => {
     const matchesSearch =
@@ -229,7 +254,7 @@ export default function SiparislerPage() {
                       <td className="py-3.5 px-4">
                         <select
                           value={order.stage}
-                          onChange={(e) => updateOrderStage(order.id, e.target.value as OrderStage)}
+                          onChange={(e) => handleStageChange(order, e.target.value as OrderStage)}
                           className={`px-2.5 py-1.5 rounded-xl text-[11px] font-bold border transition ${currentStage.color}`}
                         >
                           <option value="SIPARIS_ALINDI">Sipariş Alındı</option>
@@ -285,6 +310,15 @@ export default function SiparislerPage() {
                         >
                           Detay
                         </button>
+
+                        <Link
+                          href={`/admin/etiket-montaj?orderId=${order.id}`}
+                          className="px-2.5 py-1.5 rounded-lg bg-orange-50 hover:bg-orange-100 text-[#D96B27] border border-orange-200 text-xs font-bold transition shadow-xs inline-flex items-center gap-1"
+                          title="Bu Sipariş İçin Etiket Montajı Yap"
+                        >
+                          <Printer className="w-3.5 h-3.5" />
+                          <span>Etiket</span>
+                        </Link>
 
                         {isInvoiceReady ? (
                           <button
@@ -426,7 +460,15 @@ export default function SiparislerPage() {
             </div>
 
             <div className="pt-4 border-t border-gray-100 flex items-center justify-between">
-              <div>
+              <div className="flex items-center gap-2">
+                <Link
+                  href={`/admin/etiket-montaj?orderId=${selectedOrder.id}`}
+                  className="px-4 py-2 rounded-xl bg-orange-50 hover:bg-orange-100 text-[#D96B27] border border-orange-300 font-bold text-xs flex items-center gap-2 transition"
+                >
+                  <Printer className="w-4 h-4" />
+                  <span>Etiket Montajına Git</span>
+                </Link>
+
                 {selectedOrder.invoiceStatus !== 'OLUSTURULDU' && (
                   <button
                     onClick={() => {
@@ -497,9 +539,9 @@ export default function SiparislerPage() {
                     Safirya El Yapımı Tasarım ve Zanaat Atölyesi Tic. Ltd. Şti.
                   </div>
                   <div className="text-[11px] text-gray-500 mt-1 space-y-0.5">
-                    <div>Caferağa Mah. Şair Nefi Sk. No:18 Kadıköy / İstanbul</div>
-                    <div>Kadıköy V.D. • VKN: 1820448192 • Tic. Sicil: 491029-5</div>
-                    <div>Mersis: 0182044819200001 • Tel: +90 (212) 555 7234</div>
+                    <div>Karşıyaka / İzmir (Yalnızca Online E-Ticaret Hizmeti)</div>
+                    <div>Karşıyaka V.D. • VKN: 1820448192 • Tic. Sicil: 491029-5</div>
+                    <div>Mersis: 0182044819200001 • Tel: +90 (232) 555 7234</div>
                   </div>
                 </div>
 
@@ -538,7 +580,7 @@ export default function SiparislerPage() {
                     DÜZENLEME DETAYLARI
                   </span>
                   <div>TCKN/VKN: <strong>{selectedInvoice.customerTaxId || '11111111111'}</strong></div>
-                  <div>Vergi Dairesi: <strong>Kadıköy V.D.</strong></div>
+                  <div>Vergi Dairesi: <strong>Karşıyaka V.D.</strong></div>
                   <div>Fatura Türü: <strong>SATIS (Nihai Tüketici)</strong></div>
                   <div>Ödeme Yöntemi: <strong>KREDİ KARTI / SANAL POS</strong></div>
                 </div>
@@ -620,6 +662,94 @@ export default function SiparislerPage() {
                 Kapat
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* KARGO BİLGİSİ GİRİŞİ MODALI */}
+      {cargoModalOrder && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-gray-200 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between pb-3 border-b border-gray-200">
+              <div className="flex items-center gap-2">
+                <Truck className="w-5 h-5 text-[#D96B27]" />
+                <h3 className="text-base font-black text-[#1B2A4A]">
+                  Kargo Bilgilerini Girin
+                </h3>
+              </div>
+              <button
+                onClick={() => setCargoModalOrder(null)}
+                className="p-1.5 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleConfirmCargo} className="mt-4 space-y-4">
+              <div className="bg-[#FAF8F5] p-3 rounded-xl border border-gray-200 text-xs text-gray-700">
+                <div className="font-bold text-[#1B2A4A]">
+                  Sipariş #{cargoModalOrder.orderNumber}
+                </div>
+                <div>Alıcı: {cargoModalOrder.customerName}</div>
+                <div className="text-[11px] text-gray-500 mt-0.5">
+                  Teslimat: {typeof cargoModalOrder.shippingAddress === 'string' ? cargoModalOrder.shippingAddress : `${cargoModalOrder.shippingAddress?.city || ''} / ${cargoModalOrder.shippingAddress?.district || ''}`}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-[#1B2A4A] mb-1">
+                  Kargo Firması *
+                </label>
+                <select
+                  value={cargoCompanyInput}
+                  onChange={(e) => setCargoCompanyInput(e.target.value)}
+                  required
+                  className="w-full px-3 py-2 text-xs bg-[#F6F4F0] border border-gray-200 rounded-lg text-[#1B2A4A] font-semibold focus:outline-none focus:ring-2 focus:ring-[#D96B27]"
+                >
+                  <option value="Yurtiçi Kargo">Yurtiçi Kargo</option>
+                  <option value="Aras Kargo">Aras Kargo</option>
+                  <option value="MNG Kargo">MNG Kargo</option>
+                  <option value="Sürat Kargo">Sürat Kargo</option>
+                  <option value="PTT Kargo">PTT Kargo</option>
+                  <option value="HepsiJet">HepsiJet</option>
+                  <option value="Kolay Gelsin">Kolay Gelsin</option>
+                  <option value="Diğer Kargo">Diğer / Özel Taşıyıcı</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-[#1B2A4A] mb-1">
+                  Kargo Takip Numarası
+                </label>
+                <input
+                  type="text"
+                  placeholder="Örn: 123456789012"
+                  value={cargoTrackingCodeInput}
+                  onChange={(e) => setCargoTrackingCodeInput(e.target.value)}
+                  className="w-full px-3 py-2 text-xs bg-[#F6F4F0] border border-gray-200 rounded-lg text-[#1B2A4A] font-mono focus:outline-none focus:ring-2 focus:ring-[#D96B27]"
+                />
+                <span className="text-[10px] text-gray-500 mt-1 block">
+                  Müşteriniz sipariş takibi sayfasında ve e-postasında bu takip kodunu görecektir.
+                </span>
+              </div>
+
+              <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-gray-200">
+                <button
+                  type="button"
+                  onClick={() => setCargoModalOrder(null)}
+                  className="px-4 py-2 rounded-xl text-xs font-bold text-gray-600 hover:bg-gray-100 transition"
+                >
+                  Vazgeç
+                </button>
+                <button
+                  type="submit"
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#D96B27] hover:bg-[#c25a1e] text-white text-xs font-bold transition shadow-md"
+                >
+                  <Truck className="w-3.5 h-3.5" />
+                  <span>Kargoya Verildi Olarak Kaydet</span>
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

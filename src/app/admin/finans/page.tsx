@@ -563,7 +563,7 @@ export default function FinansPage() {
                   required
                   value={txDescription}
                   onChange={(e) => setTxDescription(e.target.value)}
-                  placeholder="Örn: 25kg Soya vaksı fatura ödemesi / Kadıköy Atölye Kirası"
+                  placeholder="Örn: 25kg Soya vaksı fatura ödemesi / Karşıyaka Atölye Kirası"
                   className="w-full px-3 py-2 rounded-xl border border-gray-300 text-xs focus:ring-2 focus:ring-[#D96B27]"
                 />
               </div>

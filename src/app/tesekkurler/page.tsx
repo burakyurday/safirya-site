@@ -29,6 +29,7 @@ function ThankYouContent() {
     shippingAddress?: string;
     date?: string;
     items?: Array<{ name: string; quantity: number; price: number }>;
+    paymentMethod?: string;
   } | null>(null);
 
   useEffect(() => {
@@ -119,6 +120,42 @@ function ThankYouContent() {
                   </>
                 )}
               </button>
+            </div>
+          )}
+
+          {/* Havale / EFT İçin WhatsApp Dekont & Sipariş No İletimi */}
+          {(orderData?.paymentMethod === 'HAVALE_EFT' || searchParams.get('payment') === 'havale') && (
+            <div className="p-5 rounded-xs bg-[#FEF5C8] border border-[#F5E898] text-left space-y-3">
+              <div className="flex items-center gap-2.5">
+                <span className="text-xl">📱</span>
+                <div>
+                  <h3 className="font-semibold text-xs uppercase tracking-wider text-[#231B18]">
+                    WhatsApp Dekont & Sipariş No İletimi Gerekli
+                  </h3>
+                  <p className="text-[11px] text-[#554D46] mt-0.5">
+                    Havale/EFT transferinizin teyit edilerek siparişinizin atölyede üretime alınması için lütfen dekontunuzu WhatsApp destek hattımıza iletiniz.
+                  </p>
+                </div>
+              </div>
+              {displayOrderNumber && (
+                <div className="bg-white/90 p-3 rounded-xs border border-[#F5E898] text-xs text-[#231B18] flex items-center justify-between">
+                  <span>Sipariş No: <strong>{displayOrderNumber}</strong></span>
+                  {orderData?.totalAmount && (
+                    <span>Tutar: <strong>₺{orderData.totalAmount.toFixed(2)}</strong></span>
+                  )}
+                </div>
+              )}
+              <a
+                href={`https://wa.me/905325557234?text=${encodeURIComponent(
+                  `Merhaba, #${displayOrderNumber} nolu siparişimin havale/EFT dekontunu iletiyorum.`
+                )}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xs bg-[#25D366] hover:bg-[#20ba59] text-white text-xs font-semibold uppercase tracking-wider transition shadow-sm"
+              >
+                <MessageCircle className="w-4 h-4" />
+                <span>WhatsApp ile Dekont İlet</span>
+              </a>
             </div>
           )}
 

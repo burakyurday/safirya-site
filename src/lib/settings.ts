@@ -29,7 +29,7 @@ export const defaultSettings: SystemSettingsData = {
   contactPhone: '+90 (212) 555 7234',
   whatsappNumber: '+90 532 555 7234',
   instagramHandle: '@safirya35353535',
-  atelierAddress: 'Caferağa Mah. Şair Nefi Sk. No:18 Kadıköy / İstanbul',
+  atelierAddress: 'Karşıyaka / İzmir (Yalnızca Online E-Ticaret Hizmeti)',
   exitIntentTitle: 'Atölyemizden Ayrılmadan Önce %10 Tanışma İndirimi!',
   exitIntentCouponCode: 'SAFIRYA10',
   logoUrl: '',

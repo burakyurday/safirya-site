@@ -46,14 +46,14 @@ const pagesContent: Record<
     title: 'Hakkımızda',
     subtitle: 'Safirya: El Emeğinin, Zarafetin ve Doğallığın Zanaati',
     metaDescription:
-      'Safirya, Kadıköy atölyesinde petrol türevi parafin yerine %100 bitkisel soya mumu, kokulu taşlar, ahşap epoksi tepsiler ve Miyuki boncuk takılar üreten bağımsız tasarım atölyesidir.',
+      'Safirya, İzmir Karşıyaka atölyesinde petrol türevi parafin yerine %100 bitkisel soya mumu, kokulu taşlar, ahşap epoksi tepsiler ve Miyuki boncuk takılar üreten bağımsız tasarım atölyesidir.',
     content: (
       <div className="space-y-6 text-sm sm:text-base text-[#1B2A4A]/80 leading-relaxed">
         <p>
           Safirya, seri üretimin mekanik ruhuna inat; her bir objeyi zanaatkar dokunuşuyla, sevgiyle ve özenle üreten bağımsız bir tasarım atölyesidir.
         </p>
         <p>
-          Kadıköy&apos;deki atölyemizde döktüğümüz her bir soya mumu, zımparaladığımız her bir epoksi ahşap sunumluk ve tek tek ipe dizdiğimiz her bir Japon Miyuki boncuğu; yaşam alanlarınıza sıcaklık, huzur ve estetik katmak için üretilir.
+          İzmir Karşıyaka&apos;daki atölyemizde döktüğümüz her bir soya mumu, zımparaladığımız her bir epoksi ahşap sunumluk ve tek tek ipe dizdiğimiz her bir Japon Miyuki boncuğu; yaşam alanlarınıza sıcaklık, huzur ve estetik katmak için üretilir.
         </p>
         <h3 className="text-xl font-bold text-[#1B2A4A] pt-4">Değerlerimiz</h3>
         <ul className="list-disc pl-5 space-y-2">
@@ -168,7 +168,7 @@ const pagesContent: Record<
           <div className="bg-[#FAF8F5] p-4 rounded-2xl border border-[#E8E2D9] text-xs space-y-1.5">
             <p><strong>Ticari Ünvan:</strong> Safirya El Yapımı Tasarım Atölyesi</p>
             <p><strong>Alan Adı:</strong> https://safirya.tr</p>
-            <p><strong>Atölye Adresi:</strong> Caferağa Mah. Şair Nefi Sk. No:18 Kadıköy / İstanbul</p>
+            <p><strong>Atölye Adresi:</strong> Karşıyaka / İzmir (Yalnızca Online E-Ticaret Hizmeti)</p>
             <p><strong>Müşteri Hizmetleri:</strong> +90 (212) 555 7234</p>
             <p><strong>WhatsApp İletişim:</strong> +90 (532) 555 7234</p>
             <p><strong>KVKK & Gizlilik E-Posta:</strong> kvkk@safirya.tr / destek@safirya.tr</p>
@@ -310,7 +310,7 @@ const pagesContent: Record<
             Yukarıda belirtilen haklarınızı kullanmak için kimliğinizi tespit edici belgelerle birlikte:
           </p>
           <ul className="list-disc pl-5 space-y-1 text-xs">
-            <li>Islak imzalı dilekçe ile: <em>Caferağa Mah. Şair Nefi Sk. No:18 Kadıköy / İstanbul</em> adresimize şahsen veya noter kanalıyla,</li>
+            <li>Islak imzalı dilekçe ile: <em>Karşıyaka / İzmir</em> adresimize şahsen veya noter kanalıyla,</li>
             <li>Elektronik posta ile: Sistemimizde kayıtlı e-posta adresiniz üzerinden <strong>kvkk@safirya.tr</strong> adresine iletebilirsiniz.</li>
           </ul>
           <p className="text-xs text-gray-500">
@@ -338,7 +338,7 @@ const pagesContent: Record<
         <section className="space-y-3">
           <h3 className="text-lg font-bold text-[#1B2A4A]">1. Giriş ve Taraflar</h3>
           <p className="text-xs sm:text-sm">
-            Bu internet sitesi (<strong>https://safirya.tr</strong>), Caferağa Mah. Şair Nefi Sk. No:18 Kadıköy / İstanbul adresinde mukim Safirya El Yapımı Tasarım Atölyesi (&quot;Safirya&quot;) tarafından işletilmektedir. safirya.tr sitesini ziyaret eden, üye olan veya alışveriş yapan gerçek veya tüzel kişiler bundan böyle &quot;Kullanıcı&quot; veya &quot;Müşteri&quot; olarak anılacaktır.
+            Bu internet sitesi (<strong>https://safirya.tr</strong>), Karşıyaka / İzmir adresinde mukim Safirya El Yapımı Tasarım Atölyesi (&quot;Safirya&quot; - Yalnızca Online E-Ticaret Hizmeti) tarafından işletilmektedir. safirya.tr sitesini ziyaret eden, üye olan veya alışveriş yapan gerçek veya tüzel kişiler bundan böyle &quot;Kullanıcı&quot; veya &quot;Müşteri&quot; olarak anılacaktır.
           </p>
         </section>
 
@@ -450,7 +450,7 @@ const pagesContent: Record<
               <strong className="text-[#D96B27] block font-bold">1.1. SATICI BİLGİLERİ:</strong>
               <p><strong>Ünvan:</strong> Safirya El Yapımı Tasarım Atölyesi</p>
               <p><strong>Web Sitesi:</strong> https://safirya.tr</p>
-              <p><strong>Adres:</strong> Caferağa Mah. Şair Nefi Sk. No:18 Kadıköy / İstanbul</p>
+              <p><strong>Adres:</strong> Karşıyaka / İzmir (Yalnızca Online E-Ticaret Hizmeti)</p>
               <p><strong>Telefon:</strong> +90 (212) 555 7234</p>
               <p><strong>WhatsApp:</strong> +90 (532) 555 7234</p>
               <p><strong>E-Posta:</strong> destek@safirya.tr</p>
@@ -575,40 +575,32 @@ const pagesContent: Record<
   },
 
   iletisim: {
-    title: 'İletişim & Atölye Ziyareti',
-    subtitle: 'Bir Kahve Eşliğinde Kadıköy Atölyemizi Ziyaret Edin',
+    title: 'İletişim',
+    subtitle: 'Safirya Online Tasarım & Zanaat Atölyesi',
     metaDescription:
-      'Safirya Kadıköy tasarım atölyesi adresi, telefon, e-posta, çalışma saatleri ve hızlı iletişim formu.',
+      'Safirya İzmir Karşıyaka online tasarım atölyesi telefon, e-posta, WhatsApp ve hızlı iletişim formu.',
     content: (
       <div className="space-y-10">
         <p className="text-sm sm:text-base text-[#1B2A4A]/80 leading-relaxed">
-          Söz, nişan ve etkinlik hediyeliklerinizi birebir numuneler üzerinden incelemek, koku notalarını koklamak veya özel bir tasarım projenizi konuşmak için Kadıköy Moda paralelindeki atölyemize her zaman bekleriz.
+          Safirya atölyemiz İzmir Karşıyaka merkezli olup yalnızca online e-ticaret üzerinden hizmet vermektedir. Fiziksel mağazamız veya showroom bulunmamaktadır; söz, nişan ve etkinlik hediyelikleriniz, özel siparişleriniz ve her türlü sorunuz için WhatsApp hattımız ve iletişim formumuz üzerinden bize doğrudan ulaşabilirsiniz.
         </p>
 
         {/* 4 Ana Bilgi Kartı */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <a
-            href="https://maps.google.com/?q=Caferaga+Mah+Sair+Nefi+Sk+No:18+Kadikoy+Istanbul"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="bg-[#FAF8F5] p-5 rounded-xs border border-stone-200 hover:border-[#231B18] transition group block"
-          >
-            <div className="flex items-center justify-between text-[#231B18] mb-2">
-              <div className="flex items-center gap-2">
-                <MapPin className="w-5 h-5 text-[#231B18]" />
-                <h4 className="font-serif text-sm font-normal text-[#231B18] group-hover:text-[#C85A32] transition">
-                  Atölye Adresi
-                </h4>
-              </div>
-              <ExternalLink className="w-4 h-4 text-stone-400 group-hover:text-[#231B18] transition" />
+          <div className="bg-[#FAF8F5] p-5 rounded-xs border border-stone-200 block">
+            <div className="flex items-center gap-2 text-[#231B18] mb-2">
+              <MapPin className="w-5 h-5 text-[#231B18]" />
+              <h4 className="font-serif text-sm font-normal text-[#231B18]">
+                Atölye Merkezi
+              </h4>
             </div>
             <p className="text-xs sm:text-sm text-[#7A7067] leading-relaxed">
-              Caferağa Mah. Şair Nefi Sk. No:18 Kadıköy / İstanbul (Moda Caddesi Paraleli)
+              Karşıyaka / İzmir (Yalnızca Online E-Ticaret Hizmeti — Fiziksel Mağaza Bulunmamaktadır)
             </p>
-            <span className="text-[11px] uppercase tracking-wider font-medium text-[#231B18] mt-2 inline-block">
-              Haritada Gör →
+            <span className="text-[11px] uppercase tracking-wider font-medium text-[#C85A32] mt-2 inline-block">
+              Tüm Türkiye&apos;ye Sigortalı Kargo Teslimatı
             </span>
-          </a>
+          </div>
 
           <div className="bg-[#FAF8F5] p-5 rounded-xs border border-stone-200 space-y-2">
             <div className="flex items-center gap-2 text-[#231B18] mb-1">

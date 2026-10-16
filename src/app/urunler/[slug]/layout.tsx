@@ -37,7 +37,7 @@ function resolveProduct(slug: string): ProductSchemaInput & {
       name: found.name,
       description:
         found.description ||
-        `${found.name} - Kadıköy Safirya atölyesinde zanaatkar ellerle hazırlanan %100 el emeği tasarım. Doğal ve kişiselleştirilebilir hediyelik koleksiyon parçası.`,
+        `${found.name} - Safirya atölyesinde zanaatkar ellerle hazırlanan %100 el emeği tasarım. Doğal ve kişiselleştirilebilir hediyelik koleksiyon parçası.`,
       slug: found.slug,
       price: found.price,
       discountPrice: found.discountPrice,
@@ -52,10 +52,10 @@ function resolveProduct(slug: string): ProductSchemaInput & {
 
   // Fallback for custom or newly added slugs
   return {
-    title: 'El Yapımı Zanaat Tasarımı | Safirya Atölye Kadıköy',
+    title: 'El Yapımı Zanaat Tasarımı | Safirya Atölye',
     name: 'Safirya El Emeği Tasarım Ürünü',
     description:
-      'Safirya atölyesinde zanaatkar ellerle hazırlanan %100 el emeği tasarım parçası. Kadıköy İstanbul merkezli atölye üretimi.',
+      'Safirya atölyesinde zanaatkar ellerle hazırlanan %100 el emeği tasarım parçası. İzmir Karşıyaka merkezli atölye üretimi.',
     slug,
     price: 250,
     categoryName: 'El Yapımı Tasarım',

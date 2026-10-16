@@ -313,7 +313,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           id: 'welcome-notif-1',
           title: '✨ Safirya Atölyesi’ne Hoş Geldiniz!',
           message:
-            'Kadıköy atölyemizde özenle dökülen doğal soya mumları ve zanaatkar objelerimizi keşfedin.',
+            'İzmir Karşıyaka atölyemizde özenle dökülen doğal soya mumları ve zanaatkar objelerimizi keşfedin.',
           type: 'system',
           isRead: false,
           createdAt: new Date().toISOString(),

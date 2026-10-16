@@ -5,7 +5,7 @@ export default function manifest(): MetadataRoute.Manifest {
     name: 'Safirya El Yapımı Tasarım Atölyesi',
     short_name: 'Safirya',
     description:
-      'Doğal soya mumları, kokulu taşlar, epoksi sunumluklar ve Miyuki boncuk takılar üreten Kadıköy merkezli zanaat atölyesi.',
+      'Doğal soya mumları, kokulu taşlar, epoksi sunumluklar ve Miyuki boncuk takılar üreten İzmir Karşıyaka merkezli online zanaat atölyesi.',
     start_url: '/',
     display: 'standalone',
     background_color: '#FAF8F5',

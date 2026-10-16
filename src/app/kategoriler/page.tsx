@@ -8,7 +8,7 @@ import { JsonLd, getBreadcrumbSchema } from '@/components/seo/JsonLd';
 export const metadata: Metadata = {
   title: 'Atölye Koleksiyonları & Kategoriler',
   description:
-    'Doğal soya mumları, kokulu taşlar, epoksi ahşap sunumluklar ve el dokuması Miyuki boncuk takılar. Kadıköy atölyemizden zanaatkar dokunuşuyla üretilen tüm kategorileri keşfedin.',
+    'Doğal soya mumları, kokulu taşlar, epoksi ahşap sunumluklar ve el dokuması Miyuki boncuk takılar. İzmir Karşıyaka atölyemizden zanaatkar dokunuşuyla üretilen tüm kategorileri keşfedin.',
   alternates: {
     canonical: '/kategoriler',
   },
@@ -40,7 +40,7 @@ export default async function CategoriesPage() {
           Kategorilerimize Göz Atın
         </h1>
         <p className="text-xs sm:text-sm text-[#7A7067] mt-2 max-w-xl mx-auto leading-relaxed">
-          Kadıköy atölyemizde doğal soya vaksı, masif ahşap reçine ve Japon cam boncuklarla tek tek şekillendirilen koleksiyonlarımız.
+          İzmir Karşıyaka atölyemizde doğal soya vaksı, masif ahşap reçine ve Japon cam boncuklarla tek tek şekillendirilen koleksiyonlarımız.
         </p>
       </div>
 

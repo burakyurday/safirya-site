@@ -473,7 +473,7 @@ export default function CarilerPage() {
                     type="text"
                     value={newTaxOffice}
                     onChange={(e) => setNewTaxOffice(e.target.value)}
-                    placeholder="Örn: Kadıköy V.D."
+                    placeholder="Örn: Karşıyaka V.D."
                     className="w-full px-3 py-2 rounded-xl border border-gray-300 text-xs focus:ring-2 focus:ring-[#D96B27]"
                   />
                 </div>

@@ -9,7 +9,7 @@ export async function GET(req: Request) {
     {
       id: 'notif-welcome',
       title: '✨ Safirya Atölyesi’ne Hoş Geldiniz!',
-      message: 'Kadıköy atölyemizde özenle dökülen doğal soya mumları ve zanaatkar objelerimizi keşfedin.',
+      message: 'İzmir Karşıyaka atölyemizde özenle dökülen doğal soya mumları ve zanaatkar objelerimizi keşfedin.',
       type: 'system',
       isRead: false,
       createdAt: new Date().toISOString(),

@@ -55,7 +55,17 @@ export default function SozlesmeOnayPage() {
     if (!orderId) return;
 
     // 1. Önce kayıtlı sözleşme var mı bak
-    const existingContract = getContractByOrderId(orderId);
+    let existingContract = getContractByOrderId(orderId);
+    if (!existingContract && typeof window !== 'undefined') {
+      try {
+        const raw = localStorage.getItem('safirya_custom_contracts') || localStorage.getItem('safirya_admin_contracts');
+        if (raw) {
+          const list = JSON.parse(raw);
+          existingContract = list.find((c: any) => c.orderId === orderId || c.orderNumber === orderId || (c.orderNumber && c.orderNumber.toUpperCase() === orderId.toUpperCase()));
+        }
+      } catch {}
+    }
+
     if (existingContract) {
       setContract(existingContract);
       setSignerName(existingContract.customerName);
@@ -66,9 +76,18 @@ export default function SozlesmeOnayPage() {
     }
 
     // 2. Sipariş var mı bak
-    const foundOrder = orders.find(
-      (o) => o.id === orderId || o.orderNumber === orderId
+    let foundOrder = orders.find(
+      (o) => o.id === orderId || o.orderNumber === orderId || (o.orderNumber && o.orderNumber.toUpperCase() === orderId.toUpperCase())
     );
+    if (!foundOrder && typeof window !== 'undefined') {
+      try {
+        const oRaw = localStorage.getItem('safirya_orders');
+        if (oRaw) {
+          const oList = JSON.parse(oRaw);
+          foundOrder = oList.find((o: any) => o.id === orderId || o.orderNumber === orderId || (o.orderNumber && o.orderNumber.toUpperCase() === orderId.toUpperCase()));
+        }
+      } catch {}
+    }
     if (foundOrder) {
       setOrder(foundOrder);
       setSignerName(foundOrder.customerName);
@@ -451,7 +470,7 @@ export default function SozlesmeOnayPage() {
 
         {/* ALT GÜVENLİK BİLGİSİ */}
         <div className="text-center text-xs text-gray-400 space-y-1">
-          <p>Safirya El Yapımı Tasarım Atölyesi — Kadıköy / İstanbul</p>
+          <p>Safirya El Yapımı Tasarım Atölyesi — Karşıyaka / İzmir</p>
           <p className="text-[10px]">Tüm dijital onay kayıtları 256-bit SSL ve zaman damgası ile güvence altındadır.</p>
         </div>
       </div>

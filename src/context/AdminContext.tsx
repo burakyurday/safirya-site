@@ -107,7 +107,7 @@ export const initialProducts: AdminProduct[] = [
     category: 'Doğal Mumlar',
     categoryId: 'cat-mum',
     shortDesc: 'Lavanta, sandal ağacı ve vanilya notaları ile huzur dolu el yapımı atölye esintisi.',
-    description: '%100 doğal soya vaksı, ahşap fitilli ve saf esansiyel yağlarla Kadıköy atölyemizde özenle dökülmüştür. Ahşap fitili yanarken şömine çıtırtısı sesi çıkarır. Kimyasal parafin veya sentetik koku tutucular içermez.',
+    description: '%100 doğal soya vaksı, ahşap fitilli ve saf esansiyel yağlarla atölyemizde özenle dökülmüştür. Ahşap fitili yanarken şömine çıtırtısı sesi çıkarır. Kimyasal parafin veya sentetik koku tutucular içermez.',
     images: [
       'https://images.unsplash.com/photo-1603006905003-be475563bc59?auto=format&fit=crop&w=800&q=80',
       'https://images.unsplash.com/photo-1508746829417-e6f548d8d6ed?auto=format&fit=crop&w=800&q=80',
@@ -333,10 +333,10 @@ const initialOrders: AdminOrder[] = [
     shippingAddress: {
       fullName: 'Selin Demir',
       phone: '+90 532 987 6543',
-      city: 'İstanbul',
-      district: 'Kadıköy',
-      address: 'Caferağa Mah. Sakız Sk. No:14 D:3',
-      zipCode: '34710',
+      city: 'İzmir',
+      district: 'Karşıyaka',
+      address: 'Bostanlı Mah. 1800 Sk. No:14 D:3',
+      zipCode: '35590',
     },
     subtotal: 13550,
     discountTotal: 1600,
@@ -763,7 +763,7 @@ const initialSettings: AdminSettings = {
   contactPhone: '+90 (212) 555 7234',
   whatsappNumber: '+90 532 555 7234',
   instagramHandle: '@safirya35353535',
-  atelierAddress: 'Caferağa Mah. Şair Nefi Sk. No:18 Kadıköy / İstanbul',
+  atelierAddress: 'Karşıyaka / İzmir (Yalnızca Online E-Ticaret Hizmeti)',
   exitIntentEnabled: true,
   exitIntentTitle: 'Atölyemizden Ayrılmadan Önce %10 Tanışma İndirimi!',
   exitIntentSubtitle: 'İlk siparişinize özel zanaatkar dokunuşlu el yapımı hediyeniz.',
@@ -944,9 +944,9 @@ const initialCmsPages: Record<string, CmsPageData> = {
   },
   'iletisim': {
     slug: 'iletisim',
-    title: 'İletişim & Atölye Ziyareti',
-    subtitle: 'Bir Kahve Eşliğinde Atölyemizi Ziyaret Edin',
-    content: `## Atölyemize Kahveye Bekleriz\n\nCaferağa Mah. Şair Nefi Sk. No:18 Kadıköy / İstanbul`,
+    title: 'İletişim',
+    subtitle: 'Safirya Online Tasarım & Zanaat Atölyesi',
+    content: `## Safirya Online Tasarım Atölyesi\n\nKarşıyaka / İzmir (Yalnızca Online E-Ticaret Hizmeti - Fiziksel Mağaza Bulunmamaktadır)\nWhatsApp: +90 532 555 72 34\nE-posta: destek@safirya.tr`,
     updatedAt: '2026-10-10',
   },
 };
@@ -1002,7 +1002,7 @@ interface AdminContextType {
   orders: AdminOrder[];
   invoices: AdminInvoice[];
   addManualOrder: (order: Omit<AdminOrder, 'id' | 'orderNumber' | 'createdAt'>) => AdminOrder;
-  updateOrderStage: (id: string, stage: OrderStage) => void;
+  updateOrderStage: (id: string, stage: OrderStage, cargoInfo?: { cargoCompany?: string; cargoTrackingNo?: string }) => void;
   generateInvoice: (orderId: string) => AdminInvoice;
   cancelInvoice: (invoiceId: string) => void;
 
@@ -1922,16 +1922,34 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
     return newOrder;
   };
 
-  const updateOrderStage = (id: string, stage: OrderStage) => {
+  const updateOrderStage = (
+    id: string,
+    stage: OrderStage,
+    cargoInfo?: { cargoCompany?: string; cargoTrackingNo?: string }
+  ) => {
     const orderToUpdate = orders.find((o) => o.id === id);
     setOrders((prev) =>
-      prev.map((o) => (o.id === id ? { ...o, stage } : o))
+      prev.map((o) =>
+        o.id === id
+          ? {
+              ...o,
+              stage,
+              ...(cargoInfo?.cargoCompany ? { cargoCompany: cargoInfo.cargoCompany } : {}),
+              ...(cargoInfo?.cargoTrackingNo !== undefined ? { cargoTrackingNo: cargoInfo.cargoTrackingNo } : {}),
+            }
+          : o
+      )
     );
     showToast(`Sipariş aşaması güncellendi.`);
 
     if (orderToUpdate) {
       triggerOrderStageNotification({
-        order: { ...orderToUpdate, stage },
+        order: {
+          ...orderToUpdate,
+          stage,
+          ...(cargoInfo?.cargoCompany ? { cargoCompany: cargoInfo.cargoCompany } : {}),
+          ...(cargoInfo?.cargoTrackingNo !== undefined ? { cargoTrackingNo: cargoInfo.cargoTrackingNo } : {}),
+        },
         newStage: stage,
         settings,
       }).then(({ siteNotified, emailSent }) => {
@@ -2092,11 +2110,19 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
     if (targetColumnId === 'col-prep') stageMapping = 'SIPARIS_ALINDI';
     else if (targetColumnId === 'col-qc') stageMapping = 'KALITE_KONTROL_PAKETLEME';
 
-    if (orderToMove && orderToMove.stage !== stageMapping) {
+    const targetCol = kanbanColumns.find((c) => c.id === targetColumnId);
+    const targetTitle = targetCol?.title || 'Üretim Aşaması';
+
+    if (orderToMove && (orderToMove.kanbanColumnId !== targetColumnId || orderToMove.stage !== stageMapping)) {
       triggerOrderStageNotification({
         order: { ...orderToMove, stage: stageMapping, kanbanColumnId: targetColumnId },
         newStage: stageMapping,
+        stageTitle: targetTitle,
         settings,
+      }).then(({ siteNotified, emailSent }) => {
+        if (siteNotified || emailSent) {
+          showToast(`Sipariş "${targetTitle}" aşamasına taşındı ve müşteriye bildirim iletildi.`);
+        }
       });
 
       if (settings?.webhookEnabled && settings?.webhookUrl) {
@@ -2104,6 +2130,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
           previousStage: orderToMove.stage,
           newStage: stageMapping,
           targetColumnId,
+          targetTitle,
           customerName: orderToMove.customerName,
           customerEmail: orderToMove.customerEmail,
           customerPhone: orderToMove.customerPhone,
@@ -2272,8 +2299,8 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
       shippingAddress: {
         fullName: quote.customerName,
         phone: quote.customerPhone,
-        city: 'İstanbul',
-        district: 'Kadıköy',
+        city: 'İzmir',
+        district: 'Karşıyaka',
         address: 'Atölye Özel Üretim & Teslimat',
       },
       subtotal: customTotalPrice,
@@ -2289,7 +2316,6 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
       paymentStatus: 'BEKLIYOR',
       paymentMethod: 'HAVALE_EFT',
       invoiceStatus: 'BEKLIYOR',
-      cargoCompany: 'Yurtiçi Kargo (Toplu Sevkiyat)',
       createdAt: today,
       items: [
         {

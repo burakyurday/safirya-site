@@ -65,7 +65,7 @@ export async function POST(req: Request) {
       type === 'reset_password'
         ? 'Şifre sıfırlama talebiniz için doğrulama kodunuz:'
         : 'Üyelik kaydınızı tamamlamak için 6 haneli doğrulama kodunuz:'
-    }\n\n👉  ${code}  👈\n\nBu kod 10 dakika boyunca geçerlidir.\nEğer bu işlemi siz başlatmadıysanız bu e-postayı dikkate almayınız.\n\nSafirya Zanaat & Tasarım Atölyesi - Kadıköy / İstanbul`;
+    }\n\n👉  ${code}  👈\n\nBu kod 10 dakika boyunca geçerlidir.\nEğer bu işlemi siz başlatmadıysanız bu e-postayı dikkate almayınız.\n\nSafirya Zanaat & Tasarım Atölyesi - İzmir / Karşıyaka`;
 
     const resendApiKey = getResendApiKey();
     const smtpHost = process.env.SMTP_HOST;

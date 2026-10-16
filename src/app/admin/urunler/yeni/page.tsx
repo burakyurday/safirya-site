@@ -357,7 +357,7 @@ export default function YeniUrunEklePage() {
       shortDesc: shortDesc.trim() || `${name} - El yapımı Safirya atölye tasarımı.`,
       description:
         description.trim() ||
-        `${name}, Safirya Kadıköy Atölyemizde tamamen el emeği ile doğal malzemelerden üretilmiştir.`,
+        `${name}, Safirya atölyemizde tamamen el emeği ile doğal malzemelerden üretilmiştir.`,
       images,
       price: Number(price) || 0,
       discountRate: Number(discountRate) || 0,

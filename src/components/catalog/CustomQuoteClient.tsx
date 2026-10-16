@@ -268,7 +268,7 @@ export function CustomQuoteClient() {
                 </span>
                 <div>
                   <strong className="block text-[#231B18] mb-0.5">Atölye Dökümü & Kalite Kontrol:</strong>
-                  Kadıköy atölyemizde tek tek el dökümü yapılır, kraft kutular özenle mühürlenir.
+                  Atölyemizde tek tek el dökümü yapılır, kraft kutular özenle mühürlenir.
                 </div>
               </div>
 

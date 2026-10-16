@@ -35,9 +35,9 @@ const HOME_FAQS = [
       'Evet. Tüm siparişlerimiz darbe emici hava yastıklı ambalajlarla paketlenir. Kargo sürecinde ezilme veya kırılma olması halinde, hiçbir ek ücret talep edilmeksizin hasarlı ürünün yerine yenisi 24 saat içinde kargoya verilir.',
   },
   {
-    question: 'Kadıköy atölyenizden siparişleri elden teslim alabilir miyiz?',
+    question: 'Atölyenizden siparişleri elden teslim alabilir miyiz?',
     answer:
-      'Evet, atölyemiz Caferağa Mahallesi, Şair Nefi Sokak No:18 Kadıköy/İstanbul adresindedir. Çalışma saatlerimiz Pazartesi – Cumartesi 10:00 – 19:00 arasındadır. Dilerseniz siparişinizi atölyemizden elden teslim alabilirsiniz.',
+      'Safirya atölyemiz İzmir Karşıyaka merkezli olup yalnızca online e-ticaret üzerinden hizmet vermektedir. Fiziksel mağazamız veya elden teslimatımız bulunmamaktadır; tüm el emeği siparişleriniz sigortalı ve koruyucu özel ambalajında doğrudan adresinize kargo ile ulaştırılmaktadır.',
   },
 ];
 
@@ -205,7 +205,7 @@ export default function HomePage() {
                   {hero.title || 'El Emeği Zanaatkar Tasarımlar & Doğal Mumlar'}
                 </h1>
                 <p className="text-xs sm:text-sm text-[#7A7067] max-w-lg mx-auto leading-relaxed">
-                  {hero.subtitle || 'Kadıköy atölyemizde özenle hazırlanan %100 doğal soya mumları, kokulu taşlar, epoksi sunumluklar ve Miyuki takılar.'}
+                  {hero.subtitle || 'İzmir Karşıyaka atölyemizde özenle hazırlanan %100 doğal soya mumları, kokulu taşlar, epoksi sunumluklar ve Miyuki takılar.'}
                 </p>
                 <div className="pt-3">
                   <Link

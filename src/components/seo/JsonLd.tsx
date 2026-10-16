@@ -32,10 +32,10 @@ export function getLocalBusinessSchema() {
       'Safirya',
       'Safirya Atölye',
       'Safirya Craft Studio',
-      'Safirya Kadıköy',
+      'Safirya İzmir',
     ],
     description:
-      'İstanbul Kadıköy merkezli, %100 bitkisel doğal soya mumları, kalıcı kokulu taş objeler, masif ceviz epoksi sunumluk tepsiler ve Japon Miyuki boncuk takılar üreten bağımsız zanaat ve tasarım atölyesi.',
+      'İzmir Karşıyaka merkezli, %100 bitkisel doğal soya mumları, kalıcı kokulu taş objeler, masif ceviz epoksi sunumluk tepsiler ve Japon Miyuki boncuk takılar üreten bağımsız online zanaat ve tasarım atölyesi.',
     url: SITE_URL,
     logo: {
       '@type': 'ImageObject',
@@ -53,21 +53,21 @@ export function getLocalBusinessSchema() {
     priceRange: '₺₺',
     currenciesAccepted: 'TRY',
     paymentAccepted:
-      'Kredi Kartı, Banka Kartı, Havale/EFT, 3D Secure, PayTR, Nakit (Atölye Teslimatında)',
+      'Kredi Kartı, Banka Kartı, Havale/EFT, 3D Secure, PayTR',
     address: {
       '@type': 'PostalAddress',
-      streetAddress: 'Caferağa Mah. Şair Nefi Sk. No:18',
-      addressLocality: 'Kadıköy',
-      addressRegion: 'İstanbul',
-      postalCode: '34710',
+      streetAddress: 'Karşıyaka (Online Zanaat Atölyesi)',
+      addressLocality: 'Karşıyaka',
+      addressRegion: 'İzmir',
+      postalCode: '35580',
       addressCountry: 'TR',
     },
     geo: {
       '@type': 'GeoCoordinates',
-      latitude: 40.988,
-      longitude: 29.026,
+      latitude: 38.4559,
+      longitude: 27.1105,
     },
-    hasMap: 'https://maps.google.com/?q=40.9880,29.0260',
+    hasMap: 'https://maps.google.com/?q=38.4559,27.1105',
     openingHoursSpecification: [
       {
         '@type': 'OpeningHoursSpecification',
@@ -86,11 +86,11 @@ export function getLocalBusinessSchema() {
     areaServed: [
       {
         '@type': 'AdministrativeArea',
-        name: 'Kadıköy',
+        name: 'Karşıyaka',
       },
       {
         '@type': 'City',
-        name: 'İstanbul',
+        name: 'İzmir',
       },
       {
         '@type': 'Country',
@@ -127,7 +127,7 @@ export function getLocalBusinessSchema() {
         datePublished: '2026-09-15',
         reviewRating: { '@type': 'Rating', ratingValue: '5', bestRating: '5' },
         reviewBody:
-          'Kadıköy atölyelerinden aldığım vanilya & sandal ağacı soya mumu harika! Ahşap fitilin çıtırtısı şömine hissi veriyor, hiç is yapmıyor.',
+          'Safirya atölyesinden aldığım vanilya & sandal ağacı soya mumu harika! Ahşap fitilin çıtırtısı şömine hissi veriyor, hiç is yapmıyor.',
       },
       {
         '@type': 'Review',
@@ -143,7 +143,7 @@ export function getLocalBusinessSchema() {
         datePublished: '2026-10-04',
         reviewRating: { '@type': 'Rating', ratingValue: '5', bestRating: '5' },
         reviewBody:
-          'Miyuki bilekliklerin el dokuması kalitesi muhteşem. Kadıköy atölyesinden elden teslim aldım, çalışanlar çok ilgiliydi.',
+          'Miyuki bilekliklerin el dokuması kalitesi muhteşem. Hasarsız koruyucu kutusunda kargoyla hızla ulaştı.',
       },
     ],
     hasOfferCatalog: {
@@ -425,7 +425,7 @@ export function getProductSchema(product: ProductSchemaInput) {
         datePublished: '2026-09-20',
         reviewRating: { '@type': 'Rating', ratingValue: '5', bestRating: '5' },
         reviewBody:
-          'Kadıköy atölyesinden aldığım bu ürünün işçiliği mükemmel. Doğal esansın yayılımı çok başarılı.',
+          'Safirya atölyesinden aldığım bu ürünün işçiliği mükemmel. Doğal esansın yayılımı çok başarılı.',
       },
     ],
   };

@@ -130,7 +130,7 @@ export default function BestSellersPage() {
 
   const itemListSchema = getItemListSchema(
     'Safirya Çok Satanlar Koleksiyonu',
-    'Kadıköy atölyemizde müşterilerimizin en çok tercih ettiği, doğal malzemeler ve zanaatkar dokunuşuyla üretilen favori parçalar.',
+    'İzmir Karşıyaka atölyemizde müşterilerimizin en çok tercih ettiği, doğal malzemeler ve zanaatkar dokunuşuyla üretilen favori parçalar.',
     '/cok-satanlar',
     bestSellers
   );
@@ -156,7 +156,7 @@ export default function BestSellersPage() {
           Çok Satanlar Koleksiyonu
         </h1>
         <p className="text-xs sm:text-sm text-[#7A7067] mt-2 max-w-xl mx-auto leading-relaxed">
-          Kadıköy atölyemizde müşterilerimizin en çok tercih ettiği, doğal malzemeler ve zanaatkar dokunuşuyla üretilen favori parçalar.
+          İzmir Karşıyaka atölyemizde müşterilerimizin en çok tercih ettiği, doğal malzemeler ve zanaatkar dokunuşuyla üretilen favori parçalar.
         </p>
       </div>
 

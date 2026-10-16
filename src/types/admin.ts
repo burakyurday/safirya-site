@@ -254,6 +254,7 @@ export interface AdminOrder {
   invoiceNo?: string;
   cargoCompany?: string;
   trackingCode?: string;
+  cargoTrackingNo?: string;
   contractStatus?: 'ONAYLANDI' | 'BEKLIYOR' | 'GEREKLI_DEGIL';
   contractId?: string;
   contractSignedAt?: string;

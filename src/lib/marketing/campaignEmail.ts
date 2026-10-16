@@ -80,7 +80,7 @@ export function generateCampaignEmailHtml(props: CampaignEmailProps): string {
     storeName = 'Safirya Atölyesi',
     contactEmail = 'destek@safirya.tr',
     instagramHandle = '@safirya35353535',
-    address = 'Caferağa Mah. Şair Nefi Sk. No:18 Kadıköy / İstanbul',
+    address = 'Karşıyaka / İzmir (Online Zanaat Atölyesi)',
     products = DEFAULT_PRODUCTS,
   } = props;
 
@@ -297,7 +297,7 @@ export function generateCampaignEmailHtml(props: CampaignEmailProps): string {
                     🌿 %100 Doğal Malzeme
                   </td>
                   <td width="33.33%" style="font-size: 11px; font-weight: 700; color: ${EMAIL_BRAND.navy}; border-left: 1px solid ${EMAIL_BRAND.line}; border-right: 1px solid ${EMAIL_BRAND.line};">
-                    ✨ El Yapımı Kadıköy Zanaati
+                    ✨ El Yapımı Butik Zanaat
                   </td>
                   <td width="33.33%" style="font-size: 11px; font-weight: 700; color: ${EMAIL_BRAND.navy};">
                     📦 Hasarsız Teslimat Garantisi

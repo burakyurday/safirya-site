@@ -75,12 +75,14 @@ export function addSiteNotification(notification: Omit<StoreNotification, 'id' |
 export async function triggerOrderStageNotification({
   order,
   newStage,
+  stageTitle,
   settings,
   photoUrl,
   caption,
 }: {
   order: AdminOrder;
   newStage: OrderStage;
+  stageTitle?: string;
   settings: AdminSettings;
   photoUrl?: string;
   caption?: string;
@@ -95,6 +97,11 @@ export async function triggerOrderStageNotification({
     return { siteNotified: false, emailSent: false };
   }
 
+  const effectiveTitle = stageTitle ? `Siparişiniz: ${stageTitle}` : meta.title;
+  const effectiveMessage = stageTitle
+    ? `#${order.orderNumber} numaralı siparişiniz atölye üretim bandında "${stageTitle}" aşamasına taşındı.`
+    : meta.message(order.orderNumber);
+
   let siteNotified = false;
   let emailSent = false;
 
@@ -104,9 +111,9 @@ export async function triggerOrderStageNotification({
     addSiteNotification({
       userEmail: order.customerEmail,
       orderNumber: order.orderNumber,
-      stageName: meta.title,
-      title: `🎨 ${meta.title}`,
-      message: caption ? `${meta.message(order.orderNumber)} Not: "${caption}"` : meta.message(order.orderNumber),
+      stageName: effectiveTitle,
+      title: `🎨 ${effectiveTitle}`,
+      message: caption ? `${effectiveMessage} Not: "${caption}"` : effectiveMessage,
       type: 'order_stage',
       link: order.customerEmail
         ? `/siparis-takip?orderNumber=${encodeURIComponent(order.orderNumber)}&email=${encodeURIComponent(order.customerEmail)}`
@@ -124,7 +131,7 @@ export async function triggerOrderStageNotification({
         customerName: order.customerName,
         customerEmail: order.customerEmail,
         customerPhone: order.customerPhone,
-        stageName: meta.title,
+        stageName: effectiveTitle,
         photoUrl,
         caption,
         trackingUrl: `https://safirya.tr/siparis-takip?orderNumber=${encodeURIComponent(order.orderNumber)}&email=${encodeURIComponent(order.customerEmail)}`,
@@ -138,3 +145,4 @@ export async function triggerOrderStageNotification({
 
   return { siteNotified, emailSent };
 }
+

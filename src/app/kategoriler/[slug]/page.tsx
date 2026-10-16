@@ -16,7 +16,7 @@ interface Props {
 const CATEGORY_META: Record<string, { title: string; desc: string }> = {
   'dogal-mumlar': {
     title: 'Doğal Soya Mumları & Botanik Mum Koleksiyonu',
-    desc: '%100 doğal bitkisel soya vaksından, ahşap fitilli ve saf esansiyel aromaterapi yağlarıyla Kadıköy atölyemizde tek tek elde dökülür.',
+    desc: '%100 doğal bitkisel soya vaksından, ahşap fitilli ve saf esansiyel aromaterapi yağlarıyla İzmir Karşıyaka atölyemizde tek tek elde dökülür.',
   },
   'kokulu-tas': {
     title: 'Kokulu Taş & Seramik Heykelsi Objeler',

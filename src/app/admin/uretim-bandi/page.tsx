@@ -183,23 +183,44 @@ export default function UretimBandiPage() {
     e.dataTransfer.effectAllowed = 'move';
   };
 
+  const handleDragEnd = () => {
+    setDraggedOrderId(null);
+    setDragOverColumnId(null);
+  };
+
   const handleDragOver = (e: React.DragEvent, colId: string) => {
     e.preventDefault();
+    e.stopPropagation();
     e.dataTransfer.dropEffect = 'move';
     if (dragOverColumnId !== colId) {
       setDragOverColumnId(colId);
     }
   };
 
-  const handleDragLeave = () => {
+  const handleDragEnter = (e: React.DragEvent, colId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (dragOverColumnId !== colId) {
+      setDragOverColumnId(colId);
+    }
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    if (e.currentTarget.contains(e.relatedTarget as Node)) {
+      return;
+    }
     setDragOverColumnId(null);
   };
 
   const handleDropToColumn = (e: React.DragEvent, targetColId: string) => {
     e.preventDefault();
+    e.stopPropagation();
     setDragOverColumnId(null);
     const orderId = e.dataTransfer.getData('text/plain') || draggedOrderId;
-    if (!orderId) return;
+    if (!orderId) {
+      setDraggedOrderId(null);
+      return;
+    }
 
     moveOrderToColumn(orderId, targetColId);
     setDraggedOrderId(null);
@@ -405,6 +426,7 @@ export default function UretimBandiPage() {
               <div
                 key={col.id}
                 onDragOver={(e) => handleDragOver(e, col.id)}
+                onDragEnter={(e) => handleDragEnter(e, col.id)}
                 onDragLeave={handleDragLeave}
                 onDrop={(e) => handleDropToColumn(e, col.id)}
                 className={`w-80 shrink-0 flex flex-col rounded-2xl transition-all duration-200 ${
@@ -453,7 +475,12 @@ export default function UretimBandiPage() {
                 </div>
 
                 {/* Sütun Kartları Listesi */}
-                <div className="p-3 space-y-3 min-h-[500px]">
+                <div
+                  onDragOver={(e) => handleDragOver(e, col.id)}
+                  onDragEnter={(e) => handleDragEnter(e, col.id)}
+                  onDrop={(e) => handleDropToColumn(e, col.id)}
+                  className="p-3 space-y-3 min-h-[500px]"
+                >
                   {colOrders.length === 0 ? (
                     <div className="h-36 border-2 border-dashed border-gray-200 rounded-xl flex flex-col items-center justify-center text-gray-400 text-xs p-4 text-center">
                       <Layers className="w-6 h-6 mb-1 text-gray-300" />
@@ -472,11 +499,14 @@ export default function UretimBandiPage() {
                           key={order.id}
                           draggable
                           onDragStart={(e) => handleDragStart(e, order.id)}
+                          onDragEnd={handleDragEnd}
+                          onDragOver={(e) => handleDragOver(e, col.id)}
+                          onDrop={(e) => handleDropToColumn(e, col.id)}
                           className={`bg-white rounded-xl p-3.5 border transition-all duration-150 shadow-xs group cursor-grab active:cursor-grabbing hover:shadow-md hover:border-[#D96B27]/40 ${
                             isDragging
                               ? 'opacity-40 border-dashed border-[#D96B27] scale-95'
                               : 'border-gray-200'
-                          }`}
+                          } ${draggedOrderId && draggedOrderId !== order.id ? 'pointer-events-none' : ''}`}
                         >
                           {/* Üst Satır: Sıra No Inputu + Sipariş No + Kanal */}
                           <div className="flex items-center justify-between pb-2 border-b border-gray-100">

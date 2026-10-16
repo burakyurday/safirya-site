@@ -113,7 +113,7 @@ export async function POST(req: Request) {
           totalAmount: Number(dbOrder.totalAmount),
           paymentMethod: dbOrder.paymentMethod === 'HAVALE_EFT' ? 'Havale / EFT' : 'Kredi Kartı',
           shippingAddress: formattedAddress,
-          cargoCompany: dbOrder.cargoCompany || 'Yurtiçi Kargo',
+          cargoCompany: dbOrder.cargoCompany || undefined,
           trackingCode: dbOrder.trackingCode || undefined,
           trackingUrl: dbOrder.trackingUrl || undefined,
           isGiftWrapped: dbOrder.isGiftWrapped,

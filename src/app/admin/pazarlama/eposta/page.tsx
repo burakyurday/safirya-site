@@ -62,7 +62,7 @@ export default function EpostaPazarlamaPage() {
   const [targetSegment, setTargetSegment] = useState('Tüm Aboneler & Müşteriler (2.450 Alıcı)');
   const [headline, setHeadline] = useState('Doğal Işık ve Sıcak Kokularla Sonbahara Merhaba');
   const [bodyText, setBodyText] = useState(
-    'Kadıköy atölyemizde zanaatkar ustalarımızın elleriyle hazırlanan yeni sezon aromaterapik soya mumu koleksiyonumuz hazırlandı. %100 saf soya mumu, ahşap fitil çıtırtısı ve organik esanslarla yaşam alanınıza huzur katın.\nHer siparişiniz geri dönüştürülebilir amber cam kavanozda, kurutulmuş lavanta dalı ve mühürlü kraft kutu ile kapınıza ulaşır.'
+    'İzmir Karşıyaka atölyemizde zanaatkar ustalarımızın elleriyle hazırlanan yeni sezon aromaterapik soya mumu koleksiyonumuz hazırlandı. %100 saf soya mumu, ahşap fitil çıtırtısı ve organik esanslarla yaşam alanınıza huzur katın.\nHer siparişiniz geri dönüştürülebilir amber cam kavanozda, kurutulmuş lavanta dalı ve mühürlü kraft kutu ile kapınıza ulaşır.'
   );
   const [couponCode, setCouponCode] = useState('ATOLYE15');
   const [discountRate, setDiscountRate] = useState<number>(15);
@@ -91,7 +91,7 @@ export default function EpostaPazarlamaPage() {
       icon: Flame,
       defaultSubject: '🕯️ Atölyemizin Yeni Hasadı: Tarçın & Kehribar Soya Mumları Yayında!',
       defaultHeadline: 'Doğal Işık ve Sıcak Kokularla Sonbahara Merhaba',
-      defaultBody: 'Kadıköy atölyemizde ustalarımızın elleriyle hazırlanan yeni sezon aromaterapik soya mumu koleksiyonumuz hazırlandı. Ahşap fitil çıtırtısı ve organik esanslarla yaşam alanınıza huzur katın.',
+      defaultBody: 'İzmir Karşıyaka atölyemizde ustalarımızın elleriyle hazırlanan yeni sezon aromaterapik soya mumu koleksiyonumuz hazırlandı. Ahşap fitil çıtırtısı ve organik esanslarla yaşam alanınıza huzur katın.',
       defaultHero: 'https://images.unsplash.com/photo-1603006905003-be475563bc59?auto=format&fit=crop&w=1200&q=80',
       defaultCta: 'Yeni Koleksiyonu Keşfet',
       defaultUrl: 'https://safirya.tr/kategoriler/dogal-mumlar',
@@ -168,7 +168,7 @@ export default function EpostaPazarlamaPage() {
     storeName: settings?.storeName || 'Safirya Atölyesi',
     contactEmail: settings?.contactEmail || 'destek@safirya.tr',
     instagramHandle: settings?.instagramHandle || '@safirya35353535',
-    address: settings?.atelierAddress || 'Caferağa Mah. Şair Nefi Sk. No:18 Kadıköy / İstanbul',
+    address: settings?.atelierAddress || 'Karşıyaka / İzmir (Online Zanaat Atölyesi)',
   };
 
   const renderedHtml = generateCampaignEmailHtml(currentEmailProps);

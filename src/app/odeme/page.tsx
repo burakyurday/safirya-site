@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import {
   ShieldCheck,
@@ -14,6 +14,10 @@ import {
   ChevronRight,
   AlertCircle,
   Check,
+  FileCheck2,
+  RotateCcw,
+  Sparkles,
+  Lock,
 } from 'lucide-react';
 import { useStore, CartItem } from '@/context/StoreContext';
 
@@ -89,6 +93,194 @@ export default function CheckoutPage() {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  // Benzersiz Sipariş Numarası (Sözleşme ve sipariş entegrasyonu için sabitlenir)
+  const [orderNumber] = useState(() => `SFR-2026-${Math.floor(1000 + Math.random() * 9000)}`);
+
+  // Kişiselleştirilen Ürünler (Yalnızca sepette kişiselleştirilen ürün varsa sözleşme gerekir)
+  const personalizedItems = cartItems.filter(
+    (item) => Boolean(item.customText && item.customText.trim().length > 0)
+  );
+  const hasPersonalizedItems = personalizedItems.length > 0;
+
+  // Dijital Sözleşme & E-İmza State'leri (TKHK Md. 15/b)
+  const contractCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const [isDrawingSignature, setIsDrawingSignature] = useState(false);
+  const [hasSignature, setHasSignature] = useState(false);
+  const [signatureDataUrl, setSignatureDataUrl] = useState<string | null>(null);
+  const [signerName, setSignerName] = useState('');
+  const [checkTextApproved, setCheckTextApproved] = useState(false);
+  const [checkLegalApproved, setCheckLegalApproved] = useState(false);
+  const [isContractApproved, setIsContractApproved] = useState(false);
+  const [contractVerificationCode, setContractVerificationCode] = useState<string | null>(null);
+  const [contractSignedAt, setContractSignedAt] = useState<string | null>(null);
+  const [contractError, setContractError] = useState<string | null>(null);
+
+  // Formdaki isimle imzalayan ismini eşle
+  useEffect(() => {
+    if (formData.fullName && !signerName) {
+      setSignerName(formData.fullName);
+    }
+  }, [formData.fullName, signerName]);
+
+  // Canvas İmza Koordinat Hesaplama (Mobil Dokunmatik + Masaüstü Fare)
+  const getCanvasCoordinates = (
+    e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>
+  ) => {
+    const canvas = contractCanvasRef.current;
+    if (!canvas) return { x: 0, y: 0 };
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+
+    let clientX = 0;
+    let clientY = 0;
+    if ('touches' in e && e.touches.length > 0) {
+      clientX = e.touches[0].clientX;
+      clientY = e.touches[0].clientY;
+    } else if ('clientX' in e) {
+      clientX = e.clientX;
+      clientY = e.clientY;
+    }
+
+    return {
+      x: (clientX - rect.left) * scaleX,
+      y: (clientY - rect.top) * scaleY,
+    };
+  };
+
+  const startDrawing = (
+    e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>
+  ) => {
+    const canvas = contractCanvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    setIsDrawingSignature(true);
+    setHasSignature(true);
+    setContractError(null);
+
+    const { x, y } = getCanvasCoordinates(e);
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+  };
+
+  const drawSignature = (
+    e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>
+  ) => {
+    if (!isDrawingSignature) return;
+    const canvas = contractCanvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const { x, y } = getCanvasCoordinates(e);
+    ctx.lineWidth = 2.5;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.strokeStyle = '#231B18';
+    ctx.lineTo(x, y);
+    ctx.stroke();
+  };
+
+  const stopDrawing = () => {
+    setIsDrawingSignature(false);
+  };
+
+  const clearSignature = () => {
+    const canvas = contractCanvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    setHasSignature(false);
+    setSignatureDataUrl(null);
+    setIsContractApproved(false);
+    setContractVerificationCode(null);
+  };
+
+  // Sözleşmeyi Mühürle / Doğrula
+  const handleSealContract = (targetOrderNumber: string = orderNumber) => {
+    if (!checkTextApproved) {
+      setContractError('Lütfen yukarıdaki kişiselleştirme metinlerinin ve tasarım detaylarının doğruluğunu onaylayınız.');
+      return null;
+    }
+    if (!checkLegalApproved) {
+      setContractError('Lütfen 6502 Sayılı Tüketicinin Korunması Kanunu Md. 15/b yasal cayma hakkı istisnasını onaylayınız.');
+      return null;
+    }
+    const finalSigner = (signerName || formData.fullName).trim();
+    if (!finalSigner) {
+      setContractError('Lütfen imzalayan Ad Soyad bilgisini giriniz.');
+      return null;
+    }
+    if (!hasSignature && !signatureDataUrl) {
+      setContractError('Lütfen dijital imza alanına parmağınızla veya farenizle imzanızı atınız.');
+      return null;
+    }
+
+    const canvas = contractCanvasRef.current;
+    const sigUrl = signatureDataUrl || (canvas ? canvas.toDataURL('image/png') : '');
+    const nowStr = new Date().toLocaleString('tr-TR', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+    const randomSuffix = Math.floor(1000 + Math.random() * 9000);
+    const sealCode = `SOZ-${targetOrderNumber}-${randomSuffix}-OK`;
+
+    setSignatureDataUrl(sigUrl);
+    setContractVerificationCode(sealCode);
+    setContractSignedAt(nowStr);
+    setIsContractApproved(true);
+    setContractError(null);
+
+    // Yerel depolamaya sözleşme kaydını yaz (Admin & Sipariş Takip ekranları için)
+    if (typeof window !== 'undefined') {
+      try {
+        const contractPayload = {
+          id: `cnt-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+          orderNumber: targetOrderNumber,
+          orderId: targetOrderNumber,
+          customerName: finalSigner,
+          customerEmail: formData.email,
+          customerPhone: formData.phone,
+          productName: personalizedItems.map((i) => `${i.name} (${i.quantity} Adet)`).join(', '),
+          quantity: personalizedItems.reduce((acc, i) => acc + i.quantity, 0),
+          totalAmount: grandTotal,
+          customText: personalizedItems.map((i) => i.customText).filter(Boolean).join(' | '),
+          scentNote: personalizedItems[0]?.scentNote,
+          colorPalette: personalizedItems[0]?.colorPalette,
+          status: 'ONAYLANDI' as const,
+          verificationCode: sealCode,
+          signedAt: nowStr,
+          signedBy: finalSigner,
+          signatureDataUrl: sigUrl,
+          legalConsentChecked: true,
+          createdAt: new Date().toISOString(),
+        };
+
+        const existingRaw = localStorage.getItem('safirya_custom_contracts');
+        const list = existingRaw ? JSON.parse(existingRaw) : [];
+        const filtered = list.filter((c: any) => c.orderNumber !== targetOrderNumber);
+        filtered.unshift(contractPayload);
+        localStorage.setItem('safirya_custom_contracts', JSON.stringify(filtered));
+        localStorage.setItem('safirya_admin_contracts', JSON.stringify(filtered));
+      } catch (storageErr) {
+        console.warn('Sözleşme kaydedilirken uyarı:', storageErr);
+      }
+    }
+
+    return {
+      verificationCode: sealCode,
+      signedAt: nowStr,
+      signedBy: finalSigner,
+      signatureDataUrl: sigUrl,
+    };
+  };
+
   const [placedOrder, setPlacedOrder] = useState<{
     orderNumber: string;
     email: string;
@@ -97,6 +289,7 @@ export default function CheckoutPage() {
     date: string;
     shippingAddress: string;
     giftNote?: string;
+    paymentMethod?: string;
   } | null>(null);
 
   const [copied, setCopied] = useState(false);
@@ -252,6 +445,7 @@ export default function CheckoutPage() {
       date: orderPayload.date,
       shippingAddress: orderPayload.shippingAddress,
       giftNote: isGiftWrapped ? giftNote : undefined,
+      paymentMethod: method,
     });
 
     clearCart();
@@ -411,6 +605,42 @@ export default function CheckoutPage() {
               </button>
             </div>
 
+            {/* Havale / EFT İçin WhatsApp Dekont & Sipariş No İletimi */}
+            {placedOrder.paymentMethod === 'HAVALE_EFT' && (
+              <div className="p-4 sm:p-5 rounded-xs bg-[#FEF5C8] border border-[#F5E898] text-left space-y-3">
+                <div className="flex items-center gap-2.5">
+                  <span className="text-xl">📱</span>
+                  <div>
+                    <h3 className="font-semibold text-xs uppercase tracking-wider text-[#231B18]">
+                      WhatsApp Dekont & Sipariş No İletimi
+                    </h3>
+                    <p className="text-[11px] text-[#554D46] mt-0.5">
+                      Havale/EFT transferinizin teyit edilerek siparişinizin derhal üretime alınması için lütfen dekontunuzu WhatsApp hattımıza iletiniz.
+                    </p>
+                  </div>
+                </div>
+                <div className="bg-white/90 p-3 rounded-xs border border-[#F5E898] text-xs text-[#231B18] space-y-1">
+                  <p>
+                    • <strong className="text-[#7A7067]">Sipariş Numaranız:</strong> <span className="font-mono font-semibold">{placedOrder.orderNumber}</span>
+                  </p>
+                  <p>
+                    • <strong className="text-[#7A7067]">Ödenecek Tutar:</strong> <span className="font-semibold">₺{placedOrder.totalAmount.toFixed(2)}</span>
+                  </p>
+                </div>
+                <a
+                  href={`https://wa.me/905325557234?text=${encodeURIComponent(
+                    `Merhaba, #${placedOrder.orderNumber} nolu siparişimin havale/EFT dekontunu iletiyorum. Tutar: ₺${placedOrder.totalAmount.toFixed(2)}`
+                  )}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xs bg-[#25D366] hover:bg-[#20ba59] text-white text-xs font-semibold uppercase tracking-wider transition shadow-sm"
+                >
+                  <span>WhatsApp ile Dekont İlet</span>
+                  <ArrowRight className="w-4 h-4" />
+                </a>
+              </div>
+            )}
+
             {/* Sipariş Özet Bilgileri */}
             <div className="text-left p-5 rounded-xs bg-[#FAF8F5] border border-stone-200 space-y-3 text-xs text-[#231B18]">
               <div className="flex justify-between border-b border-stone-200 pb-2">
@@ -502,26 +732,30 @@ export default function CheckoutPage() {
         <nav className="flex items-center gap-2 text-xs text-[#7A7067] mb-6">
           <Link href="/sepet" className="hover:text-[#231B18] transition">Sepetim</Link>
           <ChevronRight className="w-3.5 h-3.5" />
-          <span className="text-[#231B18] font-medium">Hızlı & Üyeliksiz Ödeme</span>
+          <span className="text-[#231B18] font-medium">
+            {currentUser ? 'Güvenli Ödeme' : 'Hızlı & Üyeliksiz Ödeme'}
+          </span>
         </nav>
 
-        {/* Üst Bilgilendirme Bandı - Soft Sarı / Minimalist */}
-        <div className="mb-8 p-4 rounded-xs bg-[#FEF5C8] border border-[#F5E898] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div>
-            <h2 className="text-xs font-semibold uppercase tracking-wider text-[#231B18]">
-              Üyeliksiz Hızlı Sipariş Modu Aktif
-            </h2>
-            <p className="text-xs text-[#554D46] mt-0.5">
-              Şifre veya hesap oluşturma zorunluluğu yok. Adres bilgilerinizi girerek doğrudan sipariş verebilirsiniz.
-            </p>
+        {/* Üst Bilgilendirme Bandı - Yalnızca Giriş Yapmamış Kullanıcılara Göster */}
+        {!currentUser && (
+          <div className="mb-8 p-4 rounded-xs bg-[#FEF5C8] border border-[#F5E898] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <h2 className="text-xs font-semibold uppercase tracking-wider text-[#231B18]">
+                Üyeliksiz Hızlı Sipariş Modu Aktif
+              </h2>
+              <p className="text-xs text-[#554D46] mt-0.5">
+                Şifre veya hesap oluşturma zorunluluğu yok. Adres bilgilerinizi girerek doğrudan sipariş verebilirsiniz.
+              </p>
+            </div>
+            <Link
+              href="/hesabim/giris"
+              className="text-xs font-medium text-[#231B18] underline hover:text-[#C85A32] self-start sm:self-auto shrink-0 transition"
+            >
+              Mevcut Hesabın Var mı? Giriş Yap →
+            </Link>
           </div>
-          <Link
-            href="/hesabim/giris"
-            className="text-xs font-medium text-[#231B18] underline hover:text-[#C85A32] self-start sm:self-auto shrink-0 transition"
-          >
-            Mevcut Hesabın Var mı? Giriş Yap →
-          </Link>
-        </div>
+        )}
 
         <form onSubmit={handleCompleteOrder}>
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
@@ -651,7 +885,7 @@ export default function CheckoutPage() {
                     <input
                       type="text"
                       name="district"
-                      placeholder="Örn: Kadıköy"
+                      placeholder="Örn: Karşıyaka"
                       value={formData.district}
                       onChange={handleInputChange}
                       className={`w-full px-3.5 py-2.5 rounded-xs border text-sm text-[#231B18] bg-white focus:outline-none transition ${
@@ -841,7 +1075,7 @@ export default function CheckoutPage() {
                         type="text"
                         name="taxOffice"
                         required={formData.invoiceType === 'CORPORATE'}
-                        placeholder="Örn: Kadıköy V.D."
+                        placeholder="Örn: Karşıyaka V.D."
                         value={formData.taxOffice}
                         onChange={handleInputChange}
                         className="w-full px-3.5 py-2.5 rounded-xs border border-stone-300 bg-white text-sm text-[#231B18] focus:outline-none focus:border-[#231B18]"
@@ -1029,7 +1263,7 @@ export default function CheckoutPage() {
                       <div className="space-y-1 min-w-0">
                         <span className="font-medium text-[#231B18] block truncate">Garanti BBVA - Safirya Tasarım Ltd.</span>
                         <p className="font-mono text-xs text-[#231B18] tracking-wider">TR42 0006 2000 1234 5678 9012 34</p>
-                        <span className="text-[11px] text-[#7A7067] block">Şube: Kadıköy Çarşı / 123</span>
+                        <span className="text-[11px] text-[#7A7067] block">Şube: Karşıyaka Çarşı / İzmir</span>
                       </div>
                       <button
                         type="button"
@@ -1054,7 +1288,7 @@ export default function CheckoutPage() {
                       <div className="space-y-1 min-w-0">
                         <span className="font-medium text-[#231B18] block truncate">Türkiye İş Bankası - Safirya Tasarım Ltd.</span>
                         <p className="font-mono text-xs text-[#231B18] tracking-wider">TR88 0006 4000 9876 5432 1098 76</p>
-                        <span className="text-[11px] text-[#7A7067] block">Şube: Kadıköy Moda / 456</span>
+                        <span className="text-[11px] text-[#7A7067] block">Şube: Karşıyaka Bostanlı / İzmir</span>
                       </div>
                       <button
                         type="button"
@@ -1075,9 +1309,22 @@ export default function CheckoutPage() {
                       </button>
                     </div>
 
-                    <p className="text-[11px] text-[#554D46] bg-[#FEF5C8] p-3 rounded-xs border border-[#F5E898]">
-                      ℹ️ Siparişinizi tamamladıktan sonra banka açıklama alanına üretilecek <strong>Sipariş Numaranızı</strong> yazmanız yeterlidir. Havaleniz ulaştığında siparişiniz anında üretime alınır.
-                    </p>
+                    <div className="text-[11px] text-[#554D46] bg-[#FEF5C8] p-3.5 rounded-xs border border-[#F5E898] space-y-2">
+                      <div className="font-semibold text-[#231B18] flex items-center gap-1.5">
+                        <span>⚠️ Önemli WhatsApp Dekont Bildirimi:</span>
+                      </div>
+                      <p className="leading-relaxed">
+                        Havale/EFT ile ödemelerde banka açıklama alanına <strong>Sipariş Numaranızı</strong> yazmanız ve ödeme sonrası <strong>dekontunuzu WhatsApp hattımıza iletmeniz</strong> gerekmektedir. Dekontunuz teyit edildiği anda siparişiniz atölyemizde üretime alınacaktır.
+                      </p>
+                      <a
+                        href="https://wa.me/905325557234?text=Merhaba,%20havale%20ile%20sipari%C5%9F%20verdim.%20Dekontumu%20ve%20sipari%C5%9F%20numaram%C4%B1%20iletmek%20istiyorum."
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#231B18] hover:text-[#C85A32] underline pt-0.5"
+                      >
+                        <span>WhatsApp Destek Hattı (+90 532 555 72 34) →</span>
+                      </a>
+                    </div>
                   </div>
                 )}
               </div>

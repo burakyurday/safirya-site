@@ -59,7 +59,7 @@ ${emailPreheader(content.description)}
 </td></tr>
 <tr><td style="border-top:1px solid ${EMAIL_BRAND.line};background:${EMAIL_BRAND.cream};padding:24px 36px;text-align:center;">
   <div style="font-size:12px;color:${EMAIL_BRAND.navy};font-weight:bold;">Safirya Zanaat &amp; Tasarım Atölyesi</div>
-  <div style="font-size:11px;color:${EMAIL_BRAND.muted};margin-top:7px;">Caferağa Mah. Şair Nefi Sk. No:18 · Kadıköy / İstanbul</div>
+  <div style="font-size:11px;color:${EMAIL_BRAND.muted};margin-top:7px;">İzmir / Karşıyaka (Online Zanaat Atölyesi)</div>
   <div style="font-size:10px;color:#9AA2AE;margin-top:13px;">${escapeHtml(email)} · © ${currentYear} Safirya</div>
 </td></tr>
 </table></td></tr></table></body></html>`;

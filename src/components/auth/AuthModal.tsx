@@ -288,7 +288,7 @@ export function AuthModal() {
                 {authModalView === 'verify_reset' && 'Yeni Şifre Belirle'}
               </h2>
               <span className="text-[10px] uppercase tracking-widest text-[#C85A32] font-semibold">
-                Kadıköy Atölye
+                Online Atölye
               </span>
             </div>
           </div>
