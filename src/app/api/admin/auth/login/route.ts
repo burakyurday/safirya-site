@@ -3,6 +3,7 @@ import {
   validateAdminCredentials,
   createAdminToken,
   ADMIN_COOKIE_NAME,
+  isAuthorizedAdminEmail,
 } from '@/lib/adminAuth';
 import { supabase } from '@/lib/supabase';
 
@@ -62,13 +63,15 @@ export async function POST(req: NextRequest) {
           const appMeta = sbData.user.app_metadata || {};
           const userRole = userMeta.role || appMeta.role;
 
-          // Admin yetkisi kontrolü: role admin veya admin@safirya.tr veya env ADMIN_USERNAME
+          // Admin yetkisi kontrolü: role admin veya admin@safirya.tr veya env ADMIN_USERNAME veya listede yetkili
           const configuredAdminUser = (process.env.ADMIN_USERNAME || 'admin@safirya.tr').trim().toLowerCase();
+          const isAuthorized = await isAuthorizedAdminEmail(cleanUser);
           const isEligibleAdmin =
             userRole === 'admin' ||
             userRole === 'ADMIN' ||
             cleanUser === configuredAdminUser ||
-            cleanUser === 'admin@safirya.tr';
+            cleanUser === 'admin@safirya.tr' ||
+            isAuthorized;
 
           if (isEligibleAdmin) {
             isValid = true;

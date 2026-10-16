@@ -4,6 +4,8 @@ export interface UserProfile {
   email: string;
   phone?: string;
   avatar?: string;
+  role?: 'ADMIN' | 'CUSTOMER' | 'ATELIER_STAFF';
+  isAdmin?: boolean;
   isVerified: boolean;
   createdAt: string;
 }

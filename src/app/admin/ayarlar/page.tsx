@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import {
   Settings,
   Truck,
@@ -39,11 +40,14 @@ import {
   Check,
   Bell,
   History,
+  UserPlus,
+  Plus,
+  Users,
 } from 'lucide-react';
 import { useAdmin } from '@/context/AdminContext';
 import { addSiteNotification } from '@/lib/notifications/orderNotifications';
 
-export default function AyarlarPage() {
+function AyarlarContent() {
   const {
     settings,
     updateSettings,
@@ -56,7 +60,105 @@ export default function AyarlarPage() {
     clearWebhookLogs,
   } = useAdmin();
 
-  const [activeTab, setActiveTab] = useState<'logo' | 'store' | 'payment' | 'cms' | 'webhook'>('logo');
+  const searchParams = useSearchParams();
+  const [activeTab, setActiveTab] = useState<'logo' | 'store' | 'payment' | 'cms' | 'webhook' | 'admins'>(() => {
+    const tabParam = searchParams?.get('tab');
+    if (tabParam === 'admins' || tabParam === 'store' || tabParam === 'payment' || tabParam === 'cms' || tabParam === 'webhook') {
+      return tabParam;
+    }
+    return 'logo';
+  });
+
+  // Admin Yetkilendirme State'leri
+  const [adminsList, setAdminsList] = useState<any[]>([]);
+  const [isLoadingAdmins, setIsLoadingAdmins] = useState(false);
+  const [newAdminEmail, setNewAdminEmail] = useState('');
+  const [newAdminName, setNewAdminName] = useState('');
+  const [isSubmittingAdmin, setIsSubmittingAdmin] = useState(false);
+
+  const loadAdmins = async () => {
+    setIsLoadingAdmins(true);
+    try {
+      const res = await fetch('/api/admin/authorities');
+      const data = await res.json();
+      if (data?.success && Array.isArray(data.admins)) {
+        setAdminsList(data.admins);
+      }
+    } catch (e) {
+      console.error('Yöneticiler yüklenirken hata:', e);
+    } finally {
+      setIsLoadingAdmins(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'admins') {
+      loadAdmins();
+    }
+  }, [activeTab]);
+
+  const handleAddAdmin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newAdminEmail.trim()) return;
+
+    setIsSubmittingAdmin(true);
+    try {
+      const res = await fetch('/api/admin/authorities', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: newAdminEmail.trim(),
+          name: newAdminName.trim() || undefined,
+        }),
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        showToast(data.message || 'Yönetici yetkisi başarıyla tanımlandı!');
+        setNewAdminEmail('');
+        setNewAdminName('');
+        if (Array.isArray(data.admins)) {
+          setAdminsList(data.admins);
+        } else {
+          loadAdmins();
+        }
+      } else {
+        alert(data.error || 'Yetki verilirken bir hata oluştu.');
+      }
+    } catch (err: any) {
+      alert(`Hata: ${err.message}`);
+    } finally {
+      setIsSubmittingAdmin(false);
+    }
+  };
+
+  const handleRemoveAdmin = async (email: string) => {
+    if (!confirm(`${email} adresinin yönetim paneli yetkisini kaldırmak istediğinize emin misiniz?`)) {
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/admin/authorities', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        showToast(data.message || 'Yönetici yetkisi kaldırıldı.');
+        if (Array.isArray(data.admins)) {
+          setAdminsList(data.admins);
+        } else {
+          loadAdmins();
+        }
+      } else {
+        alert(data.error || 'Yetki kaldırılırken hata oluştu.');
+      }
+    } catch (err: any) {
+      alert(`Hata: ${err.message}`);
+    }
+  };
 
   // Webhook Otomasyon State'leri
   const [webhookEnabled, setWebhookEnabled] = useState<boolean>(settings.webhookEnabled ?? false);
@@ -496,6 +598,18 @@ export default function AyarlarPage() {
         >
           <Bell className="w-3.5 h-3.5 text-[#C85A32]" />
           <span>Webhook & API Otomasyonu</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('admins')}
+          className={`px-4 py-2 rounded-md text-xs font-medium transition flex items-center gap-2 ${
+            activeTab === 'admins'
+              ? 'bg-[#231B18] text-white shadow-xs'
+              : 'bg-[#FAF8F5] text-stone-700 hover:bg-[#EFECE6]'
+          }`}
+        >
+          <ShieldCheck className="w-3.5 h-3.5 text-[#C85A32]" />
+          <span>Yöneticiler & Yetkilendirme</span>
         </button>
 
         <Link
@@ -1860,6 +1974,222 @@ export default function AyarlarPage() {
           </div>
         </div>
       )}
+
+      {/* 5. İÇERİK: SEKME 6 - YÖNETİCİLER & YETKİLENDİRME */}
+      {activeTab === 'admins' && (
+        <div className="space-y-6 text-xs animate-fadeIn">
+          {/* Üst Bilgi Kartı */}
+          <div className="bg-white p-6 rounded-2xl border border-[#E2DCD3] shadow-2xs space-y-2">
+            <div className="flex items-center gap-2">
+              <ShieldCheck className="w-5 h-5 text-[#C85A32]" />
+              <h3 className="font-serif text-lg text-[#231B18] font-normal">
+                Yönetim Paneli Yetkilileri & Admin Rolleri
+              </h3>
+            </div>
+            <p className="text-stone-600 text-xs">
+              Bu bölümden dilediğiniz kişilerin e-posta adreslerini girerek yönetim paneli yetkisi tanımlayabilirsiniz.
+              Yetkilendirilen kişiler, mağaza vitrininden normal üye girişi yaptıktan sonra doğrudan <strong>&ldquo;Yönetim Paneline Geç&rdquo;</strong> tuşuyla panele erişebilirler.
+            </p>
+          </div>
+
+          {/* Yeni Yönetici Ekleme Formu */}
+          <div className="bg-white p-6 rounded-2xl border border-[#E2DCD3] shadow-2xs space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-[#E2DCD3]">
+              <div className="flex items-center gap-2">
+                <UserPlus className="w-4 h-4 text-[#C85A32]" />
+                <h4 className="font-serif text-base text-[#231B18] font-normal">
+                  Yeni Yönetici Yetkilendir
+                </h4>
+              </div>
+              <span className="text-[11px] text-stone-500 font-medium">
+                Kayıtlı Yetkili: {adminsList.length} Kişi
+              </span>
+            </div>
+
+            <form onSubmit={handleAddAdmin} className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-12 gap-4">
+                <div className="sm:col-span-6">
+                  <label className="block font-medium text-stone-800 mb-1">
+                    Yetkilendirilecek E-Posta Adresi <span className="text-rose-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <Mail className="w-4 h-4 text-stone-400 absolute left-3 top-2.5" />
+                    <input
+                      type="email"
+                      required
+                      value={newAdminEmail}
+                      onChange={(e) => setNewAdminEmail(e.target.value)}
+                      placeholder="ornek@safirya.tr veya kisi@gmail.com"
+                      className="w-full pl-9 pr-3.5 py-2 rounded-lg border border-[#E2DCD3] text-xs focus:ring-1 focus:ring-[#C85A32]"
+                    />
+                  </div>
+                  <p className="text-[10px] text-stone-400 mt-1">
+                    Bu e-posta adresine sahip hesap anında yönetim paneline tam erişim hakkı kazanır.
+                  </p>
+                </div>
+
+                <div className="sm:col-span-4">
+                  <label className="block font-medium text-stone-800 mb-1">
+                    Yetkili Adı & Soyadı (Opsiyonel)
+                  </label>
+                  <input
+                    type="text"
+                    value={newAdminName}
+                    onChange={(e) => setNewAdminName(e.target.value)}
+                    placeholder="Örn: Selin Demir"
+                    className="w-full px-3.5 py-2 rounded-lg border border-[#E2DCD3] text-xs focus:ring-1 focus:ring-[#C85A32]"
+                  />
+                </div>
+
+                <div className="sm:col-span-2 flex items-end">
+                  <button
+                    type="submit"
+                    disabled={isSubmittingAdmin || !newAdminEmail.trim()}
+                    className="w-full py-2 px-3.5 rounded-lg bg-[#C85A32] hover:bg-[#B34E2A] text-white font-medium text-xs shadow-xs transition flex items-center justify-center gap-1.5 disabled:opacity-50 cursor-pointer"
+                  >
+                    {isSubmittingAdmin ? (
+                      <>
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                        <span>Kaydediliyor...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>Yetki Ver</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+
+          {/* Mevcut Yöneticiler Tablosu */}
+          <div className="bg-white rounded-2xl border border-[#E2DCD3] shadow-2xs overflow-hidden">
+            <div className="p-4 sm:p-5 border-b border-[#E2DCD3] flex items-center justify-between bg-[#FAF8F5]">
+              <div>
+                <h4 className="font-serif text-sm sm:text-base font-normal text-[#231B18]">
+                  Aktif Yönetici & Yetkili Listesi
+                </h4>
+                <p className="text-[11px] text-stone-500">
+                  Yönetim paneline giriş yetkisine sahip personeller ve süper yöneticiler
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={loadAdmins}
+                disabled={isLoadingAdmins}
+                className="p-1.5 rounded-md hover:bg-stone-200/60 text-stone-600 transition cursor-pointer"
+                title="Listeyi Yenile"
+              >
+                <RefreshCw className={`w-4 h-4 ${isLoadingAdmins ? 'animate-spin' : ''}`} />
+              </button>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-[#FAF8F5]/50 border-b border-[#E2DCD3] text-stone-500 uppercase tracking-wider text-[10px]">
+                  <tr>
+                    <th className="py-3 px-4 font-semibold">Yönetici</th>
+                    <th className="py-3 px-4 font-semibold">Yetki Türü</th>
+                    <th className="py-3 px-4 font-semibold">Tanımlanma Tarihi</th>
+                    <th className="py-3 px-4 font-semibold">Yetki Veren</th>
+                    <th className="py-3 px-4 text-right font-semibold">İşlem</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-stone-100">
+                  {isLoadingAdmins && adminsList.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="py-8 text-center text-stone-500">
+                        <div className="flex items-center justify-center gap-2">
+                          <RefreshCw className="w-4 h-4 animate-spin text-[#C85A32]" />
+                          <span>Yetkili listesi yükleniyor...</span>
+                        </div>
+                      </td>
+                    </tr>
+                  ) : adminsList.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="py-8 text-center text-stone-500">
+                        Henüz kayıtlı yetkili bulunamadı.
+                      </td>
+                    </tr>
+                  ) : (
+                    adminsList.map((admin) => (
+                      <tr key={admin.email} className="hover:bg-[#FAF8F5]/60 transition">
+                        <td className="py-3.5 px-4">
+                          <div className="flex items-center gap-2.5">
+                            <div className="w-7 h-7 rounded-full bg-[#231B18] text-[#F6F3EC] flex items-center justify-center text-xs font-semibold shrink-0">
+                              {admin.name?.charAt(0).toUpperCase() || 'A'}
+                            </div>
+                            <div>
+                              <div className="font-medium text-[#231B18]">
+                                {admin.name || 'Safirya Yöneticisi'}
+                              </div>
+                              <div className="text-[11px] text-stone-500">{admin.email}</div>
+                            </div>
+                          </div>
+                        </td>
+
+                        <td className="py-3.5 px-4">
+                          {admin.isPrimary ? (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-900 text-[10px] font-bold">
+                              <span>👑 Süper Yönetici</span>
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-900 text-[10px] font-semibold">
+                              <span>🛡️ Yetkili Yönetici</span>
+                            </span>
+                          )}
+                        </td>
+
+                        <td className="py-3.5 px-4 text-stone-600">
+                          {admin.addedAt
+                            ? new Date(admin.addedAt).toLocaleDateString('tr-TR', {
+                                day: '2-digit',
+                                month: 'short',
+                                year: 'numeric',
+                              })
+                            : '-'}
+                        </td>
+
+                        <td className="py-3.5 px-4 text-stone-500 text-[11px]">
+                          {admin.addedBy || 'Sistem'}
+                        </td>
+
+                        <td className="py-3.5 px-4 text-right">
+                          {admin.isPrimary ? (
+                            <span className="text-[10px] text-stone-400 italic">
+                              Ana Yetkili
+                            </span>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveAdmin(admin.email)}
+                              className="p-1.5 rounded-md hover:bg-rose-50 text-stone-400 hover:text-rose-600 transition cursor-pointer"
+                              title="Yetkiyi Kaldır"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
+  );
+}
+
+export default function AyarlarPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center text-xs text-stone-500">Yükleniyor...</div>}>
+      <AyarlarContent />
+    </Suspense>
   );
 }

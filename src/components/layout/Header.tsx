@@ -18,6 +18,7 @@ import {
   KeyRound,
   UserPlus,
   LogIn,
+  ShieldCheck,
 } from 'lucide-react';
 import { useStore } from '@/context/StoreContext';
 import { CategoryItem } from '@/lib/catalog';
@@ -227,6 +228,17 @@ export function Header({ categories }: HeaderProps) {
             </button>
 
             {/* 3. Kullanıcı Hesabı & Dropdown */}
+            {currentUser && Boolean(currentUser.isAdmin || currentUser.role === 'ADMIN') && (
+              <Link
+                href="/admin"
+                className="hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#231B18] text-white hover:bg-[#C85A32] text-xs font-semibold uppercase tracking-wider transition shadow-2xs mr-1 group"
+                title="Yönetim Paneline Geçiş Yap"
+              >
+                <ShieldCheck className="w-3.5 h-3.5 text-[#C85A32] group-hover:text-white transition" />
+                <span>Yönetim Paneli</span>
+              </Link>
+            )}
+
             <div className="relative" ref={userMenuRef}>
               <button
                 type="button"
@@ -236,8 +248,11 @@ export function Header({ categories }: HeaderProps) {
                 title={currentUser ? currentUser.name : 'Giriş Yap / Kayıt Ol'}
               >
                 {currentUser ? (
-                  <div className="w-6 h-6 rounded-full bg-[#231B18] text-[#F6F3EC] flex items-center justify-center text-xs font-semibold">
+                  <div className="w-6 h-6 rounded-full bg-[#231B18] text-[#F6F3EC] flex items-center justify-center text-xs font-semibold relative">
                     {currentUser.name.charAt(0).toUpperCase()}
+                    {Boolean(currentUser.isAdmin || currentUser.role === 'ADMIN') && (
+                      <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-[#C85A32] border-2 border-white" title="Yönetici" />
+                    )}
                   </div>
                 ) : (
                   <User className="w-5 h-5 stroke-[1.4]" />
@@ -251,15 +266,47 @@ export function Header({ categories }: HeaderProps) {
                     /* Giriş Yapılmış Durum */
                     <div>
                       <div className="p-3.5 bg-[#FAF8F5] border-b border-stone-200">
-                        <p className="font-serif text-sm font-medium text-[#231B18] truncate">
-                          {currentUser.name}
-                        </p>
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="font-serif text-sm font-medium text-[#231B18] truncate">
+                            {currentUser.name}
+                          </p>
+                          {Boolean(currentUser.isAdmin || currentUser.role === 'ADMIN') && (
+                            <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-xs bg-[#C85A32]/10 text-[#C85A32] text-[10px] font-bold uppercase tracking-wider shrink-0">
+                              Yönetici
+                            </span>
+                          )}
+                        </div>
                         <p className="text-[11px] text-[#7A7067] truncate mt-0.5">
                           {currentUser.email}
                         </p>
                       </div>
 
+                      {/* Admin Geçiş Butonu - Sadece Yönetici İse Görünür */}
+                      {Boolean(currentUser.isAdmin || currentUser.role === 'ADMIN') && (
+                        <div className="p-2 bg-gradient-to-r from-amber-50 to-stone-50 border-b border-amber-200/60">
+                          <Link
+                            href="/admin"
+                            onClick={() => setIsUserMenuOpen(false)}
+                            className="flex items-center justify-between px-3 py-2 rounded-xs bg-[#231B18] text-white hover:bg-[#C85A32] transition text-xs font-semibold uppercase tracking-wider shadow-2xs group"
+                          >
+                            <div className="flex items-center gap-2">
+                              <ShieldCheck className="w-4 h-4 text-[#C85A32] group-hover:text-white transition" />
+                              <span>Yönetim Paneli</span>
+                            </div>
+                            <ArrowRight className="w-3.5 h-3.5 text-stone-300 group-hover:translate-x-0.5 transition" />
+                          </Link>
+                        </div>
+                      )}
+
                       <div className="p-1 space-y-0.5 text-xs">
+                        <Link
+                          href="/hesabim"
+                          onClick={() => setIsUserMenuOpen(false)}
+                          className="flex items-center gap-2.5 px-3 py-2 rounded-xs hover:bg-[#FAF8F5] transition text-[#231B18]"
+                        >
+                          <User className="w-4 h-4 text-[#C85A32]" />
+                          <span>Hesap Özeti</span>
+                        </Link>
                         <Link
                           href="/hesabim/siparislerim"
                           onClick={() => setIsUserMenuOpen(false)}
@@ -446,6 +493,21 @@ export function Header({ categories }: HeaderProps) {
               </div>
             )}
           </div>
+
+          {/* Mobil Yönetici Geçiş Butonu */}
+          {currentUser && Boolean(currentUser.isAdmin || currentUser.role === 'ADMIN') && (
+            <Link
+              href="/admin"
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="w-full flex items-center justify-between p-3 rounded-xs bg-[#231B18] text-white hover:bg-[#C85A32] text-xs font-semibold uppercase tracking-wider transition shadow-xs group"
+            >
+              <div className="flex items-center gap-2">
+                <ShieldCheck className="w-4 h-4 text-[#C85A32] group-hover:text-white transition" />
+                <span>Yönetim Paneline Geç</span>
+              </div>
+              <ArrowRight className="w-4 h-4 text-stone-300 group-hover:translate-x-0.5 transition" />
+            </Link>
+          )}
 
           <div className="space-y-1">
             <div className="px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-[#7A7067]">

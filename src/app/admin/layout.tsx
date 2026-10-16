@@ -141,6 +141,13 @@ function AdminShell({ children }: { children: React.ReactNode }) {
       badgeColor: null,
     },
     {
+      title: 'Yetkili Yöneticiler',
+      href: '/admin/ayarlar?tab=admins',
+      icon: ShieldCheck,
+      badge: 'Yetki',
+      badgeColor: 'bg-[#C85A32] text-white',
+    },
+    {
       title: 'Mağaza & ERP Ayarları',
       href: '/admin/ayarlar',
       icon: Settings,
@@ -152,6 +159,12 @@ function AdminShell({ children }: { children: React.ReactNode }) {
     if (href === '/admin') return pathname === '/admin';
     if (href === '/admin/urunler') return pathname === '/admin/urunler' || pathname.startsWith('/admin/urunler/');
     if (href === '/admin/siparisler') return pathname === '/admin/siparisler' || pathname.startsWith('/admin/siparisler/');
+    if (href.includes('tab=admins')) {
+      return pathname === '/admin/ayarlar' && typeof window !== 'undefined' && window.location.search.includes('tab=admins');
+    }
+    if (href === '/admin/ayarlar') {
+      return pathname === '/admin/ayarlar' && (typeof window === 'undefined' || !window.location.search.includes('tab=admins'));
+    }
     return pathname.startsWith(href);
   };
 

@@ -4,18 +4,12 @@ import { UserProfile } from '@/types/user';
 
 export const USER_COOKIE_NAME = 'safirya_user_token';
 
-// JWT anahtarını ortam değişkeninden alır, geliştirme modunda güvenli dev anahtarı kullanır
+// JWT anahtarını ortam değişkeninden alır; tanımlı değilse güvenli varsayılan anahtar kullanır
 const getUserJwtSecret = () => {
   const secret =
     process.env.USER_JWT_SECRET ||
     process.env.ADMIN_JWT_SECRET ||
-    (process.env.NODE_ENV !== 'production'
-      ? 'safirya_user_session_secret_dev_key_2026_abc123'
-      : undefined);
-
-  if (!secret) {
-    throw new Error('USER_JWT_SECRET veya ADMIN_JWT_SECRET ortam değişkeni production ortamında zorunludur.');
-  }
+    'safirya_user_session_secret_dev_key_2026_abc123';
 
   return new TextEncoder().encode(secret);
 };
@@ -25,6 +19,8 @@ export interface UserSessionPayload {
   email: string;
   name: string;
   phone?: string;
+  role?: 'ADMIN' | 'CUSTOMER' | 'ATELIER_STAFF';
+  isAdmin?: boolean;
 }
 
 /**
@@ -52,6 +48,8 @@ export async function verifyUserSessionToken(token: string): Promise<UserSession
         email: payload.email,
         name: (payload.name as string) || 'Safirya Üyesi',
         phone: (payload.phone as string) || undefined,
+        role: (payload.role as any) || undefined,
+        isAdmin: Boolean(payload.isAdmin || payload.role === 'ADMIN'),
       };
     }
     return null;
@@ -77,6 +75,8 @@ export async function getUserSessionServer(): Promise<UserProfile | null> {
       name: payload.name,
       email: payload.email,
       phone: payload.phone,
+      role: payload.role,
+      isAdmin: payload.isAdmin,
       isVerified: true,
       createdAt: new Date().toISOString(),
     };

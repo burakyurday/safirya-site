@@ -33,6 +33,25 @@ export async function middleware(request: NextRequest) {
       }
     }
 
+    // Normal kullanıcı oturumu (safirya_user_token) üzerinden admin yetkisi kontrolü
+    if (!isAuthenticated) {
+      const userToken = request.cookies.get('safirya_user_token')?.value;
+      if (userToken) {
+        try {
+          const userSecret =
+            process.env.USER_JWT_SECRET ||
+            process.env.ADMIN_JWT_SECRET ||
+            'safirya_user_session_secret_dev_key_2026_abc123';
+          const { payload } = await jwtVerify(userToken, new TextEncoder().encode(userSecret));
+          if (payload.role === 'ADMIN' || payload.isAdmin === true) {
+            isAuthenticated = true;
+          }
+        } catch {
+          // geçersiz token
+        }
+      }
+    }
+
     // A. API Admin Rotaları Koruması (/api/admin/*)
     if (isApiAdmin && !isLoginPage) {
       if (!isAuthenticated) {

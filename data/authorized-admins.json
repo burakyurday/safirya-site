@@ -1,0 +1,10 @@
+[
+  {
+    "email": "atolye.yetkili.test@safirya.tr",
+    "name": "Atölye Sorumlusu Test",
+    "role": "ADMIN",
+    "addedAt": "2026-10-16T10:04:01.348Z",
+    "addedBy": "Birim Testi",
+    "isPrimary": false
+  }
+]

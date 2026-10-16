@@ -33,10 +33,17 @@ export default function HesabimIndexPage() {
               </div>
 
               <div className="flex items-center gap-2">
-                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xs bg-[#5F6F52]/10 text-[#5F6F52] text-xs font-medium">
-                  <ShieldCheck className="w-3.5 h-3.5" />
-                  <span>Doğrulanmış Hesap</span>
-                </span>
+                {Boolean(currentUser.isAdmin || currentUser.role === 'ADMIN') ? (
+                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xs bg-[#C85A32]/15 text-[#C85A32] text-xs font-bold border border-[#C85A32]/30">
+                    <ShieldCheck className="w-3.5 h-3.5" />
+                    <span>Yönetici Yetkilisi</span>
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xs bg-[#5F6F52]/10 text-[#5F6F52] text-xs font-medium">
+                    <ShieldCheck className="w-3.5 h-3.5" />
+                    <span>Doğrulanmış Hesap</span>
+                  </span>
+                )}
                 <button
                   type="button"
                   onClick={logoutUser}
@@ -46,6 +53,36 @@ export default function HesabimIndexPage() {
                 </button>
               </div>
             </div>
+
+            {/* Yönetici Portalı Geçiş Kartı - Yalnızca Admin İse Görünür */}
+            {Boolean(currentUser.isAdmin || currentUser.role === 'ADMIN') && (
+              <div className="bg-gradient-to-r from-[#231B18] via-[#2F211C] to-[#1C1513] text-white p-5 rounded-xl border border-stone-800 shadow-md flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div className="flex items-center gap-3.5">
+                  <div className="w-11 h-11 rounded-lg bg-[#C85A32]/20 border border-[#C85A32]/40 text-[#C85A32] flex items-center justify-center shrink-0">
+                    <ShieldCheck className="w-6 h-6 text-[#C85A32]" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-serif text-base font-normal text-[#F6F3EC]">Yönetim Portalı Yetkisi</span>
+                      <span className="px-2 py-0.5 rounded-full bg-[#C85A32] text-white text-[10px] font-bold uppercase tracking-wider">
+                        Aktif
+                      </span>
+                    </div>
+                    <p className="text-xs text-stone-300 mt-0.5">
+                      Bu hesap yönetim paneli yetkisine sahiptir. Siparişleri, ürün kataloğunu ve atölye üretim bandını yönetebilirsiniz.
+                    </p>
+                  </div>
+                </div>
+
+                <Link
+                  href="/admin"
+                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-md bg-[#C85A32] hover:bg-[#B34E2A] text-white text-xs font-semibold uppercase tracking-wider transition shadow-sm shrink-0"
+                >
+                  <span>Yönetim Paneline Geç</span>
+                  <ArrowRight className="w-4 h-4" />
+                </Link>
+              </div>
+            )}
 
             {/* Atölye Kulübü Rozeti & Puan Özeti */}
             <Link
