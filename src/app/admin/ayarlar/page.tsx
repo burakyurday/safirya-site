@@ -220,7 +220,17 @@ export default function AyarlarPage() {
       const res = await fetch('/api/admin/email/test', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ targetEmail: target }),
+        body: JSON.stringify({
+          targetEmail: target,
+          apiKey: smtpPass || undefined,
+          from: smtpFrom || undefined,
+          smtpSettings: {
+            host: smtpHost || undefined,
+            port: smtpPort || undefined,
+            user: smtpUser || undefined,
+            pass: smtpPass || undefined,
+          },
+        }),
       });
       const data = await res.json();
       if (res.ok && data.success) {

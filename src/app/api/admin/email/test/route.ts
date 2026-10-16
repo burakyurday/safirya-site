@@ -36,11 +36,24 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json().catch(() => ({}));
-    const { targetEmail = 'destek@safirya.tr' } = body;
+    const {
+      targetEmail = 'destek@safirya.tr',
+      apiKey,
+      smtpSettings,
+      from,
+    } = body;
 
     const emailResult = await sendEmail({
       to: targetEmail,
       subject: `Safirya Atölye - Resend Altyapı Bağlantı Testi (${new Date().toLocaleTimeString('tr-TR')})`,
+      from: from || process.env.SMTP_FROM || 'Safirya Atölyesi <bildirim@safirya.tr>',
+      apiKey: apiKey || process.env.RESEND_API_KEY || process.env.SMTP_PASS,
+      smtpSettings: smtpSettings || {
+        host: process.env.SMTP_HOST || 'smtp.resend.com',
+        port: Number(process.env.SMTP_PORT || 465),
+        user: process.env.SMTP_USER || 'resend',
+        pass: process.env.SMTP_PASS || process.env.RESEND_API_KEY,
+      },
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 550px; margin: 0 auto; padding: 24px; border: 1px solid #E2DCD3; border-radius: 12px; background: #FFFCF9;">
           <h2 style="color: #18243D; margin-top: 0;">Safirya E-Posta Altyapı Testi Başarılı!</h2>
