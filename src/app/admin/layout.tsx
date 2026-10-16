@@ -22,6 +22,7 @@ import {
   ShieldCheck,
   Printer,
   Boxes,
+  BarChart3,
 } from 'lucide-react';
 
 import { AdminProvider, useAdmin } from '@/context/AdminContext';
@@ -62,6 +63,13 @@ function AdminShell({ children }: { children: React.ReactNode }) {
       href: '/admin',
       icon: LayoutDashboard,
       badge: null,
+    },
+    {
+      title: 'Gelişmiş Analitik',
+      href: '/admin/analitik',
+      icon: BarChart3,
+      badge: 'Canlı',
+      badgeColor: 'bg-emerald-600 text-white',
     },
     {
       title: 'Siparişler',

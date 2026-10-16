@@ -13,6 +13,7 @@ import {
   ChevronRight,
   MessageSquareQuote,
   CheckCircle2,
+  BarChart3,
 } from 'lucide-react';
 import { useAdmin } from '@/context/AdminContext';
 
@@ -76,6 +77,14 @@ export default function AdminDashboardPage() {
           >
             <Plus className="w-3.5 h-3.5" />
             <span>Manuel Sipariş Gir</span>
+          </Link>
+
+          <Link
+            href="/admin/analitik"
+            className="px-4 py-2 rounded-md bg-stone-100 hover:bg-stone-200 text-[#231B18] text-xs font-medium transition border border-stone-200 flex items-center gap-1.5"
+          >
+            <BarChart3 className="w-3.5 h-3.5 text-[#C85A32]" />
+            <span>Gelişmiş Analitik</span>
           </Link>
         </div>
       </div>
