@@ -257,30 +257,28 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
     isLoadedRef.current = true;
 
-    // 4. Kayıtlı kullanıcı tablosunu temizle / ilklendir
+    // 4. Güvenlik Temizliği: Düz metin kullanıcı şifrelerinin tutulduğu eski localStorage tablosunu kalıcı olarak temizle
     try {
-      const storedUsers = localStorage.getItem('safirya_registered_users');
-      if (storedUsers) {
-        const parsed = JSON.parse(storedUsers);
-        if (Array.isArray(parsed)) {
-          const filtered = parsed.filter(
-            (u: any) =>
-              u &&
-              u.email !== 'elif.kaya@safirya.tr' &&
-              u.email !== 'elif.kaya@example.com' &&
-              u.id !== 'usr-1'
-          );
-          if (filtered.length !== parsed.length) {
-            localStorage.setItem('safirya_registered_users', JSON.stringify(filtered));
-          }
-        }
-      } else {
-        localStorage.setItem(
-          'safirya_registered_users',
-          JSON.stringify(DEFAULT_REGISTERED_USERS)
-        );
-      }
+      localStorage.removeItem('safirya_registered_users');
     } catch {}
+
+    // 4.1. Sunucu tarafındaki güvenli HTTP-Only oturumu doğrula ve senkronize et
+    fetch('/api/auth/me')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data?.success && data?.user) {
+          setCurrentUser(data.user);
+          try {
+            localStorage.setItem('safirya_active_user', JSON.stringify(data.user));
+          } catch {}
+        } else if (data && !data.success) {
+          setCurrentUser(null);
+          try {
+            localStorage.removeItem('safirya_active_user');
+          } catch {}
+        }
+      })
+      .catch(() => {});
 
     // 4.1. Tarayıcıda kalmış eski demo siparişleri temizle
     try {
@@ -550,38 +548,24 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     const cleanEmail = email.toLowerCase().trim();
 
     try {
-      const stored = localStorage.getItem('safirya_registered_users');
-      const users: Array<UserProfile & { passwordHash: string }> = stored
-        ? JSON.parse(stored)
-        : DEFAULT_REGISTERED_USERS;
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: cleanEmail, password }),
+      });
 
-      const matched = users.find((u) => u.email.toLowerCase() === cleanEmail);
-      if (!matched) {
+      const data = await res.json();
+      if (!res.ok || !data.success) {
         return {
           success: false,
-          error: 'Bu e-posta adresiyle kayıtlı bir hesap bulunamadı.',
+          error: data.error || 'Girdiğiniz şifre veya e-posta hatalı.',
         };
       }
 
-      if (matched.passwordHash !== password) {
-        return {
-          success: false,
-          error: 'Girdiğiniz şifre hatalı. Lütfen kontrol edip tekrar deneyiniz.',
-        };
-      }
-
-      const profile: UserProfile = {
-        id: matched.id,
-        name: matched.name,
-        email: matched.email,
-        phone: matched.phone,
-        avatar: matched.avatar,
-        isVerified: matched.isVerified,
-        createdAt: matched.createdAt,
-      };
-
+      const profile: UserProfile = data.user;
       setCurrentUser(profile);
       localStorage.setItem('safirya_active_user', JSON.stringify(profile));
+      localStorage.removeItem('safirya_registered_users'); // Güvenlik temizliği
       setIsAuthModalOpen(false);
 
       // Misafir sepeti varsa kullanıcının hafızasına aktar ve localStorage'dan sil
@@ -600,11 +584,11 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
       // Sunucu in-memory deposundan da varsa sepeti al ve birleştir
       try {
-        const res = await fetch(`/api/cart?userId=${encodeURIComponent(profile.id)}`);
-        if (res.ok) {
-          const data = await res.json();
-          if (data?.success && Array.isArray(data.items) && data.items.length > 0) {
-            newCart = mergeCartLists(newCart, data.items);
+        const cartRes = await fetch(`/api/cart?userId=${encodeURIComponent(profile.id)}`);
+        if (cartRes.ok) {
+          const cartData = await cartRes.json();
+          if (cartData?.success && Array.isArray(cartData.items) && cartData.items.length > 0) {
+            newCart = mergeCartLists(newCart, cartData.items);
           }
         }
       } catch {}
@@ -641,56 +625,27 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   ): Promise<{ success: boolean; error?: string }> => {
     const cleanEmail = email.toLowerCase().trim();
 
-    // 1. API ile doğrulama kodunu kontrol et
     try {
-      const res = await fetch('/api/auth/verify-code', {
+      const res = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: cleanEmail, code, type: 'register' }),
+        body: JSON.stringify({
+          name: name.trim(),
+          email: cleanEmail,
+          password,
+          code: code.trim(),
+        }),
       });
+
       const data = await res.json();
       if (!res.ok || !data.success) {
-        return { success: false, error: data.error || 'Girdiğiniz doğrulama kodu hatalı.' };
-      }
-    } catch {
-      return { success: false, error: 'Doğrulama servisine ulaşılamadı. Lütfen tekrar deneyiniz.' };
-    }
-
-    try {
-      const stored = localStorage.getItem('safirya_registered_users');
-      const users: Array<UserProfile & { passwordHash: string }> = stored
-        ? JSON.parse(stored)
-        : DEFAULT_REGISTERED_USERS;
-
-      if (users.some((u) => u.email.toLowerCase() === cleanEmail)) {
-        return {
-          success: false,
-          error: 'Bu e-posta adresiyle zaten kayıtlı bir hesap var. Giriş yapabilirsiniz.',
-        };
+        return { success: false, error: data.error || 'Hesap oluşturulamadı.' };
       }
 
-      const newUser: UserProfile & { passwordHash: string } = {
-        id: createUniqueUserId(),
-        name: name.trim(),
-        email: cleanEmail,
-        isVerified: true,
-        createdAt: new Date().toISOString(),
-        passwordHash: password,
-      };
-
-      const updatedUsers = [...users, newUser];
-      localStorage.setItem('safirya_registered_users', JSON.stringify(updatedUsers));
-
-      const profile: UserProfile = {
-        id: newUser.id,
-        name: newUser.name,
-        email: newUser.email,
-        isVerified: true,
-        createdAt: newUser.createdAt,
-      };
-
+      const profile: UserProfile = data.user;
       setCurrentUser(profile);
       localStorage.setItem('safirya_active_user', JSON.stringify(profile));
+      localStorage.removeItem('safirya_registered_users'); // Güvenlik temizliği
       setIsAuthModalOpen(false);
 
       // Misafir sepeti varsa kullanıcının hafızasına aktar ve localStorage'dan sil
@@ -738,37 +693,21 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   ): Promise<{ success: boolean; error?: string }> => {
     const cleanEmail = email.toLowerCase().trim();
 
-    // 1. API ile doğrulama kodunu kontrol et
     try {
-      const res = await fetch('/api/auth/verify-code', {
+      const res = await fetch('/api/auth/reset-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: cleanEmail, code, type: 'reset_password' }),
+        body: JSON.stringify({
+          email: cleanEmail,
+          code: code.trim(),
+          newPassword,
+        }),
       });
+
       const data = await res.json();
       if (!res.ok || !data.success) {
-        return { success: false, error: data.error || 'Girdiğiniz sıfırlama kodu hatalı.' };
+        return { success: false, error: data.error || 'Şifre sıfırlanamadı.' };
       }
-    } catch {
-      return { success: false, error: 'Doğrulama servisine ulaşılamadı. Lütfen tekrar deneyiniz.' };
-    }
-
-    try {
-      const stored = localStorage.getItem('safirya_registered_users');
-      const users: Array<UserProfile & { passwordHash: string }> = stored
-        ? JSON.parse(stored)
-        : DEFAULT_REGISTERED_USERS;
-
-      const idx = users.findIndex((u) => u.email.toLowerCase() === cleanEmail);
-      if (idx === -1) {
-        return {
-          success: false,
-          error: 'Bu e-posta adresiyle ilişkili bir kullanıcı bulunamadı.',
-        };
-      }
-
-      users[idx].passwordHash = newPassword;
-      localStorage.setItem('safirya_registered_users', JSON.stringify(users));
 
       return { success: true };
     } catch (e: any) {
@@ -777,8 +716,10 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   };
 
   const logoutUser = () => {
+    fetch('/api/auth/logout', { method: 'POST' }).catch(() => {});
     if (typeof window !== 'undefined') {
       localStorage.removeItem('safirya_active_user');
+      localStorage.removeItem('safirya_registered_users');
       localStorage.removeItem(GUEST_CART_STORAGE_KEY);
       localStorage.removeItem('safirya_cart_items');
       try {
