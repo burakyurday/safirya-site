@@ -75,6 +75,7 @@ function AyarlarContent() {
   const [newAdminEmail, setNewAdminEmail] = useState('');
   const [newAdminName, setNewAdminName] = useState('');
   const [isSubmittingAdmin, setIsSubmittingAdmin] = useState(false);
+  const [adminFeedback, setAdminFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   const loadAdmins = async () => {
     setIsLoadingAdmins(true);
@@ -94,39 +95,52 @@ function AyarlarContent() {
   useEffect(() => {
     if (activeTab === 'admins') {
       loadAdmins();
+      setAdminFeedback(null);
     }
   }, [activeTab]);
 
   const handleAddAdmin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newAdminEmail.trim()) return;
+    const cleanEmail = newAdminEmail.trim();
+    if (!cleanEmail) return;
 
     setIsSubmittingAdmin(true);
+    setAdminFeedback(null);
+
     try {
       const res = await fetch('/api/admin/authorities', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          email: newAdminEmail.trim(),
+          email: cleanEmail,
           name: newAdminName.trim() || undefined,
         }),
       });
 
       const data = await res.json();
       if (res.ok && data.success) {
-        showToast(data.message || 'Yönetici yetkisi başarıyla tanımlandı!');
+        const successMsg = data.message || `${cleanEmail} adresine yönetim paneli yetkisi başarıyla tanımlandı!`;
+        showToast(successMsg);
+        setAdminFeedback({ type: 'success', message: successMsg });
         setNewAdminEmail('');
         setNewAdminName('');
-        if (Array.isArray(data.admins)) {
+
+        if (Array.isArray(data.admins) && data.admins.length > 0) {
           setAdminsList(data.admins);
+        } else if (data.admin) {
+          setAdminsList((prev) => [data.admin, ...prev.filter((a) => a.email !== data.admin.email)]);
         } else {
           loadAdmins();
         }
       } else {
-        alert(data.error || 'Yetki verilirken bir hata oluştu.');
+        const errorMsg = data.error || 'Yetki verilirken bir hata oluştu.';
+        setAdminFeedback({ type: 'error', message: errorMsg });
+        showToast(errorMsg);
       }
     } catch (err: any) {
-      alert(`Hata: ${err.message}`);
+      const errMsg = `Bağlantı hatası: ${err.message || 'Yetkilendirme yapılamadı.'}`;
+      setAdminFeedback({ type: 'error', message: errMsg });
+      showToast(errMsg);
     } finally {
       setIsSubmittingAdmin(false);
     }
@@ -137,6 +151,7 @@ function AyarlarContent() {
       return;
     }
 
+    setAdminFeedback(null);
     try {
       const res = await fetch('/api/admin/authorities', {
         method: 'DELETE',
@@ -146,17 +161,24 @@ function AyarlarContent() {
 
       const data = await res.json();
       if (res.ok && data.success) {
-        showToast(data.message || 'Yönetici yetkisi kaldırıldı.');
+        const successMsg = data.message || `${email} adresinin yetkisi kaldırıldı.`;
+        showToast(successMsg);
+        setAdminFeedback({ type: 'success', message: successMsg });
         if (Array.isArray(data.admins)) {
           setAdminsList(data.admins);
         } else {
+          setAdminsList((prev) => prev.filter((a) => a.email !== email));
           loadAdmins();
         }
       } else {
-        alert(data.error || 'Yetki kaldırılırken hata oluştu.');
+        const errorMsg = data.error || 'Yetki kaldırılırken hata oluştu.';
+        setAdminFeedback({ type: 'error', message: errorMsg });
+        showToast(errorMsg);
       }
     } catch (err: any) {
-      alert(`Hata: ${err.message}`);
+      const errMsg = `Bağlantı hatası: ${err.message}`;
+      setAdminFeedback({ type: 'error', message: errMsg });
+      showToast(errMsg);
     }
   };
 
@@ -2005,6 +2027,23 @@ function AyarlarContent() {
                 Kayıtlı Yetkili: {adminsList.length} Kişi
               </span>
             </div>
+
+            {adminFeedback && (
+              <div
+                className={`p-3.5 rounded-xl border flex items-start gap-2.5 text-xs animate-fadeIn ${
+                  adminFeedback.type === 'success'
+                    ? 'bg-emerald-50/90 border-emerald-200 text-emerald-800'
+                    : 'bg-rose-50/90 border-rose-200 text-rose-800'
+                }`}
+              >
+                {adminFeedback.type === 'success' ? (
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                ) : (
+                  <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                )}
+                <span className="flex-1 font-medium">{adminFeedback.message}</span>
+              </div>
+            )}
 
             <form onSubmit={handleAddAdmin} className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-12 gap-4">

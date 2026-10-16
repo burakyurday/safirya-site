@@ -69,7 +69,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const updatedList = await listAuthorizedAdmins();
+    const updatedList = await listAuthorizedAdmins(true);
     return NextResponse.json({
       success: true,
       message: `${email} adresine yönetim paneli yetkisi başarıyla verildi.`,
@@ -117,7 +117,7 @@ export async function DELETE(req: NextRequest) {
       );
     }
 
-    const updatedList = await listAuthorizedAdmins();
+    const updatedList = await listAuthorizedAdmins(true);
     return NextResponse.json({
       success: true,
       message: `${email} adresinin yönetim paneli yetkisi kaldırıldı.`,

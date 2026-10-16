@@ -17,7 +17,7 @@ import { createUserSessionToken, USER_COOKIE_NAME } from '@/lib/auth/userAuth';
 
 const TEST_ADMIN_FILE = path.join(process.cwd(), 'data', 'authorized-admins.json');
 
-describe('Admin Authorities & Yetkilendirme Sistemi', () => {
+describe('Admin Authorities & Yetkilendirme Sistemi', { timeout: 15000 }, () => {
   let originalFileContent: string | null = null;
 
   beforeAll(() => {

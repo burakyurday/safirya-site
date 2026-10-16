@@ -33,6 +33,8 @@ export function StickyMobileBar({ settings }: Props) {
     'Merhaba, Safirya atölyenizden ürünler ve kişiye özel sipariş hakkında bilgi almak istiyorum.'
   )}`;
 
+  const isAdmin = Boolean(currentUser && (currentUser.isAdmin || currentUser.role === 'ADMIN'));
+
   return (
     <div
       className="fixed bottom-0 left-0 right-0 z-40 bg-[#F6F3EC]/95 backdrop-blur-md border-t border-[#E2DCD3] px-3 py-2 shadow-lg md:hidden transition-transform duration-300"
@@ -64,19 +66,33 @@ export function StickyMobileBar({ settings }: Props) {
           <span className="text-[9px] font-medium uppercase tracking-wider mt-1">Koleksiyon</span>
         </Link>
 
-        {/* WhatsApp Hızlı Destek (Orta Buton - Adaçayı Yeşili) */}
-        <a
-          href={whatsappUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex flex-col items-center justify-center p-1.5 -mt-3.5 group"
-          aria-label="WhatsApp Canlı Destek"
-        >
-          <div className="w-11 h-11 rounded-full bg-[#5F6F52] text-white flex items-center justify-center shadow-md group-active:scale-95 transition-transform">
-            <MessageCircle className="w-5 h-5 fill-current" />
-          </div>
-          <span className="text-[9px] font-medium uppercase tracking-wider text-[#5F6F52] mt-1">WhatsApp</span>
-        </a>
+        {/* Orta Buton: Admin Girişinde Yönetim Paneline Geçiş Butonu, Normal Ziyaretçide WhatsApp Canlı Destek */}
+        {isAdmin ? (
+          <a
+            href="/api/admin/auth/switch"
+            className="flex flex-col items-center justify-center p-1.5 -mt-3.5 group"
+            aria-label="Yönetim Paneline Geçiş Yap"
+            title="Yönetim Paneline Giriş Yap"
+          >
+            <div className="w-11 h-11 rounded-full bg-[#231B18] text-[#C85A32] border border-[#C85A32]/40 flex items-center justify-center shadow-md group-active:scale-95 transition-transform">
+              <ShieldCheck className="w-5 h-5 stroke-[1.8]" />
+            </div>
+            <span className="text-[9px] font-bold uppercase tracking-wider text-[#C85A32] mt-1">Admin Panel</span>
+          </a>
+        ) : (
+          <a
+            href={whatsappUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex flex-col items-center justify-center p-1.5 -mt-3.5 group"
+            aria-label="WhatsApp Canlı Destek"
+          >
+            <div className="w-11 h-11 rounded-full bg-[#5F6F52] text-white flex items-center justify-center shadow-md group-active:scale-95 transition-transform">
+              <MessageCircle className="w-5 h-5 fill-current" />
+            </div>
+            <span className="text-[9px] font-medium uppercase tracking-wider text-[#5F6F52] mt-1">WhatsApp</span>
+          </a>
+        )}
 
         {/* Favoriler */}
         <Link
@@ -113,22 +129,6 @@ export function StickyMobileBar({ settings }: Props) {
           </div>
           <span className="text-[9px] font-medium uppercase tracking-wider text-[#231B18] mt-1">Sepet</span>
         </button>
-
-        {/* Yönetim Paneli Hızlı Geçiş Butonu - Sadece Yönetici Girişi Varsa */}
-        {currentUser && Boolean(currentUser.isAdmin || currentUser.role === 'ADMIN') && (
-          <a
-            href="/api/admin/auth/switch"
-            className="flex flex-col items-center justify-center p-1.5 text-[#C85A32] hover:text-[#231B18] transition relative"
-            title="Yönetim Paneline Geçiş Yap"
-            aria-label="Yönetim Paneli"
-          >
-            <div className="relative">
-              <ShieldCheck className="w-4.5 h-4.5 stroke-[1.6] text-[#C85A32]" />
-              <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-[#C85A32]" />
-            </div>
-            <span className="text-[9px] font-bold uppercase tracking-wider text-[#C85A32] mt-1">Panel</span>
-          </a>
-        )}
       </div>
     </div>
   );
