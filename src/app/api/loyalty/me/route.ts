@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyUserSessionToken, USER_COOKIE_NAME } from '@/lib/auth/userAuth';
 import prisma from '@/lib/prisma';
+import { supabaseAdmin } from '@/lib/supabase';
 import { createInitialLoyaltyAccount, calculateTier } from '@/lib/loyalty';
 import { LoyaltyAccount } from '@/types/loyalty';
 
@@ -89,7 +90,51 @@ export async function GET(req: NextRequest) {
           id: created.id,
         },
       });
-    } catch {
+    } catch (dbErr) {
+      // Prisma DB hatası durumunda doğrudan Supabase REST API üzerinden dene
+      if (supabaseAdmin) {
+        try {
+          const { data: dbAccount } = await supabaseAdmin
+            .from('loyalty_accounts')
+            .select('*, transactions:loyalty_transactions(*)')
+            .eq('userId', userId)
+            .maybeSingle();
+
+          if (dbAccount) {
+            const txs = Array.isArray(dbAccount.transactions)
+              ? dbAccount.transactions.sort(
+                  (a: any, b: any) =>
+                    new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+                )
+              : [];
+
+            const account: LoyaltyAccount = {
+              id: dbAccount.id,
+              userId: dbAccount.userId,
+              pointsBalance: dbAccount.pointsBalance,
+              lifetimePoints: dbAccount.lifetimePoints,
+              totalSpent: Number(dbAccount.totalSpent || 0),
+              currentTier: dbAccount.currentTier as any,
+              referralCode: dbAccount.referralCode,
+              referredByCode: dbAccount.referredByCode || undefined,
+              birthday: dbAccount.birthday ? new Date(dbAccount.birthday).toISOString() : undefined,
+              transactions: txs.map((tx: any) => ({
+                id: tx.id,
+                type: tx.type as any,
+                points: tx.points,
+                description: tx.description,
+                orderNumber: tx.orderNumber || undefined,
+                createdAt: new Date(tx.createdAt).toISOString(),
+              })),
+            };
+
+            return NextResponse.json({ success: true, account });
+          }
+        } catch (sbErr) {
+          console.warn('Supabase loyalty/me fallback hatası:', sbErr);
+        }
+      }
+
       // Veritabanı bağlantısı yoksa (local fallback)
       const fallbackAccount = createInitialLoyaltyAccount(userId, userName);
       return NextResponse.json({ success: true, account: fallbackAccount, isFallback: true });

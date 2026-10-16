@@ -229,28 +229,16 @@ export function Header({ categories }: HeaderProps) {
 
             {/* 3. Kullanıcı Hesabı & Dropdown */}
             {currentUser && Boolean(currentUser.isAdmin || currentUser.role === 'ADMIN') && (
-              <>
-                {/* Masaüstü Yönetim Paneli Geçiş Butonu */}
-                <a
-                  href="/api/admin/auth/switch"
-                  className="hidden md:inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#231B18] text-white hover:bg-[#C85A32] text-xs font-semibold uppercase tracking-wider transition shadow-2xs mr-1 group border border-[#3E342F] cursor-pointer"
-                  title="Yönetim Paneline Geçiş Yap"
-                >
-                  <ShieldCheck className="w-3.5 h-3.5 text-[#C85A32] group-hover:text-white transition" />
-                  <span>Yönetim Paneli</span>
-                  <ArrowRight className="w-3 h-3 text-stone-400 group-hover:text-white group-hover:translate-x-0.5 transition" />
-                </a>
-
-                {/* Mobil Header Hızlı Panel Butonu */}
-                <a
-                  href="/api/admin/auth/switch"
-                  className="md:hidden inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#231B18] text-white hover:bg-[#C85A32] text-[10px] font-bold uppercase tracking-wider transition shadow-xs mr-0.5 group border border-[#3E342F] cursor-pointer"
-                  title="Yönetim Paneline Geçiş Yap"
-                >
-                  <ShieldCheck className="w-3 h-3 text-[#C85A32] group-hover:text-white transition" />
-                  <span>Panel</span>
-                </a>
-              </>
+              /* Masaüstü Yönetim Paneli Geçiş Butonu */
+              <a
+                href="/api/admin/auth/switch"
+                className="hidden md:inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#231B18] text-white hover:bg-[#C85A32] text-xs font-semibold uppercase tracking-wider transition shadow-2xs mr-1 group border border-[#3E342F] cursor-pointer"
+                title="Yönetim Paneline Geçiş Yap"
+              >
+                <ShieldCheck className="w-3.5 h-3.5 text-[#C85A32] group-hover:text-white transition" />
+                <span>Yönetim Paneli</span>
+                <ArrowRight className="w-3 h-3 text-stone-400 group-hover:text-white group-hover:translate-x-0.5 transition" />
+              </a>
             )}
 
             <div className="relative" ref={userMenuRef}>
