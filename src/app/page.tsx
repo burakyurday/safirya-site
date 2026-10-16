@@ -1,21 +1,30 @@
-'use client';
-
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
+import type { Metadata } from 'next';
 import {
   ShieldCheck,
   Truck,
   Lock,
-  ChevronLeft,
   ChevronRight,
-  ArrowRight,
   Sparkles,
 } from 'lucide-react';
 import { ProductCard } from '@/components/catalog/ProductCard';
 import { JsonLd, getFaqSchema } from '@/components/seo/JsonLd';
 import { initialConceptBanners } from '@/context/AdminContext';
-import { ConceptBannersMap, ConceptBannerItem } from '@/types/admin';
-import { getClientCatalogProducts, CatalogProductItem } from '@/lib/catalog';
+import { ALL_CATALOG_PRODUCTS } from '@/lib/catalog';
+import { getConceptBannersServer } from '@/lib/banners';
+import { FeaturedProductsCarousel } from '@/components/home/FeaturedProductsCarousel';
+import { HomeClientBannerSync } from '@/components/home/HomeClientBannerSync';
+
+export const metadata: Metadata = {
+  title: 'Safirya | El Yapımı Tasarım Atölyesi',
+  description:
+    'İzmir Karşıyaka merkezli bağımsız online zanaat atölyesi. %100 doğal soya mumları, kalıcı kokulu taş objeler, masif ceviz epoksi sunumluk tepsiler ve el dokuması Japon Miyuki boncuk takılar.',
+  alternates: {
+    canonical: '/',
+  },
+};
 
 // ── SSS (FAQ) Verileri ──
 const HOME_FAQS = [
@@ -43,74 +52,18 @@ const HOME_FAQS = [
 
 const faqSchemaData = getFaqSchema(HOME_FAQS);
 
-export default function HomePage() {
-  const [banners, setBanners] = useState<ConceptBannersMap>(initialConceptBanners);
-  const [carouselIndex, setCarouselIndex] = useState(0);
-  const [products, setProducts] = useState<CatalogProductItem[]>([]);
+export default async function HomePage() {
+  const banners = await getConceptBannersServer();
+  const products = ALL_CATALOG_PRODUCTS;
 
-  // Dinamik Katalog & Supabase Bulut / LocalStorage Senkronizasyonu
-  useEffect(() => {
-    setProducts(getClientCatalogProducts());
+  const hero = banners?.hero || initialConceptBanners?.hero || {};
+  const cat1 = banners?.category_1 || initialConceptBanners?.category_1 || {};
+  const cat2 = banners?.category_2 || initialConceptBanners?.category_2 || {};
+  const cat3 = banners?.category_3 || initialConceptBanners?.category_3 || {};
+  const show1 = banners?.showcase_1 || initialConceptBanners?.showcase_1 || {};
+  const show2 = banners?.showcase_2 || initialConceptBanners?.showcase_2 || {};
 
-    if (typeof window !== 'undefined') {
-      // 1. Önce localStorage'dan hızlıca yükle (anlık gösterim)
-      const saved = localStorage.getItem('safirya_concept_banners');
-      if (saved) {
-        try {
-          const parsed = JSON.parse(saved);
-          setBanners({ ...initialConceptBanners, ...parsed });
-        } catch {}
-      }
-
-      // 2. Ardından sunucudan / buluttan (Supabase) en güncel bannerları çek (Tüm cihazlar & Mobil eşitlenir)
-      fetch('/api/banners')
-        .then((res) => res.json())
-        .then((data) => {
-          if (data.success && data.banners && Object.keys(data.banners).length > 0) {
-            setBanners((prev) => {
-              const updated = { ...prev, ...data.banners };
-              try {
-                localStorage.setItem('safirya_concept_banners', JSON.stringify(updated));
-              } catch {}
-              return updated;
-            });
-          }
-        })
-        .catch((err) => {
-          console.warn('Bulut banner senkronizasyon hatası:', err);
-        });
-
-      const handleUpdate = (e: Event) => {
-        const customEvent = e as CustomEvent<ConceptBannersMap>;
-        if (customEvent.detail) {
-          setBanners(customEvent.detail);
-        }
-      };
-
-      const handleProductsUpdate = () => {
-        setProducts(getClientCatalogProducts());
-      };
-
-      window.addEventListener('safirya_concept_banners_updated', handleUpdate);
-      window.addEventListener('safirya_products_updated', handleProductsUpdate);
-      return () => {
-        window.removeEventListener('safirya_concept_banners_updated', handleUpdate);
-        window.removeEventListener('safirya_products_updated', handleProductsUpdate);
-      };
-    }
-  }, []);
-
-  const hero = banners.hero || initialConceptBanners.hero;
-  const cat1 = banners.category_1 || initialConceptBanners.category_1;
-  const cat2 = banners.category_2 || initialConceptBanners.category_2;
-  const cat3 = banners.category_3 || initialConceptBanners.category_3;
-  const show1 = banners.showcase_1 || initialConceptBanners.showcase_1;
-  const show2 = banners.showcase_2 || initialConceptBanners.showcase_2;
-
-  // Seçilmiş ve Vitrin Ürünleri
-  const selectedProducts = products.length > 0 ? products : [];
-
-  const showcase1CategorySlug = show1.categorySlug || 'dogal-mumlar';
+  const showcase1CategorySlug = show1?.categorySlug || 'dogal-mumlar';
   let showcase1Products = products
     .filter((p) => p.categorySlug === showcase1CategorySlug || p.categoryName?.toLowerCase().includes('mum'))
     .slice(0, 3);
@@ -118,7 +71,7 @@ export default function HomePage() {
     showcase1Products = products.slice(0, 3);
   }
 
-  const showcase2CategorySlug = show2.categorySlug || 'epoksi-tasarimlar';
+  const showcase2CategorySlug = show2?.categorySlug || 'epoksi-tasarimlar';
   let showcase2Products = products
     .filter(
       (p) =>
@@ -133,18 +86,9 @@ export default function HomePage() {
     showcase2Products = products.slice(3, 6).length > 0 ? products.slice(3, 6) : products.slice(0, 3);
   }
 
-  // Carousel kontrol fonksiyonları
-  const nextSlide = () => {
-    if (selectedProducts.length <= 4) return;
-    setCarouselIndex((prev) => (prev + 1 >= selectedProducts.length - 3 ? 0 : prev + 1));
-  };
-  const prevSlide = () => {
-    if (selectedProducts.length <= 4) return;
-    setCarouselIndex((prev) => (prev - 1 < 0 ? Math.max(0, selectedProducts.length - 4) : prev - 1));
-  };
-
   return (
     <div className="bg-white text-[#231B18] pb-20 space-y-12 sm:space-y-16">
+      <HomeClientBannerSync />
 
       {/* ════════════════════════════════════════════════════════════════
           1. KONSEPT ALANI 1: ANA HERO BANNER
@@ -155,19 +99,16 @@ export default function HomePage() {
           {hero.imageUrl || hero.mobileImageUrl ? (
             /* Görsel Yüklüyse: Tam Ekran Konsept Banner */
             <div className="relative w-full overflow-hidden rounded-xs bg-stone-100 min-h-[380px] sm:min-h-[480px] lg:min-h-[540px] flex items-center group">
-              <picture className="absolute inset-0 w-full h-full">
-                {hero.mobileImageUrl && (
-                  <source media="(max-width: 767px)" srcSet={hero.mobileImageUrl} />
-                )}
-                {hero.imageUrl && (
-                  <source media="(min-width: 768px)" srcSet={hero.imageUrl} />
-                )}
-                <img
-                  src={hero.imageUrl || hero.mobileImageUrl}
+              <div className="absolute inset-0 w-full h-full">
+                <Image
+                  src={hero.imageUrl || hero.mobileImageUrl || ''}
                   alt={hero.title || 'Safirya Banner'}
+                  fill
+                  priority
+                  sizes="(max-width: 1400px) 100vw, 1400px"
                   className="w-full h-full object-cover group-hover:scale-101 transition-transform duration-700"
                 />
-              </picture>
+              </div>
               <div className="absolute inset-0 bg-gradient-to-t sm:bg-gradient-to-r from-white/80 via-white/40 to-transparent sm:w-2/3" />
               
               <div className="relative z-10 p-6 sm:p-14 max-w-xl space-y-3 sm:space-y-4">
@@ -303,23 +244,17 @@ export default function HomePage() {
               <div className="relative aspect-square w-full overflow-hidden rounded-xs bg-[#FAF8F5] border border-stone-200/80 flex items-center justify-center">
                 {banner.imageUrl || banner.mobileImageUrl ? (
                   <>
-                    <picture className="w-full h-full">
-                      {banner.mobileImageUrl && (
-                        <source media="(max-width: 767px)" srcSet={banner.mobileImageUrl} />
-                      )}
-                      {banner.imageUrl && (
-                        <source media="(min-width: 768px)" srcSet={banner.imageUrl} />
-                      )}
-                      <img
-                        src={banner.imageUrl || banner.mobileImageUrl}
-                        alt={banner.title || fallbackTitle}
-                        className="w-full h-full object-cover group-hover:scale-103 transition-transform duration-700"
-                      />
-                    </picture>
+                    <Image
+                      src={banner.imageUrl || banner.mobileImageUrl || ''}
+                      alt={banner.title || fallbackTitle}
+                      fill
+                      sizes="(max-width: 768px) 100vw, 33vw"
+                      className="w-full h-full object-cover group-hover:scale-103 transition-transform duration-700"
+                    />
                     <div className="absolute inset-0 bg-black/15 group-hover:bg-black/25 transition-colors" />
                     
                     {/* Görsel Üstü Buton */}
-                    <div className="absolute inset-x-0 bottom-6 flex justify-center">
+                    <div className="absolute inset-x-0 bottom-6 flex justify-center z-10">
                       <Link
                         href={banner.buttonLink || defaultLink}
                         className="bg-white/95 text-[#231B18] hover:bg-white text-[11px] uppercase tracking-widest font-medium px-5 py-2.5 rounded-none shadow-sm transition"
@@ -362,59 +297,9 @@ export default function HomePage() {
       </section>
 
       {/* ════════════════════════════════════════════════════════════════
-          4. "SİZİN İÇİN SEÇTİKLERİMİZ" (Ürün Sliderı / Grid)
+          4. "SİZİN İÇİN SEÇTİKLERİMİZ" (İnteraktif İstemci Carousel)
       ════════════════════════════════════════════════════════════════ */}
-      {selectedProducts.length > 0 && (
-        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
-          <div className="text-center mb-8">
-            <h2 className="font-serif text-2xl sm:text-3xl text-[#231B18] font-normal tracking-tight">
-              Sizin İçin Seçtiklerimiz
-            </h2>
-            <div className="w-12 h-0.5 bg-[#C85A32] mx-auto mt-2" />
-          </div>
-
-          <div className="relative">
-            {/* Desktop Oklar */}
-            {selectedProducts.length > 4 && (
-              <>
-                <button
-                  onClick={prevSlide}
-                  className="hidden md:flex absolute -left-4 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full bg-white border border-stone-200 shadow-md items-center justify-center text-[#231B18] hover:text-[#C85A32] transition cursor-pointer"
-                  aria-label="Önceki Ürünler"
-                >
-                  <ChevronLeft className="w-5 h-5" />
-                </button>
-                <button
-                  onClick={nextSlide}
-                  className="hidden md:flex absolute -right-4 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full bg-white border border-stone-200 shadow-md items-center justify-center text-[#231B18] hover:text-[#C85A32] transition cursor-pointer"
-                  aria-label="Sonraki Ürünler"
-                >
-                  <ChevronRight className="w-5 h-5" />
-                </button>
-              </>
-            )}
-
-            {/* Ürün Listesi */}
-            <div className="overflow-x-auto md:overflow-hidden pb-4 md:pb-0 scrollbar-none">
-              <div
-                className="flex md:grid md:grid-cols-4 lg:grid-cols-5 gap-4 transition-transform duration-500 ease-out"
-                style={{
-                  transform:
-                    typeof window !== 'undefined' && window.innerWidth >= 768 && selectedProducts.length > 4
-                      ? `translateX(-${carouselIndex * 20}%)`
-                      : 'none',
-                }}
-              >
-                {selectedProducts.map((prod) => (
-                  <div key={prod.id} className="min-w-[200px] sm:min-w-[220px] md:min-w-0 shrink-0">
-                    <ProductCard product={prod} variant="simple" />
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </section>
-      )}
+      <FeaturedProductsCarousel products={products} />
 
       {/* ════════════════════════════════════════════════════════════════
           5. KONSEPT ALANI 3: VİTRİN 1 (Mum & Doğal Koleksiyon)
@@ -427,20 +312,14 @@ export default function HomePage() {
             <div className="relative aspect-[4/3] w-full overflow-hidden rounded-xs bg-[#FAF8F5] border border-stone-200/80 flex items-center justify-center group">
               {show1.imageUrl || show1.mobileImageUrl ? (
                 <>
-                  <picture className="w-full h-full">
-                    {show1.mobileImageUrl && (
-                      <source media="(max-width: 767px)" srcSet={show1.mobileImageUrl} />
-                    )}
-                    {show1.imageUrl && (
-                      <source media="(min-width: 768px)" srcSet={show1.imageUrl} />
-                    )}
-                    <img
-                      src={show1.imageUrl || show1.mobileImageUrl}
-                      alt={show1.title || 'Safirya Vitrin'}
-                      className="w-full h-full object-cover group-hover:scale-102 transition-transform duration-700"
-                    />
-                  </picture>
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/10 to-transparent flex flex-col justify-end p-5 sm:p-8 text-white">
+                  <Image
+                    src={show1.imageUrl || show1.mobileImageUrl || ''}
+                    alt={show1.title || 'Safirya Vitrin'}
+                    fill
+                    sizes="(max-width: 1024px) 100vw, 50vw"
+                    className="w-full h-full object-cover group-hover:scale-102 transition-transform duration-700"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/10 to-transparent flex flex-col justify-end p-5 sm:p-8 text-white z-10">
                     {show1.subtitle && (
                       <span className="text-[10px] sm:text-[11px] font-sans uppercase tracking-[0.2em] text-white/90 font-medium">
                         {show1.subtitle}
@@ -508,20 +387,14 @@ export default function HomePage() {
             <div className="relative aspect-[4/3] w-full overflow-hidden rounded-xs bg-[#FAF8F5] border border-stone-200/80 flex items-center justify-center group">
               {show2.imageUrl || show2.mobileImageUrl ? (
                 <>
-                  <picture className="w-full h-full">
-                    {show2.mobileImageUrl && (
-                      <source media="(max-width: 767px)" srcSet={show2.mobileImageUrl} />
-                    )}
-                    {show2.imageUrl && (
-                      <source media="(min-width: 768px)" srcSet={show2.imageUrl} />
-                    )}
-                    <img
-                      src={show2.imageUrl || show2.mobileImageUrl}
-                      alt={show2.title || 'Safirya Vitrin'}
-                      className="w-full h-full object-cover group-hover:scale-102 transition-transform duration-700"
-                    />
-                  </picture>
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/10 to-transparent flex flex-col justify-end p-5 sm:p-8 text-white">
+                  <Image
+                    src={show2.imageUrl || show2.mobileImageUrl || ''}
+                    alt={show2.title || 'Safirya Vitrin'}
+                    fill
+                    sizes="(max-width: 1024px) 100vw, 50vw"
+                    className="w-full h-full object-cover group-hover:scale-102 transition-transform duration-700"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/10 to-transparent flex flex-col justify-end p-5 sm:p-8 text-white z-10">
                     {show2.subtitle && (
                       <span className="text-[10px] sm:text-[11px] font-sans uppercase tracking-[0.2em] text-white/90 font-medium">
                         {show2.subtitle}
