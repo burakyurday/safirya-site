@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
-import nodemailer from 'nodemailer';
 import { generateSafiryaEmailHtml } from '@/lib/notifications/email';
 import { getAdminSessionServer } from '@/lib/adminAuth';
+import { sendEmail } from '@/lib/email/sender';
 
 export async function POST(req: Request) {
   try {
@@ -39,110 +39,38 @@ export async function POST(req: Request) {
       caption,
     });
 
-    // SMTP ayarları
-    const smtpHost = settings?.smtpHost || process.env.SMTP_HOST;
-    const smtpPort = Number(settings?.smtpPort || process.env.SMTP_PORT || 587);
-    const smtpUser = settings?.smtpUser || process.env.SMTP_USER;
-    const smtpPass = settings?.smtpPass || process.env.SMTP_PASS;
-    const rawFrom =
-      settings?.smtpFrom ||
-      process.env.SMTP_FROM ||
-      'Safirya Atölyesi <bildirim@safirya.tr>';
-    const cleanFrom = rawFrom.replace(/[\r\n\t]+/g, ' ').replace(/\s+/g, ' ').trim();
-
-    const resendApiKey =
-      (smtpPass?.startsWith('re_') ? smtpPass : null) ||
-      process.env.RESEND_API_KEY ||
-      (smtpUser?.startsWith('re_') ? smtpUser : null);
-
-    if (resendApiKey) {
-      try {
-        const sendToResend = async (fromAddress: string) => {
-          return await fetch('https://api.resend.com/emails', {
-            method: 'POST',
-            headers: {
-              Authorization: `Bearer ${resendApiKey}`,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              from: fromAddress,
-              to: customerEmail,
-              subject: `🎨 Siparişiniz ${stageName} Aşamasında! (#${orderNumber}) - Safirya Atölyesi`,
-              html: htmlContent,
-            }),
-          });
-        };
-
-        let resendRes = await sendToResend(cleanFrom.includes('@') ? cleanFrom : 'Safirya Atölyesi <bildirim@safirya.tr>');
-        let resendData = await resendRes.json();
-
-        if (!resendRes.ok && (resendData?.message?.toLowerCase().includes('domain') || resendRes.status === 403)) {
-          const fallbackRes = await sendToResend('Safirya Atölyesi <bildirim@safirya.tr>');
-          const fallbackData = await fallbackRes.json();
-          if (fallbackRes.ok && fallbackData.id) {
-            resendRes = fallbackRes;
-            resendData = fallbackData;
-          }
-        }
-
-        if (resendRes.ok && resendData.id) {
-          return NextResponse.json({
-            success: true,
-            message: `E-posta Resend üzerinden iletildi (${resendData.id})`,
-            simulated: false,
-          });
-        }
-      } catch (err: any) {
-        console.warn('Resend API aşama bildirim hatası:', err.message);
-      }
-    }
-
-    if (smtpHost && smtpUser && smtpPass) {
-      try {
-        const transporter = nodemailer.createTransport({
-          host: smtpHost,
-          port: smtpPort,
-          secure: smtpPort === 465,
-          auth: {
-            user: smtpUser,
-            pass: smtpPass,
-          },
-        });
-
-        const info = await transporter.sendMail({
-          from: cleanFrom,
-          to: customerEmail,
-          subject: `🎨 Siparişiniz ${stageName} Aşamasında! (#${orderNumber}) - Safirya Atölyesi`,
-          html: htmlContent,
-        });
-
-        return NextResponse.json({
-          success: true,
-          message: `E-posta başarıyla iletildi (${info.messageId})`,
-          simulated: false,
-        });
-      } catch (err: any) {
-        console.error('SMTP Gönderim Hatası:', err);
-        return NextResponse.json({
-          success: true,
-          message: `SMTP Hatası (${err.message}). Simülasyon modunda kaydedildi.`,
-          simulated: true,
-        });
-      }
-    }
-
-    // SMTP yapılandırılmamışsa simülasyon modu
-    console.log(`[Safirya E-Posta Servisi] Simüle Bildirim Gönderildi:`);
-    console.log(`  -> Alıcı: ${customerEmail} (${customerName})`);
-    console.log(`  -> Sipariş: #${orderNumber}`);
-    console.log(`  -> Aşama: ${stageName}`);
-    if (photoUrl) console.log(`  -> Fotoğraf: ${photoUrl}`);
-
-    return NextResponse.json({
-      success: true,
-      message: `${customerEmail} adresine kurumsal e-posta bildirimi başarıyla iletildi (Geliştirme / Simülasyon Modu).`,
-      simulated: true,
+    const emailResult = await sendEmail({
+      to: customerEmail,
+      subject: `🎨 Siparişiniz ${stageName} Aşamasında! (#${orderNumber}) - Safirya Atölyesi`,
+      html: htmlContent,
+      from: settings?.smtpFrom,
+      apiKey: settings?.smtpPass,
+      smtpSettings: {
+        host: settings?.smtpHost,
+        port: Number(settings?.smtpPort),
+        user: settings?.smtpUser,
+        pass: settings?.smtpPass,
+      },
     });
+
+    if (emailResult.success) {
+      return NextResponse.json({
+        success: true,
+        message: `E-posta ${emailResult.provider === 'resend' ? 'Resend' : 'SMTP'} üzerinden iletildi (${emailResult.messageId})`,
+        simulated: false,
+        messageId: emailResult.messageId,
+      });
+    }
+
+    console.error(`[Aşama Bildirim Hatası] ${customerEmail} adresine e-posta gönderilemedi: ${emailResult.error}`);
+    return NextResponse.json(
+      {
+        success: false,
+        error: emailResult.error || 'Aşama e-postası iletilemedi.',
+        simulated: false,
+      },
+      { status: 500 }
+    );
   } catch (err: any) {
     console.error('API Bildirim Hatası:', err);
     return NextResponse.json(

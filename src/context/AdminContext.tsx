@@ -321,6 +321,110 @@ const initialKanbanColumns: KanbanColumn[] = [
   { id: 'col-qc', title: 'Kalite Kontrol & Paketleme', color: 'emerald', sortOrder: 5 },
 ];
 
+export function normalizeAdminOrder(raw: any, index: number = 0): AdminOrder {
+  const orderNumber = raw.orderNumber || `SFR-2026-${String(9000 + index)}`;
+  const id = raw.id || `ord-${orderNumber}`;
+  const totalAmount = Number(raw.totalAmount || 0);
+
+  // Adres normalizasyonu
+  let shippingAddress: any;
+  if (typeof raw.shippingAddress === 'string') {
+    shippingAddress = {
+      fullName: raw.customerName || raw.guestName || 'Müşteri',
+      phone: raw.customerPhone || raw.guestPhone || raw.phone || '',
+      address: raw.shippingAddress,
+      district: '',
+      city: '',
+      fullAddress: raw.shippingAddress,
+    };
+  } else if (raw.shippingAddress && typeof raw.shippingAddress === 'object') {
+    shippingAddress = {
+      fullName: raw.shippingAddress.fullName || raw.customerName || raw.guestName || 'Müşteri',
+      phone: raw.shippingAddress.phone || raw.customerPhone || raw.guestPhone || raw.phone || '',
+      address: raw.shippingAddress.address || raw.shippingAddress.fullAddress || '',
+      district: raw.shippingAddress.district || '',
+      city: raw.shippingAddress.city || '',
+      zipCode: raw.shippingAddress.zipCode || '',
+      fullAddress:
+        raw.shippingAddress.fullAddress ||
+        [raw.shippingAddress.address, raw.shippingAddress.district, raw.shippingAddress.city]
+          .filter(Boolean)
+          .join(' '),
+    };
+  } else {
+    shippingAddress = {
+      fullName: raw.customerName || 'Müşteri',
+      phone: raw.customerPhone || '',
+      address: 'Adres Belirtilmemiş',
+      district: '',
+      city: '',
+      fullAddress: 'Adres Belirtilmemiş',
+    };
+  }
+
+  // Kalemler normalizasyonu
+  const rawItems = Array.isArray(raw.items) ? raw.items : [];
+  const items = rawItems.map((it: any, itemIdx: number) => {
+    const quantity = Number(it.quantity) || 1;
+    const unitPrice = Number(it.unitPrice ?? it.price ?? (it.totalAmount ? it.totalAmount / quantity : 0));
+    const itemTotal = Number(it.totalAmount ?? (unitPrice * quantity));
+    const productName = it.productName || it.name || 'Özel Tasarım Ürün';
+
+    let customization = it.customization;
+    if (!customization && (it.customText || it.scentNote || it.colorPalette)) {
+      customization = {
+        customText: it.customText,
+        selectedScent: it.scentNote,
+        selectedColor: it.colorPalette,
+        tagDesignType: it.tagDesignType,
+        extraNote: it.extraNote,
+      };
+    }
+
+    return {
+      productId: it.productId || it.id || `prod-${itemIdx}`,
+      productName,
+      variantTitle: it.variantTitle || it.variantName,
+      quantity,
+      unitPrice,
+      totalAmount: itemTotal,
+      customization,
+    };
+  });
+
+  return {
+    ...raw,
+    id,
+    orderNumber,
+    customerName: raw.customerName || raw.guestName || 'Müşteri',
+    customerEmail: raw.customerEmail || raw.guestEmail || raw.email || '',
+    customerPhone: raw.customerPhone || raw.guestPhone || raw.phone || '',
+    channel: raw.channel || 'WEB',
+    stage: raw.stage || 'SIPARIS_ALINDI',
+    paymentStatus: raw.paymentStatus || 'BEKLIYOR',
+    paymentMethod: raw.paymentMethod || 'KREDI_KARTI',
+    subtotal: Number(raw.subtotal) || totalAmount,
+    discountTotal: Number(raw.discountTotal) || 0,
+    shippingFee: Number(raw.shippingFee) || 0,
+    isGiftWrapped: Boolean(raw.isGiftWrapped),
+    giftWrapFee: Number(raw.giftWrapFee) || 0,
+    giftNote: raw.giftNote,
+    totalAmount,
+    shippingAddress,
+    items,
+    invoiceStatus: raw.invoiceStatus || 'BEKLIYOR',
+    invoiceNo: raw.invoiceNo,
+    contractStatus: raw.contractStatus || (items.some((i: any) => i.customization?.customText) ? 'ONAYLANDI' : undefined),
+    contractVerificationCode: raw.contractVerificationCode,
+    contractSignedAt: raw.contractSignedAt,
+    contractSignedBy: raw.contractSignedBy,
+    signatureDataUrl: raw.signatureDataUrl,
+    createdAt: raw.createdAt || raw.date || 'Yeni',
+    cargoCompany: raw.cargoCompany,
+    cargoTrackingNo: raw.cargoTrackingNo || raw.trackingCode,
+  };
+}
+
 // Siparişler Listesi
 const initialOrders: AdminOrder[] = [
   {
@@ -762,7 +866,7 @@ const initialSettings: AdminSettings = {
   contactEmail: 'destek@safirya.tr',
   contactPhone: '+90 (212) 555 7234',
   whatsappNumber: '+90 532 555 7234',
-  instagramHandle: '@safirya35353535',
+  instagramHandle: '@safirya.tr',
   atelierAddress: 'Karşıyaka / İzmir (Yalnızca Online E-Ticaret Hizmeti)',
   exitIntentEnabled: true,
   exitIntentTitle: 'Atölyemizden Ayrılmadan Önce %10 Tanışma İndirimi!',
@@ -1187,23 +1291,26 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
 
   const [orders, setOrders] = useState<AdminOrder[]>(() => {
     if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('safirya_orders');
+      const saved = localStorage.getItem('safirya_orders') || localStorage.getItem('safirya_admin_orders');
       if (saved) {
         try {
           const parsed = JSON.parse(saved);
-          if (Array.isArray(parsed)) {
-            return parsed.filter(
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            const cleaned = parsed.filter(
               (o: any) =>
                 o &&
-                !['SFR-2026-1042', 'SFR-2026-1043', 'SFR-2026-8921'].includes(o.orderNumber) &&
+                !['SFR-2026-1042', 'SFR-2026-1043'].includes(o.orderNumber) &&
                 o.customerName !== 'Elif Kaya' &&
                 !String(o.customerEmail || o.email || '').includes('elif.kaya')
             );
+            if (cleaned.length > 0) {
+              return cleaned.map((o: any, idx: number) => normalizeAdminOrder(o, idx));
+            }
           }
         } catch {}
       }
     }
-    return initialOrders;
+    return initialOrders.map((o, idx) => normalizeAdminOrder(o, idx));
   });
 
   const [kanbanColumns, setKanbanColumns] = useState<KanbanColumn[]>(() => {
@@ -1429,48 +1536,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
 
               data.orders.forEach((apiOrder: any) => {
                 if (!existingIds.has(apiOrder.orderNumber)) {
-                  newOrders.push({
-                    id: apiOrder.id || `ord-${apiOrder.orderNumber}`,
-                    orderNumber: apiOrder.orderNumber,
-                    customerName: apiOrder.customerName || apiOrder.guestName || 'Müşteri',
-                    customerEmail: apiOrder.customerEmail || apiOrder.guestEmail || apiOrder.email || '',
-                    customerPhone: apiOrder.customerPhone || apiOrder.guestPhone || apiOrder.phone || '',
-                    channel: 'WEB',
-                    stage: apiOrder.stage || 'SIPARIS_ALINDI',
-                    paymentStatus: apiOrder.paymentStatus || 'BEKLIYOR',
-                    paymentMethod: apiOrder.paymentMethod || 'HAVALE_EFT',
-                    subtotal: Number(apiOrder.subtotal) || Number(apiOrder.totalAmount) || 0,
-                    discountTotal: Number(apiOrder.discountTotal) || 0,
-                    shippingFee: Number(apiOrder.shippingFee) || 0,
-                    giftWrapFee: Number(apiOrder.giftWrapFee) || 0,
-                    totalAmount: Number(apiOrder.totalAmount) || 0,
-                    shippingAddress: {
-                      fullName: apiOrder.customerName || apiOrder.guestName || 'Müşteri',
-                      phone: apiOrder.customerPhone || apiOrder.guestPhone || apiOrder.phone || '',
-                      address: apiOrder.shippingAddress?.address || apiOrder.shippingAddress?.fullAddress || '',
-                      district: apiOrder.shippingAddress?.district || '',
-                      city: apiOrder.shippingAddress?.city || 'İstanbul',
-                    },
-                    items: (apiOrder.items || []).map((it: any) => ({
-                      productName: it.productName || it.name,
-                      variantTitle: it.variantName || it.variantTitle,
-                      quantity: Number(it.quantity) || 1,
-                      unitPrice: Number(it.unitPrice) || 0,
-                      totalAmount: Number(it.totalAmount) || 0,
-                    })),
-                    isGiftWrapped: Boolean(apiOrder.isGiftWrapped),
-                    giftNote: apiOrder.giftNote,
-                    createdAt: apiOrder.createdAt
-                      ? new Date(apiOrder.createdAt).toLocaleDateString('tr-TR', {
-                          day: 'numeric',
-                          month: 'short',
-                          year: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })
-                      : 'Yeni',
-                    invoiceStatus: 'BEKLIYOR',
-                  });
+                  newOrders.push(normalizeAdminOrder(apiOrder, newOrders.length));
                 }
               });
 
@@ -1478,6 +1544,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
               const merged = [...newOrders, ...prev];
               if (typeof window !== 'undefined') {
                 localStorage.setItem('safirya_orders', JSON.stringify(merged));
+                localStorage.setItem('safirya_admin_orders', JSON.stringify(merged));
               }
               return merged;
             });
@@ -1559,6 +1626,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (typeof window !== 'undefined') {
       localStorage.setItem('safirya_orders', JSON.stringify(orders));
+      localStorage.setItem('safirya_admin_orders', JSON.stringify(orders));
     }
   }, [orders]);
 
@@ -1927,22 +1995,40 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
     stage: OrderStage,
     cargoInfo?: { cargoCompany?: string; cargoTrackingNo?: string }
   ) => {
-    const orderToUpdate = orders.find((o) => o.id === id);
+    if (!id) return;
+    const orderToUpdate = orders.find(
+      (o) => (Boolean(o.id) && o.id === id) || (Boolean(o.orderNumber) && o.orderNumber === id)
+    );
+
     setOrders((prev) =>
-      prev.map((o) =>
-        o.id === id
-          ? {
-              ...o,
-              stage,
-              ...(cargoInfo?.cargoCompany ? { cargoCompany: cargoInfo.cargoCompany } : {}),
-              ...(cargoInfo?.cargoTrackingNo !== undefined ? { cargoTrackingNo: cargoInfo.cargoTrackingNo } : {}),
-            }
-          : o
-      )
+      prev.map((o) => {
+        const isMatch =
+          (Boolean(o.id) && o.id === id) ||
+          (Boolean(o.orderNumber) && o.orderNumber === id);
+        if (!isMatch) return o;
+        return {
+          ...o,
+          stage,
+          ...(cargoInfo?.cargoCompany ? { cargoCompany: cargoInfo.cargoCompany } : {}),
+          ...(cargoInfo?.cargoTrackingNo !== undefined ? { cargoTrackingNo: cargoInfo.cargoTrackingNo } : {}),
+        };
+      })
     );
     showToast(`Sipariş aşaması güncellendi.`);
 
     if (orderToUpdate) {
+      // Sunucuya PATCH isteği gönder
+      fetch('/api/orders', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          orderNumber: orderToUpdate.orderNumber,
+          stage,
+          cargoCompany: cargoInfo?.cargoCompany,
+          trackingCode: cargoInfo?.cargoTrackingNo,
+        }),
+      }).catch((err) => console.warn('Sunucu sipariş güncelleme uyarısı:', err));
+
       triggerOrderStageNotification({
         order: {
           ...orderToUpdate,
@@ -1961,32 +2047,46 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
   };
 
   const generateInvoice = (orderId: string): AdminInvoice => {
-    const order = orders.find((o) => o.id === orderId);
+    const order = orders.find(
+      (o) => (Boolean(o.id) && o.id === orderId) || (Boolean(o.orderNumber) && o.orderNumber === orderId)
+    );
     if (!order) throw new Error('Sipariş bulunamadı.');
 
     const invoiceCount = invoices.length + 45;
-    const invoiceNo = `SFR2026${String(invoiceCount).padStart(8, '0')}`;
+    const invoiceNo = order.invoiceNo || `SFR2026${String(invoiceCount).padStart(8, '0')}`;
     const today = getFormattedDateTime();
 
-    const totalAmount = order.totalAmount;
+    const totalAmount = Number(order.totalAmount || 0);
     const subtotal = Number((totalAmount / 1.2).toFixed(2));
     const taxAmount = Number((totalAmount - subtotal).toFixed(2));
 
-    const invoiceItems = order.items.map((i) => ({
-      name: i.productName + (i.variantTitle ? ` (${i.variantTitle})` : ''),
-      quantity: i.quantity,
-      unitPrice: Number((i.unitPrice / 1.2).toFixed(2)),
-      totalAmount: Number((i.totalAmount / 1.2).toFixed(2)),
-    }));
+    const invoiceItems = (order.items || []).map((i: any) => {
+      const quantity = Number(i.quantity) || 1;
+      const unitPrice = Number(i.unitPrice ?? i.price ?? (i.totalAmount ? i.totalAmount / quantity : 0));
+      const itemTotal = Number(i.totalAmount ?? (unitPrice * quantity));
+      const vatExcludedUnitPrice = Number((unitPrice / 1.2).toFixed(2));
+      const vatExcludedTotal = Number((itemTotal / 1.2).toFixed(2));
 
-    if (order.isGiftWrapped && order.giftWrapFee > 0) {
+      return {
+        name: (i.productName || i.name || 'Özel Tasarım Ürün') + (i.variantTitle ? ` (${i.variantTitle})` : ''),
+        quantity,
+        unitPrice: vatExcludedUnitPrice,
+        totalAmount: vatExcludedTotal,
+      };
+    });
+
+    if (order.isGiftWrapped && (order.giftWrapFee || 0) > 0) {
       invoiceItems.push({
         name: 'Özel Atölye Hediye Paketi & Notu',
         quantity: 1,
-        unitPrice: Number((order.giftWrapFee / 1.2).toFixed(2)),
-        totalAmount: Number((order.giftWrapFee / 1.2).toFixed(2)),
+        unitPrice: Number(((order.giftWrapFee || 0) / 1.2).toFixed(2)),
+        totalAmount: Number(((order.giftWrapFee || 0) / 1.2).toFixed(2)),
       });
     }
+
+    const customerAddress = typeof order.shippingAddress === 'string'
+      ? order.shippingAddress
+      : [order.shippingAddress?.address || (order.shippingAddress as any)?.fullAddress, order.shippingAddress?.district, order.shippingAddress?.city].filter(Boolean).join(' ') || 'Adres Belirtilmemiş';
 
     const newInvoice: AdminInvoice = {
       id: createUniqueId('inv'),
@@ -1995,7 +2095,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
       orderNumber: order.orderNumber,
       type: 'SATIS',
       customerName: order.customerName,
-      customerAddress: `${order.shippingAddress.address} ${order.shippingAddress.district} / ${order.shippingAddress.city}`,
+      customerAddress,
       issueDate: today,
       subtotal,
       taxRate: 20,
@@ -2005,11 +2105,14 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
       items: invoiceItems,
     };
 
-    setInvoices((prev) => [newInvoice, ...prev]);
+    setInvoices((prev) => {
+      const filtered = prev.filter((inv) => inv.orderNumber !== order.orderNumber && inv.invoiceNo !== invoiceNo);
+      return [newInvoice, ...filtered];
+    });
 
     setOrders((prev) =>
       prev.map((o) =>
-        o.id === orderId
+        (Boolean(o.id) && o.id === order.id) || (Boolean(o.orderNumber) && o.orderNumber === order.orderNumber)
           ? { ...o, invoiceStatus: 'OLUSTURULDU', invoiceNo }
           : o
       )
@@ -2225,6 +2328,8 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
 
         if (result.email.success) {
           showToast(`✅ E-posta iletildi: ${result.email.message}`);
+        } else {
+          showToast(`⚠️ E-posta iletilemedi: ${result.email.message}`);
         }
 
         if (result.webhook) {

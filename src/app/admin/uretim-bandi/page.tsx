@@ -32,9 +32,11 @@ import {
   Check,
   Copy,
   ShieldCheck,
+  Download,
 } from 'lucide-react';
 import { useAdmin } from '@/context/AdminContext';
-import { AdminOrder, KanbanColumn, OrderStagePhoto } from '@/types/admin';
+import { AdminOrder, KanbanColumn, OrderStagePhoto, CustomContract } from '@/types/admin';
+import { downloadContractPdf, printContractA4 } from '@/lib/contractPdf';
 
 // Atölye Hazır Aşama Fotoğraf Örnekleri
 const PRESET_STAGE_PHOTOS = [
@@ -303,6 +305,91 @@ export default function UretimBandiPage() {
     setCopiedOrderId(orderId);
     showToast('Sözleşme onay bağlantısı panoya kopyalandı! Müşteriye iletebilirsiniz.');
     setTimeout(() => setCopiedOrderId(null), 2500);
+  };
+
+  // Kişiye Özel Üretim Sözleşmesi PDF İndir
+  const handleDownloadContractPdf = async (order: AdminOrder) => {
+    let contract = customContracts.find(
+      (c) => c.orderId === order.id || c.orderNumber === order.orderNumber
+    );
+
+    if (!contract && typeof window !== 'undefined') {
+      try {
+        const raw =
+          localStorage.getItem('safirya_custom_contracts') ||
+          localStorage.getItem('safirya_admin_contracts');
+        if (raw) {
+          const list = JSON.parse(raw);
+          contract = list.find(
+            (c: any) =>
+              c.orderId === order.id ||
+              c.orderNumber === order.orderNumber ||
+              (c.orderNumber &&
+                order.orderNumber &&
+                c.orderNumber.toUpperCase() === order.orderNumber.toUpperCase())
+          );
+        }
+      } catch {}
+    }
+
+    if (!contract) {
+      const customItems = order.items.filter(
+        (i) => i.customization?.customText || (i as any).customText
+      );
+      const firstCustom = customItems[0] || order.items[0];
+      contract = {
+        id: `cnt-${order.id}`,
+        orderId: order.id,
+        orderNumber: order.orderNumber,
+        customerName: order.customerName,
+        customerEmail: order.customerEmail,
+        customerPhone: order.customerPhone,
+        customerAddress: order.shippingAddress
+          ? `${order.shippingAddress.address || ''} ${order.shippingAddress.district || ''} / ${order.shippingAddress.city || ''}`
+          : undefined,
+        productName:
+          customItems.length > 0
+            ? customItems.map((i) => `${i.productName} (${i.quantity} Adet)`).join(', ')
+            : firstCustom?.productName || 'Kişiye Özel Tasarım Hediyelik',
+        quantity: customItems.reduce((acc, i) => acc + i.quantity, 0) || 1,
+        totalAmount: order.totalAmount,
+        customText:
+          customItems
+            .map((i) => i.customization?.customText || (i as any).customText)
+            .filter(Boolean)
+            .join(' | ') || 'Özel İsim Belirtilmedi',
+        scentNote: firstCustom?.customization?.selectedScent,
+        colorPalette: firstCustom?.customization?.selectedColor,
+        tagDesignType: firstCustom?.customization?.tagDesignType,
+        extraNotes: firstCustom?.customization?.extraNote,
+        status: order.contractStatus === 'ONAYLANDI' ? 'ONAYLANDI' : 'BEKLIYOR',
+        verificationCode: order.contractVerificationCode || `SOZ-${order.orderNumber}-OK`,
+        signedAt: order.contractSignedAt || order.createdAt.slice(0, 10),
+        signedBy: order.contractSignedBy || order.customerName,
+        signatureDataUrl: order.signatureDataUrl,
+        legalConsentChecked: true,
+        createdAt: order.createdAt,
+        agreedDeliveryDate: order.dueDate || '3-4 İş Günü',
+        items: order.items.map((i) => ({
+          productName: i.productName,
+          quantity: i.quantity,
+          unitPrice: i.unitPrice,
+          totalAmount: i.totalAmount,
+          customText: i.customization?.customText || (i as any).customText,
+          scentNote: i.customization?.selectedScent,
+          colorPalette: i.customization?.selectedColor,
+          tagDesignType: i.customization?.tagDesignType,
+          extraNote: i.customization?.extraNote,
+        })),
+      };
+    }
+
+    try {
+      await downloadContractPdf(contract, settings);
+      showToast(`Sözleşme PDF indirildi: #${order.orderNumber}`);
+    } catch (err: any) {
+      showToast('PDF indirilemedi: ' + (err.message || ''));
+    }
   };
 
   // Hızlı Kalıp Dökümü Modalını Aç
@@ -655,14 +742,25 @@ export default function UretimBandiPage() {
 
                                 {/* 2. Dijital Onaylı Sözleşme Rozeti */}
                                 {isContractApproved ? (
-                                  <Link
-                                    href={`/sozlesme-onay/${order.id}`}
-                                    title="Sözleşme müşteri tarafından onaylandı ve imzalandı. Belgeyi görüntüle."
-                                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 border border-emerald-200 font-bold hover:bg-emerald-100 transition"
-                                  >
-                                    <ShieldCheck className="w-3 h-3 text-emerald-600" />
-                                    <span>Sözleşme Onaylı</span>
-                                  </Link>
+                                  <div className="inline-flex items-center gap-1">
+                                    <Link
+                                      href={`/sozlesme-onay/${order.id}`}
+                                      title="Sözleşme müşteri tarafından onaylandı ve imzalandı. Belgeyi görüntüle."
+                                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 border border-emerald-200 font-bold hover:bg-emerald-100 transition"
+                                    >
+                                      <ShieldCheck className="w-3 h-3 text-emerald-600" />
+                                      <span>Sözleşme Onaylı</span>
+                                    </Link>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleDownloadContractPdf(order)}
+                                      title="Sözleşmeyi PDF Olarak İndir"
+                                      className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-white hover:bg-emerald-100 text-emerald-800 border border-emerald-300 font-bold transition text-[10px] cursor-pointer"
+                                    >
+                                      <Download className="w-3 h-3 text-emerald-700" />
+                                      <span>PDF</span>
+                                    </button>
+                                  </div>
                                 ) : isContractPending ? (
                                   <div className="inline-flex items-center gap-1 bg-amber-50 border border-amber-200 rounded px-1.5 py-0.5">
                                     <Link

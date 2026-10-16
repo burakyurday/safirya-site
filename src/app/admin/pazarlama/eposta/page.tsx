@@ -167,7 +167,7 @@ export default function EpostaPazarlamaPage() {
     brandTagline: settings?.brandTagline || 'El Yapımı Tasarım Atölyesi',
     storeName: settings?.storeName || 'Safirya Atölyesi',
     contactEmail: settings?.contactEmail || 'destek@safirya.tr',
-    instagramHandle: settings?.instagramHandle || '@safirya35353535',
+    instagramHandle: settings?.instagramHandle || '@safirya.tr',
     address: settings?.atelierAddress || 'Karşıyaka / İzmir (Online Zanaat Atölyesi)',
   };
 

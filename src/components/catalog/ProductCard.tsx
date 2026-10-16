@@ -2,6 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { Heart, ShoppingBag } from 'lucide-react';
 import { useStore } from '@/context/StoreContext';
 
@@ -41,11 +42,11 @@ export function ProductCard({ product, variant = 'simple' }: ProductCardProps) {
       {/* ── Görsel Alanı ── */}
       <div className="relative aspect-square sm:aspect-[4/5] overflow-hidden bg-[#FAF8F5] rounded-xs border border-stone-200/80">
         <Link href={`/urunler/${product.slug}`} tabIndex={-1} className="block w-full h-full">
-          <img
+          <Image
             src={product.image}
             alt={product.name}
-            loading="lazy"
-            decoding="async"
+            fill
+            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
             className="w-full h-full object-cover group-hover:scale-104 transition-transform duration-700 ease-out"
           />
         </Link>

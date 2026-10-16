@@ -23,12 +23,17 @@ import {
   ArrowRight,
 } from 'lucide-react';
 import { useAdmin } from '@/context/AdminContext';
-import { AdminOrder, AdminInvoice, OrderStage } from '@/types/admin';
+import { AdminOrder, AdminInvoice, OrderStage, CustomContract } from '@/types/admin';
+import ContractPreviewModal from '@/components/contract/ContractPreviewModal';
+import { printContractA4, downloadContractPdf } from '@/lib/contractPdf';
+import { printInvoiceA4, downloadInvoicePdf } from '@/lib/invoicePdf';
 
 export default function SiparislerPage() {
   const {
     orders,
     invoices,
+    customContracts,
+    settings,
     generateInvoice,
     updateOrderStage,
     cancelInvoice,
@@ -44,11 +49,51 @@ export default function SiparislerPage() {
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<AdminInvoice | null>(null);
   const [isInvoicePdfModalOpen, setIsInvoicePdfModalOpen] = useState(false);
+  const [isPrintingInvoice, setIsPrintingInvoice] = useState(false);
+  const [isDownloadingInvoice, setIsDownloadingInvoice] = useState(false);
+
+  // Sözleşme Modalı Durumları
+  const [selectedContract, setSelectedContract] = useState<CustomContract | null>(null);
+  const [isContractModalOpen, setIsContractModalOpen] = useState(false);
 
   // Kargo Modal Durumu
   const [cargoModalOrder, setCargoModalOrder] = useState<AdminOrder | null>(null);
   const [cargoCompanyInput, setCargoCompanyInput] = useState('Yurtiçi Kargo');
   const [cargoTrackingCodeInput, setCargoTrackingCodeInput] = useState('');
+
+  // Fatura A4 Yazdırma & İndirme Eylemleri
+  const handlePrintInvoice = async () => {
+    if (!selectedInvoice) return;
+    setIsPrintingInvoice(true);
+    try {
+      await printInvoiceA4(selectedInvoice, settings);
+    } catch (err) {
+      console.error('Fatura yazdırma hatası:', err);
+      window.print();
+    } finally {
+      setIsPrintingInvoice(false);
+    }
+  };
+
+  const handleDownloadInvoice = async () => {
+    if (!selectedInvoice) return;
+    setIsDownloadingInvoice(true);
+    try {
+      await downloadInvoicePdf(selectedInvoice, settings);
+    } catch (err) {
+      console.error('Fatura PDF indirme hatası:', err);
+      alert('PDF oluşturulamadı.');
+    } finally {
+      setIsDownloadingInvoice(false);
+    }
+  };
+
+  const formatAddress = (addr: any) => {
+    if (!addr) return 'Adres belirtilmemiş';
+    if (typeof addr === 'string') return addr;
+    const parts = [addr.address || addr.fullAddress, addr.district, addr.city].filter(Boolean);
+    return parts.join(' ') || 'Adres belirtilmemiş';
+  };
 
   const handleStageChange = (order: AdminOrder, newStage: OrderStage) => {
     if (newStage === 'KARGOYA_VERILDI') {
@@ -56,14 +101,15 @@ export default function SiparislerPage() {
       setCargoCompanyInput(order.cargoCompany || 'Yurtiçi Kargo');
       setCargoTrackingCodeInput(order.cargoTrackingNo || '');
     } else {
-      updateOrderStage(order.id, newStage);
+      updateOrderStage(order.id || order.orderNumber, newStage);
     }
   };
 
   const handleConfirmCargo = (e: React.FormEvent) => {
     e.preventDefault();
     if (!cargoModalOrder) return;
-    updateOrderStage(cargoModalOrder.id, 'KARGOYA_VERILDI', {
+    const targetId = cargoModalOrder.id || cargoModalOrder.orderNumber;
+    updateOrderStage(targetId, 'KARGOYA_VERILDI', {
       cargoCompany: cargoCompanyInput.trim(),
       cargoTrackingNo: cargoTrackingCodeInput.trim() || undefined,
     });
@@ -73,9 +119,9 @@ export default function SiparislerPage() {
   // Filtreleme
   const filteredOrders = orders.filter((o) => {
     const matchesSearch =
-      o.orderNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      o.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      o.customerEmail.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (o.orderNumber && o.orderNumber.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (o.customerName && o.customerName.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (o.customerEmail && o.customerEmail.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (o.invoiceNo && o.invoiceNo.toLowerCase().includes(searchTerm.toLowerCase()));
 
     const matchesStage = stageFilter === 'ALL' || o.stage === stageFilter;
@@ -96,14 +142,143 @@ export default function SiparislerPage() {
   };
 
   const handleViewInvoice = (order: AdminOrder) => {
-    if (!order.invoiceNo) return;
-    const inv = invoices.find((i) => i.invoiceNo === order.invoiceNo);
+    // 1. Önce Context'teki faturalarda ara
+    let inv = invoices.find(
+      (i) => (order.invoiceNo && i.invoiceNo === order.invoiceNo) || i.orderNumber === order.orderNumber
+    );
+
+    // 2. localStorage fallback
+    if (!inv && typeof window !== 'undefined') {
+      try {
+        const raw = localStorage.getItem('safirya_invoices');
+        if (raw) {
+          const list = JSON.parse(raw);
+          if (Array.isArray(list)) {
+            inv = list.find(
+              (i: any) =>
+                (order.invoiceNo && i.invoiceNo === order.invoiceNo) ||
+                i.orderNumber === order.orderNumber
+            );
+          }
+        }
+      } catch {}
+    }
+
     if (inv) {
       setSelectedInvoice(inv);
       setIsInvoicePdfModalOpen(true);
     } else {
-      // Siparişten sanal olarak göster
-      handleCreateInvoice(order.id);
+      // Siparişten sanal olarak oluşturup göster
+      handleCreateInvoice(order.id || order.orderNumber);
+    }
+  };
+
+  const findOrCreateContractForOrder = (order: AdminOrder): CustomContract => {
+    // 1. Önce AdminContext'te kayıtlı sözleşme var mı
+    let existing = customContracts.find(
+      (c) => (c.orderId && c.orderId === order.id) || c.orderNumber === order.orderNumber
+    );
+
+    // 2. localStorage fallback
+    if (!existing && typeof window !== 'undefined') {
+      try {
+        const raw =
+          localStorage.getItem('safirya_custom_contracts') ||
+          localStorage.getItem('safirya_admin_contracts');
+        if (raw) {
+          const list = JSON.parse(raw);
+          existing = list.find(
+            (c: any) =>
+              (c.orderId && c.orderId === order.id) ||
+              c.orderNumber === order.orderNumber ||
+              (c.orderNumber &&
+                order.orderNumber &&
+                c.orderNumber.toUpperCase() === order.orderNumber.toUpperCase())
+          );
+        }
+      } catch {}
+    }
+
+    if (existing) return existing;
+
+    const orderItems = order.items || [];
+    // 3. Sipariş kalemlerinden dinamik resmi sözleşme objesi üret
+    const customItems = orderItems.filter(
+      (i) => i.customization?.customText || (i as any).customText
+    );
+    const firstCustom = customItems[0] || orderItems[0];
+
+    return {
+      id: `cnt-${order.id || order.orderNumber}`,
+      orderId: order.id,
+      orderNumber: order.orderNumber,
+      customerName: order.customerName,
+      customerEmail: order.customerEmail,
+      customerPhone: order.customerPhone,
+      customerAddress: formatAddress(order.shippingAddress),
+      productName:
+        customItems.length > 0
+          ? customItems.map((i) => `${i.productName || (i as any).name || 'Özel Ürün'} (${i.quantity} Adet)`).join(', ')
+          : firstCustom?.productName || (firstCustom as any)?.name || 'Kişiye Özel Tasarım Hediyelik',
+      quantity: customItems.reduce((acc, i) => acc + (i.quantity || 1), 0) || 1,
+      totalAmount: Number(order.totalAmount || 0),
+      customText:
+        customItems
+          .map((i) => i.customization?.customText || (i as any).customText)
+          .filter(Boolean)
+          .join(' | ') || 'Özel İsim Belirtilmedi',
+      scentNote: firstCustom?.customization?.selectedScent,
+      colorPalette: firstCustom?.customization?.selectedColor,
+      tagDesignType: firstCustom?.customization?.tagDesignType,
+      extraNotes: firstCustom?.customization?.extraNote,
+      status: order.contractStatus === 'ONAYLANDI' ? 'ONAYLANDI' : 'BEKLIYOR',
+      verificationCode: order.contractVerificationCode || `SOZ-${order.orderNumber}-OK`,
+      signedAt: order.contractSignedAt || String(order.createdAt || '').slice(0, 10),
+      signedBy: order.contractSignedBy || order.customerName,
+      signatureDataUrl: order.signatureDataUrl,
+      legalConsentChecked: true,
+      createdAt: order.createdAt || 'Yeni',
+      agreedDeliveryDate: order.dueDate || '3-4 İş Günü',
+      items: orderItems.map((i) => {
+        const itemPrice = Number(i.unitPrice ?? (i as any).price ?? 0);
+        const itemTotal = Number(i.totalAmount ?? (itemPrice * (i.quantity || 1)));
+        return {
+          productName: i.productName || (i as any).name || 'Özel Ürün',
+          quantity: i.quantity || 1,
+          unitPrice: itemPrice,
+          totalAmount: itemTotal,
+          customText: i.customization?.customText || (i as any).customText,
+          scentNote: i.customization?.selectedScent,
+          colorPalette: i.customization?.selectedColor,
+          tagDesignType: i.customization?.tagDesignType,
+          extraNote: i.customization?.extraNote,
+        };
+      }),
+    };
+  };
+
+  const handleOpenContractModal = (order: AdminOrder) => {
+    const contract = findOrCreateContractForOrder(order);
+    setSelectedContract(contract);
+    setIsContractModalOpen(true);
+  };
+
+  const handleDownloadContractPdf = async (order: AdminOrder) => {
+    try {
+      const contract = findOrCreateContractForOrder(order);
+      await downloadContractPdf(contract, settings);
+      showToast(`Sözleşme PDF indirildi: #${order.orderNumber}`);
+    } catch (err: any) {
+      showToast('PDF indirilemedi: ' + (err.message || ''));
+    }
+  };
+
+  const handlePrintContract = async (order: AdminOrder) => {
+    try {
+      const contract = findOrCreateContractForOrder(order);
+      await printContractA4(contract, settings);
+    } catch (err: any) {
+      showToast('Yazdırma başlatılamadı: ' + (err.message || ''));
     }
   };
 
@@ -210,7 +385,7 @@ export default function SiparislerPage() {
                   const isInvoiceReady = order.invoiceStatus === 'OLUSTURULDU';
 
                   return (
-                    <tr key={order.id} className="hover:bg-slate-50/80 transition">
+                    <tr key={order.id || order.orderNumber} className="hover:bg-slate-50/80 transition">
                       <td className="py-3.5 px-5">
                         <div className="font-mono font-bold text-xs text-[#1B2A4A]">
                           {order.orderNumber}
@@ -235,19 +410,19 @@ export default function SiparislerPage() {
                           {order.customerName}
                         </div>
                         <div className="text-[11px] text-gray-500">
-                          {order.customerPhone}
+                          {order.customerPhone || 'Belirtilmedi'}
                         </div>
-                        <div className="text-[10px] text-gray-400 truncate max-w-[150px]">
-                          {order.shippingAddress.city} / {order.shippingAddress.district}
+                        <div className="text-[10px] text-gray-400 truncate max-w-[180px]">
+                          {formatAddress(order.shippingAddress)}
                         </div>
                       </td>
 
                       <td className="py-3.5 px-4 text-right">
                         <div className="font-black text-sm text-[#1B2A4A]">
-                          ₺{order.totalAmount.toLocaleString('tr-TR', { minimumFractionDigits: 2 })}
+                          ₺{(Number(order.totalAmount) || 0).toLocaleString('tr-TR', { minimumFractionDigits: 2 })}
                         </div>
                         <div className="text-[11px] text-gray-500 font-medium">
-                          {order.items.length} Kalem Ürün
+                          {(order.items || []).length} Kalem Ürün
                         </div>
                       </td>
 
@@ -305,14 +480,14 @@ export default function SiparislerPage() {
                             setSelectedOrder(order);
                             setIsDetailModalOpen(true);
                           }}
-                          className="px-2.5 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-100 text-gray-700 text-xs font-semibold transition"
+                          className="px-2.5 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-100 text-gray-700 text-xs font-semibold transition cursor-pointer"
                           title="Sipariş Detaylarını Gör"
                         >
                           Detay
                         </button>
 
                         <Link
-                          href={`/admin/etiket-montaj?orderId=${order.id}`}
+                          href={`/admin/etiket-montaj?orderId=${order.id || order.orderNumber}`}
                           className="px-2.5 py-1.5 rounded-lg bg-orange-50 hover:bg-orange-100 text-[#D96B27] border border-orange-200 text-xs font-bold transition shadow-xs inline-flex items-center gap-1"
                           title="Bu Sipariş İçin Etiket Montajı Yap"
                         >
@@ -320,18 +495,31 @@ export default function SiparislerPage() {
                           <span>Etiket</span>
                         </Link>
 
+                        {/* Kişiselleştirme Sözleşmesi PDF İndir */}
+                        {((order.items || []).some((i) => i.customization?.customText || (i as any).customText) || order.contractStatus) && (
+                          <button
+                            type="button"
+                            onClick={() => handleDownloadContractPdf(order)}
+                            className="px-2.5 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 text-xs font-bold transition shadow-xs inline-flex items-center gap-1 cursor-pointer"
+                            title="Kişiye Özel Üretim Sözleşmesi PDF İndir"
+                          >
+                            <Download className="w-3.5 h-3.5 text-emerald-700" />
+                            <span>Sözleşme PDF</span>
+                          </button>
+                        )}
+
                         {isInvoiceReady ? (
                           <button
                             onClick={() => handleViewInvoice(order)}
-                            className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition shadow-sm active:scale-95 inline-flex items-center gap-1"
+                            className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition shadow-sm active:scale-95 inline-flex items-center gap-1 cursor-pointer"
                           >
                             <FileText className="w-3.5 h-3.5" />
                             <span>PDF Fatura</span>
                           </button>
                         ) : (
                           <button
-                            onClick={() => handleCreateInvoice(order.id)}
-                            className="px-3 py-1.5 rounded-lg bg-[#1B2A4A] hover:bg-[#D96B27] text-white text-xs font-bold transition shadow-sm active:scale-95 inline-flex items-center gap-1"
+                            onClick={() => handleCreateInvoice(order.id || order.orderNumber)}
+                            className="px-3 py-1.5 rounded-lg bg-[#1B2A4A] hover:bg-[#D96B27] text-white text-xs font-bold transition shadow-sm active:scale-95 inline-flex items-center gap-1 cursor-pointer"
                           >
                             <Receipt className="w-3.5 h-3.5" />
                             <span>E-Fatura Oluştur</span>
@@ -377,10 +565,10 @@ export default function SiparislerPage() {
                   <span>Teslimat & Adres Bilgileri</span>
                 </div>
                 <div className="grid grid-cols-2 gap-2 text-gray-600">
-                  <div><strong>Telefon:</strong> {selectedOrder.customerPhone}</div>
-                  <div><strong>E-Posta:</strong> {selectedOrder.customerEmail}</div>
+                  <div><strong>Telefon:</strong> {selectedOrder.customerPhone || 'Belirtilmedi'}</div>
+                  <div><strong>E-Posta:</strong> {selectedOrder.customerEmail || 'Belirtilmedi'}</div>
                   <div className="col-span-2">
-                    <strong>Adres:</strong> {selectedOrder.shippingAddress.address} {selectedOrder.shippingAddress.district} / {selectedOrder.shippingAddress.city}
+                    <strong>Adres:</strong> {formatAddress(selectedOrder.shippingAddress)}
                   </div>
                 </div>
               </div>
@@ -398,63 +586,142 @@ export default function SiparislerPage() {
                 </div>
               )}
 
+              {/* KİŞİYE ÖZEL ÜRETİM SÖZLEŞMESİ KARTI (YASAL TKHK MD. 15/1-b) */}
+              {((selectedOrder.items || []).some((i) => i.customization?.customText || (i as any).customText) || selectedOrder.contractStatus) && (
+                <div className="p-4 sm:p-5 rounded-2xl bg-[#FFF8F3] border-2 border-orange-200 space-y-3 shadow-xs">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-orange-100 text-[#D96B27] flex items-center justify-center shrink-0">
+                        <FileText className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-sm text-[#1B2A4A] block">
+                            Kişiye Özel Üretim ve Kişiselleştirme Sözleşmesi
+                          </span>
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
+                            {selectedOrder.contractStatus === 'ONAYLANDI' ? 'DİJİTAL ONAYLI' : 'ONAY BEKLİYOR'}
+                          </span>
+                        </div>
+                        <span className="text-xs text-gray-500 block mt-0.5">
+                          6502 Sayılı TKHK & Mesafeli Sözleşmeler Yönetmeliği Md. 15/1-b Hükmünce Yasal Belge
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleDownloadContractPdf(selectedOrder)}
+                        className="px-3.5 py-2 rounded-xl bg-[#1B2A4A] hover:bg-[#283d6a] text-white font-bold text-xs flex items-center gap-1.5 shadow-xs transition cursor-pointer"
+                        title="Sözleşmeyi PDF Olarak İndir"
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                        <span>Sözleşmeyi İndir (PDF)</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handlePrintContract(selectedOrder)}
+                        className="px-3.5 py-2 rounded-xl border border-gray-300 bg-white hover:bg-gray-50 text-gray-700 font-bold text-xs flex items-center gap-1.5 shadow-xs transition cursor-pointer"
+                        title="Yalnızca Sözleşmeyi A4 Formatında Yazdır"
+                      >
+                        <Printer className="w-3.5 h-3.5 text-gray-600" />
+                        <span>A4 Yazdır</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleOpenContractModal(selectedOrder)}
+                        className="px-3 py-2 rounded-xl bg-orange-100 hover:bg-orange-200 text-[#D96B27] font-bold text-xs flex items-center gap-1 transition cursor-pointer"
+                        title="Sözleşmeyi Ekranda İncele"
+                      >
+                        <Eye className="w-3.5 h-3.5" />
+                        <span>İncele</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Doğrulama Mührü ve İmza Özeti */}
+                  <div className="bg-white/80 p-3 rounded-xl border border-orange-100 flex flex-wrap items-center justify-between gap-2 text-xs">
+                    <div className="flex items-center gap-2">
+                      <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
+                      <span className="text-gray-600">
+                        Doğrulama Mührü: <code className="font-bold text-[#1B2A4A]">{selectedOrder.contractVerificationCode || `SOZ-${selectedOrder.orderNumber}-OK`}</code>
+                      </span>
+                    </div>
+
+                    <div className="text-[11px] text-gray-500">
+                      <span>İmzalayan: <strong>{selectedOrder.contractSignedBy || selectedOrder.customerName}</strong></span>
+                      {selectedOrder.contractSignedAt && (
+                        <span> • Onay Tarihi: {selectedOrder.contractSignedAt}</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Kalemler & Atölye Kişiselleştirme Detayları */}
               <div>
                 <div className="font-bold text-gray-700 mb-2">Sipariş Edilen Ürünler:</div>
                 <div className="space-y-2.5">
-                  {selectedOrder.items.map((item, idx) => (
-                    <div
-                      key={idx}
-                      className="p-3.5 rounded-2xl border border-gray-200 bg-white shadow-sm space-y-2"
-                    >
-                      <div className="flex items-center justify-between font-bold text-sm text-[#1B2A4A]">
-                        <span>
-                          {item.quantity}x {item.productName}
-                        </span>
-                        <span>₺{item.totalAmount.toLocaleString('tr-TR')}</span>
-                      </div>
-
-                      {item.variantTitle && (
-                        <div className="text-gray-500 font-medium text-[11px]">
-                          Varyant: {item.variantTitle}
+                  {(selectedOrder.items || []).map((item, idx) => {
+                    const itemPrice = Number(item.unitPrice ?? (item as any).price ?? 0);
+                    const itemTotal = Number(item.totalAmount ?? (itemPrice * (item.quantity || 1)));
+                    return (
+                      <div
+                        key={idx}
+                        className="p-3.5 rounded-2xl border border-gray-200 bg-white shadow-sm space-y-2"
+                      >
+                        <div className="flex items-center justify-between font-bold text-sm text-[#1B2A4A]">
+                          <span>
+                            {item.quantity}x {item.productName || (item as any).name || 'Özel Ürün'}
+                          </span>
+                          <span>₺{itemTotal.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                         </div>
-                      )}
 
-                      {/* Kişiselleştirme Kutusu */}
-                      {item.customization && (
-                        <div className="p-2.5 rounded-xl bg-amber-50/70 border border-amber-200/80 text-amber-900 space-y-1 text-[11px]">
-                          <div className="font-bold text-[#D96B27]">
-                            ✂️ Atölye Kişiselleştirme Talimatları:
+                        {item.variantTitle && (
+                          <div className="text-gray-500 font-medium text-[11px]">
+                            Varyant: {item.variantTitle}
                           </div>
-                          {item.customization.customText && (
-                            <div>
-                              <strong>Yazılacak İsim / Metin:</strong> &quot;{item.customization.customText}&quot;
+                        )}
+
+                        {/* Kişiselleştirme Kutusu */}
+                        {item.customization && (
+                          <div className="p-2.5 rounded-xl bg-amber-50/70 border border-amber-200/80 text-amber-900 space-y-1 text-[11px]">
+                            <div className="font-bold text-[#D96B27]">
+                              ✂️ Atölye Kişiselleştirme Talimatları:
                             </div>
-                          )}
-                          {item.customization.selectedScent && (
-                            <div>
-                              <strong>Koku Notaları:</strong> {item.customization.selectedScent}
-                            </div>
-                          )}
-                          {item.customization.selectedColor && (
-                            <div>
-                              <strong>Renk Seçimi:</strong> {item.customization.selectedColor}
-                            </div>
-                          )}
-                          {item.customization.tagDesignType && (
-                            <div>
-                              <strong>Etiket Şablonu:</strong> {item.customization.tagDesignType}
-                            </div>
-                          )}
-                          {item.customization.extraNote && (
-                            <div>
-                              <strong>Özel Not:</strong> {item.customization.extraNote}
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  ))}
+                            {item.customization.customText && (
+                              <div>
+                                <strong>Yazılacak İsim / Metin:</strong> &quot;{item.customization.customText}&quot;
+                              </div>
+                            )}
+                            {item.customization.selectedScent && (
+                              <div>
+                                <strong>Koku Notaları:</strong> {item.customization.selectedScent}
+                              </div>
+                            )}
+                            {item.customization.selectedColor && (
+                              <div>
+                                <strong>Renk Seçimi:</strong> {item.customization.selectedColor}
+                              </div>
+                            )}
+                            {item.customization.tagDesignType && (
+                              <div>
+                                <strong>Etiket Şablonu:</strong> {item.customization.tagDesignType}
+                              </div>
+                            )}
+                            {item.customization.extraNote && (
+                              <div>
+                                <strong>Özel Not:</strong> {item.customization.extraNote}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             </div>
@@ -462,7 +729,7 @@ export default function SiparislerPage() {
             <div className="pt-4 border-t border-gray-100 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Link
-                  href={`/admin/etiket-montaj?orderId=${selectedOrder.id}`}
+                  href={`/admin/etiket-montaj?orderId=${selectedOrder.id || selectedOrder.orderNumber}`}
                   className="px-4 py-2 rounded-xl bg-orange-50 hover:bg-orange-100 text-[#D96B27] border border-orange-300 font-bold text-xs flex items-center gap-2 transition"
                 >
                   <Printer className="w-4 h-4" />
@@ -472,7 +739,7 @@ export default function SiparislerPage() {
                 {selectedOrder.invoiceStatus !== 'OLUSTURULDU' && (
                   <button
                     onClick={() => {
-                      handleCreateInvoice(selectedOrder.id);
+                      handleCreateInvoice(selectedOrder.id || selectedOrder.orderNumber);
                       setIsDetailModalOpen(false);
                     }}
                     className="px-4 py-2 rounded-xl bg-[#1B2A4A] hover:bg-[#D96B27] text-white font-bold text-xs flex items-center gap-2 transition"
@@ -496,8 +763,8 @@ export default function SiparislerPage() {
 
       {/* 5. MODAL: E-FATURA PDF ÖNİZLEME VE YAZDIRMA */}
       {isInvoicePdfModalOpen && selectedInvoice && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
-          <div className="bg-white rounded-3xl max-w-3xl w-full p-8 shadow-2xl border border-gray-200 max-h-[95vh] flex flex-col">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn print:static print:p-0 print:bg-white print:block">
+          <div className="bg-white rounded-3xl max-w-3xl w-full p-8 shadow-2xl border border-gray-200 max-h-[95vh] flex flex-col print:border-none print:shadow-none print:p-0 print:max-h-none print:w-full print:block">
             
             {/* Modal Üst Aksiyon Çubuğu */}
             <div className="flex items-center justify-between pb-4 border-b border-gray-200 no-print">
@@ -510,16 +777,31 @@ export default function SiparislerPage() {
 
               <div className="flex items-center gap-2">
                 <button
-                  onClick={() => window.print()}
-                  className="px-4 py-2 rounded-xl bg-[#1B2A4A] hover:bg-[#2A3F6D] text-white text-xs font-bold flex items-center gap-1.5 transition"
+                  type="button"
+                  onClick={handleDownloadInvoice}
+                  disabled={isDownloadingInvoice}
+                  className="px-3.5 py-2 rounded-xl border border-gray-300 bg-white hover:bg-gray-50 text-gray-700 text-xs font-bold flex items-center gap-1.5 transition shadow-xs cursor-pointer disabled:opacity-50"
+                  title="Resmi PDF Faturayı Cihaza İndir"
                 >
-                  <Printer className="w-4 h-4" />
-                  <span>Yazdır / PDF Kaydet</span>
+                  <Download className="w-4 h-4 text-[#1B2A4A]" />
+                  <span>{isDownloadingInvoice ? 'İndiriliyor...' : 'PDF İndir'}</span>
                 </button>
 
                 <button
+                  type="button"
+                  onClick={handlePrintInvoice}
+                  disabled={isPrintingInvoice}
+                  className="px-4 py-2 rounded-xl bg-[#1B2A4A] hover:bg-[#2A3F6D] text-white text-xs font-bold flex items-center gap-1.5 transition shadow-xs cursor-pointer disabled:opacity-50"
+                  title="Yalnızca Faturayı A4 Formatında Yazdır"
+                >
+                  <Printer className="w-4 h-4" />
+                  <span>{isPrintingInvoice ? 'Hazırlanıyor...' : 'A4 Yazdır / PDF'}</span>
+                </button>
+
+                <button
+                  type="button"
                   onClick={() => setIsInvoicePdfModalOpen(false)}
-                  className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-700"
+                  className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-700 cursor-pointer"
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -527,7 +809,10 @@ export default function SiparislerPage() {
             </div>
 
             {/* Gerçekçi Fatura Şablonu (Yazdırılabilir Alan) */}
-            <div className="flex-1 overflow-y-auto mt-6 p-8 border border-gray-300 rounded-2xl bg-white shadow-inner font-sans text-[#1B2A4A] space-y-6">
+            <div
+              id="invoice-printable-area"
+              className="flex-1 overflow-y-auto mt-6 p-8 border border-gray-300 rounded-2xl bg-white shadow-inner font-sans text-[#1B2A4A] space-y-6 print:border-none print:shadow-none print:p-0 print:m-0 print:overflow-visible print:w-full"
+            >
               
               {/* Fatura Başlığı ve Logo */}
               <div className="flex items-start justify-between border-b-2 border-[#1B2A4A] pb-6">
@@ -601,18 +886,21 @@ export default function SiparislerPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
-                    {selectedInvoice.items.map((item, idx) => {
-                      const itemVat = item.totalAmount * 0.2;
+                    {(selectedInvoice.items || []).map((item, idx) => {
+                      const itemUnitPrice = Number(item.unitPrice) || 0;
+                      const itemQuantity = Number(item.quantity) || 1;
+                      const itemTotal = Number(item.totalAmount) || (itemUnitPrice * itemQuantity);
+                      const itemVat = Number((itemTotal * 0.2).toFixed(2));
                       return (
                         <tr key={idx}>
                           <td className="py-2.5 px-3 font-mono text-gray-500">{idx + 1}</td>
-                          <td className="py-2.5 px-3 font-semibold text-[#1B2A4A]">{item.name}</td>
-                          <td className="py-2.5 px-3 text-center font-mono">{item.quantity} Adet</td>
-                          <td className="py-2.5 px-3 text-right font-mono">₺{item.unitPrice.toFixed(2)}</td>
+                          <td className="py-2.5 px-3 font-semibold text-[#1B2A4A]">{item.name || 'Ürün'}</td>
+                          <td className="py-2.5 px-3 text-center font-mono">{itemQuantity} Adet</td>
+                          <td className="py-2.5 px-3 text-right font-mono">₺{itemUnitPrice.toFixed(2)}</td>
                           <td className="py-2.5 px-3 text-center font-mono">%20</td>
                           <td className="py-2.5 px-3 text-right font-mono">₺{itemVat.toFixed(2)}</td>
                           <td className="py-2.5 px-3 text-right font-mono font-bold">
-                            ₺{item.totalAmount.toFixed(2)}
+                            ₺{itemTotal.toFixed(2)}
                           </td>
                         </tr>
                       );
@@ -640,15 +928,15 @@ export default function SiparislerPage() {
                 <div className="w-64 space-y-2 text-xs">
                   <div className="flex justify-between text-gray-600">
                     <span>Matrah (KDV Hariç):</span>
-                    <span className="font-mono font-bold">₺{selectedInvoice.subtotal.toFixed(2)}</span>
+                    <span className="font-mono font-bold">₺{(Number(selectedInvoice.subtotal) || 0).toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between text-gray-600">
                     <span>Hesaplanan KDV (%20):</span>
-                    <span className="font-mono font-bold">₺{selectedInvoice.taxAmount.toFixed(2)}</span>
+                    <span className="font-mono font-bold">₺{(Number(selectedInvoice.taxAmount) || 0).toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between text-base font-black text-[#1B2A4A] pt-2 border-t-2 border-[#1B2A4A]">
                     <span>Ödenecek Tutar:</span>
-                    <span className="font-mono text-[#D96B27]">₺{selectedInvoice.totalAmount.toFixed(2)}</span>
+                    <span className="font-mono text-[#D96B27]">₺{(Number(selectedInvoice.totalAmount) || 0).toFixed(2)}</span>
                   </div>
                 </div>
               </div>
@@ -663,6 +951,33 @@ export default function SiparislerPage() {
               </button>
             </div>
           </div>
+
+          {/* Fatura Modalı açıkken Ctrl+P basılırsa yalnızca faturayı A4 formatında yazdır */}
+          <style
+            dangerouslySetInnerHTML={{
+              __html: `
+                @media print {
+                  body * {
+                    visibility: hidden;
+                  }
+                  #invoice-printable-area,
+                  #invoice-printable-area * {
+                    visibility: visible;
+                  }
+                  #invoice-printable-area {
+                    position: absolute !important;
+                    left: 0 !important;
+                    top: 0 !important;
+                    width: 100% !important;
+                    margin: 0 !important;
+                    padding: 10mm 15mm !important;
+                    box-sizing: border-box !important;
+                    background: white !important;
+                  }
+                }
+              `,
+            }}
+          />
         </div>
       )}
 
@@ -692,7 +1007,7 @@ export default function SiparislerPage() {
                 </div>
                 <div>Alıcı: {cargoModalOrder.customerName}</div>
                 <div className="text-[11px] text-gray-500 mt-0.5">
-                  Teslimat: {typeof cargoModalOrder.shippingAddress === 'string' ? cargoModalOrder.shippingAddress : `${cargoModalOrder.shippingAddress?.city || ''} / ${cargoModalOrder.shippingAddress?.district || ''}`}
+                  Teslimat: {formatAddress(cargoModalOrder.shippingAddress)}
                 </div>
               </div>
 
@@ -752,6 +1067,16 @@ export default function SiparislerPage() {
             </form>
           </div>
         </div>
+      )}
+
+      {/* 6. MODAL: KİŞİYE ÖZEL ÜRETİM SÖZLEŞMESİ ÖNİZLEME & A4 YAZDIRMA */}
+      {isContractModalOpen && selectedContract && (
+        <ContractPreviewModal
+          contract={selectedContract}
+          isOpen={isContractModalOpen}
+          onClose={() => setIsContractModalOpen(false)}
+          settings={settings}
+        />
       )}
     </div>
   );

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import {
   Search,
   Heart,
@@ -90,10 +91,12 @@ export function Header({ categories }: HeaderProps) {
           <div className="flex-shrink-0 flex items-center">
             <Link href="/" className="group flex items-center gap-2">
               {brandLogo ? (
-                <img
+                <Image
                   src={brandLogo}
                   alt={brandText}
-                  className="h-8 sm:h-10 w-auto max-w-[190px] object-contain transition-transform group-hover:scale-102"
+                  width={190}
+                  height={40}
+                  className="h-8 sm:h-10 w-auto object-contain transition-transform group-hover:scale-102"
                 />
               ) : (
                 <span className="font-serif text-2xl sm:text-[1.85rem] font-medium tracking-[0.25em] text-[#231B18] group-hover:text-[#C85A32] transition-colors uppercase">

@@ -20,6 +20,8 @@ import {
   Palette,
   Feather,
   Flame,
+  AlertTriangle,
+  Info,
 } from 'lucide-react';
 import { useStore, CartItem } from '@/context/StoreContext';
 
@@ -141,6 +143,8 @@ export default function CartPage() {
     const res = applyCoupon(code);
     if (res.success) {
       setCouponFeedback({ type: 'success', message: res.message });
+    } else {
+      setCouponFeedback({ type: 'error', message: res.message });
     }
   };
 
@@ -157,6 +161,94 @@ export default function CartPage() {
 
   return (
     <div className="min-h-screen bg-white pb-24 pt-8 text-[#231B18]">
+
+      {/* Kupon Sonuç Popup */}
+      {couponFeedback && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4" onClick={() => setCouponFeedback(null)}>
+          {/* Arka plan overlay */}
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+
+          {/* Popup kart */}
+          <div
+            className="relative bg-white rounded-xs border border-stone-200 shadow-2xl max-w-sm w-full p-6 animate-in fade-in zoom-in duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Kapat butonu */}
+            <button
+              onClick={() => setCouponFeedback(null)}
+              className="absolute top-3 right-3 p-1 text-stone-400 hover:text-stone-600 transition"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            {couponFeedback.type === 'error' ? (
+              <>
+                {/* Hata İkonu */}
+                <div className="flex justify-center mb-4">
+                  <div className="w-14 h-14 rounded-full bg-red-50 border-2 border-red-200 flex items-center justify-center">
+                    <AlertTriangle className="w-7 h-7 text-red-500" />
+                  </div>
+                </div>
+
+                {/* Hata Başlık */}
+                <h3 className="text-center font-serif text-lg font-semibold text-[#231B18] mb-2">
+                  Kupon Uygulanamadı
+                </h3>
+
+                {/* Hata Mesajı */}
+                <div className="bg-red-50/80 border border-red-200 rounded-xs p-3 mb-4">
+                  <div className="flex items-start gap-2">
+                    <Info className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
+                    <p className="text-xs text-red-700 leading-relaxed">
+                      {couponFeedback.message}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Kapat Buton */}
+                <button
+                  onClick={() => setCouponFeedback(null)}
+                  className="w-full py-2.5 bg-[#231B18] hover:bg-[#3A2E29] text-white text-xs uppercase tracking-wider font-medium rounded-xs transition"
+                >
+                  Anladım
+                </button>
+              </>
+            ) : (
+              <>
+                {/* Başarı İkonu */}
+                <div className="flex justify-center mb-4">
+                  <div className="w-14 h-14 rounded-full bg-emerald-50 border-2 border-emerald-200 flex items-center justify-center">
+                    <CheckCircle2 className="w-7 h-7 text-emerald-600" />
+                  </div>
+                </div>
+
+                {/* Başarı Başlık */}
+                <h3 className="text-center font-serif text-lg font-semibold text-[#231B18] mb-2">
+                  Kupon Uygulandı!
+                </h3>
+
+                {/* Başarı Mesajı */}
+                <div className="bg-emerald-50/80 border border-emerald-200 rounded-xs p-3 mb-4">
+                  <div className="flex items-start gap-2">
+                    <Tag className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                    <p className="text-xs text-emerald-800 leading-relaxed">
+                      {couponFeedback.message}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Kapat Buton */}
+                <button
+                  onClick={() => setCouponFeedback(null)}
+                  className="w-full py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white text-xs uppercase tracking-wider font-medium rounded-xs transition"
+                >
+                  Devam Et
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
         {/* Üst Başlık */}

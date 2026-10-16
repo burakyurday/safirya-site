@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { verifyPaytrCallback } from '@/lib/paytr';
 import { supabaseAdmin } from '@/lib/supabase';
 import { generateSafiryaEmailHtml } from '@/lib/notifications/email';
+import { sendEmail } from '@/lib/email/sender';
 
 export const dynamic = 'force-dynamic';
 
@@ -107,32 +108,20 @@ export async function POST(req: NextRequest) {
       // Müşteriye Sipariş Onay E-postası Gönder (Resend / SMTP)
       if (completedOrder.email) {
         try {
-          const resendApiKey = process.env.RESEND_API_KEY;
-          const fromEmail = process.env.SMTP_FROM || 'Safirya Atölyesi <bildirim@safirya.tr>';
+          const emailHtml = generateSafiryaEmailHtml({
+            to: completedOrder.email,
+            customerName: completedOrder.customerName || 'Değerli Müşterimiz',
+            orderNumber,
+            stageName: 'Siparişiniz Alındı & Ödeme Onaylandı',
+            caption: `₺${(totalAmountKurus / 100).toFixed(2)} tutarındaki ödemeniz PayTR 3D Secure güvencesiyle başarıyla alındı. Atölye ustalarımız siparişinizi özenle hazırlamaya başladı.`,
+          });
 
-          if (resendApiKey) {
-            const emailHtml = generateSafiryaEmailHtml({
-              to: completedOrder.email,
-              customerName: completedOrder.customerName || 'Değerli Müşterimiz',
-              orderNumber,
-              stageName: 'Siparişiniz Alındı & Ödeme Onaylandı',
-              caption: `₺${(totalAmountKurus / 100).toFixed(2)} tutarındaki ödemeniz PayTR 3D Secure güvencesiyle başarıyla alındı. Atölye ustalarımız siparişinizi özenle hazırlamaya başladı.`,
-            });
-
-            await fetch('https://api.resend.com/emails', {
-              method: 'POST',
-              headers: {
-                Authorization: `Bearer ${resendApiKey}`,
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                from: fromEmail,
-                to: completedOrder.email,
-                subject: `Siparişiniz Alındı! #${orderNumber} - Safirya Atölye`,
-                html: emailHtml,
-              }),
-            });
-          }
+          await sendEmail({
+            to: completedOrder.email,
+            subject: `Siparişiniz Alındı! #${orderNumber} - Safirya Atölye`,
+            html: emailHtml,
+            from: process.env.SMTP_FROM || 'Safirya Atölyesi <bildirim@safirya.tr>',
+          });
         } catch (emailErr) {
           console.warn('PayTR order confirmation email error:', emailErr);
         }

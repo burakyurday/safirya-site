@@ -7,6 +7,7 @@ import {
   generateSafeOrderNumber,
 } from '@/lib/orderVerification';
 import { generateSafiryaEmailHtml } from '@/lib/notifications/email';
+import { sendEmail } from '@/lib/email/sender';
 
 export const dynamic = 'force-dynamic';
 
@@ -211,37 +212,25 @@ export async function POST(req: NextRequest) {
 
     // 6. Müşteriye Sipariş Onay E-Postası Gönder
     try {
-      const resendApiKey = process.env.RESEND_API_KEY;
-      const fromEmail = process.env.SMTP_FROM || 'Safirya Atölyesi <bildirim@safirya.tr>';
+      const emailCaption =
+        paymentMethod === 'HAVALE_EFT'
+          ? `₺${verification.grandTotal.toFixed(2)} tutarındaki Havale/EFT siparişiniz başarıyla alındı. Lütfen açıklama alanına #${orderNumber} yazarak banka transferinizi tamamlayınız ve dekontunuzu WhatsApp destek hattımıza (+90 532 555 72 34) iletiniz. Dekont onayının ardından siparişiniz derhal üretime alınacaktır.`
+          : `₺${verification.grandTotal.toFixed(2)} tutarındaki siparişiniz onaylandı. Zanaatkar ustalarımız atölyemizde hazırlığa başladı.`;
 
-      if (resendApiKey) {
-        const emailCaption =
-          paymentMethod === 'HAVALE_EFT'
-            ? `₺${verification.grandTotal.toFixed(2)} tutarındaki Havale/EFT siparişiniz başarıyla alındı. Lütfen açıklama alanına #${orderNumber} yazarak banka transferinizi tamamlayınız ve dekontunuzu WhatsApp destek hattımıza (+90 532 555 72 34) iletiniz. Dekont onayının ardından siparişiniz derhal üretime alınacaktır.`
-            : `₺${verification.grandTotal.toFixed(2)} tutarındaki siparişiniz onaylandı. Zanaatkar ustalarımız atölyemizde hazırlığa başladı.`;
+      const emailHtml = generateSafiryaEmailHtml({
+        to: cleanEmail,
+        customerName: cleanCustomerName,
+        orderNumber,
+        stageName: paymentMethod === 'HAVALE_EFT' ? 'Sipariş Alındı (Havale Bekleniyor)' : 'Sipariş Onaylandı',
+        caption: emailCaption,
+      });
 
-        const emailHtml = generateSafiryaEmailHtml({
-          to: cleanEmail,
-          customerName: cleanCustomerName,
-          orderNumber,
-          stageName: paymentMethod === 'HAVALE_EFT' ? 'Sipariş Alındı (Havale Bekleniyor)' : 'Sipariş Onaylandı',
-          caption: emailCaption,
-        });
-
-        await fetch('https://api.resend.com/emails', {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${resendApiKey}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            from: fromEmail,
-            to: cleanEmail,
-            subject: `Siparişiniz Alındı! #${orderNumber} - Safirya Atölye`,
-            html: emailHtml,
-          }),
-        });
-      }
+      await sendEmail({
+        to: cleanEmail,
+        subject: `Siparişiniz Alındı! #${orderNumber} - Safirya Atölye`,
+        html: emailHtml,
+        from: process.env.SMTP_FROM || 'Safirya Atölyesi <bildirim@safirya.tr>',
+      });
     } catch (emailErr) {
       console.warn('Sipariş onay e-postası gönderme hatası:', emailErr);
     }
@@ -307,3 +296,78 @@ export async function GET(req: NextRequest) {
     );
   }
 }
+
+// PATCH /api/orders - Sipariş Aşaması ve Kargo Takip Bilgilerini Güncelleme
+export async function PATCH(req: NextRequest) {
+  try {
+    const session = await getAdminSessionServer();
+    if (!session && process.env.NODE_ENV === 'production') {
+      return NextResponse.json(
+        { success: false, error: 'Yetkisiz erişim. Yönetici oturumu gereklidir.' },
+        { status: 401 }
+      );
+    }
+
+    const body = await req.json();
+    const { orderNumber, stage, cargoCompany, trackingCode } = body;
+
+    if (!orderNumber || !stage) {
+      return NextResponse.json(
+        { success: false, error: 'Sipariş numarası ve aşama bilgisi zorunludur.' },
+        { status: 400 }
+      );
+    }
+
+    // 1. Prisma Veritabanında Güncelle
+    try {
+      await prisma.order.update({
+        where: { orderNumber },
+        data: {
+          stage,
+          cargoCompany: cargoCompany || undefined,
+          trackingCode: trackingCode || undefined,
+        },
+      });
+    } catch {}
+
+    // 2. Supabase Storage orders/all.json dosyasını güncelle
+    if (supabaseAdmin) {
+      try {
+        const allPath = 'orders/all.json';
+        const { data } = await supabaseAdmin.storage.from(BUCKET_NAME).download(allPath);
+        if (data) {
+          const text = await data.text();
+          const list = JSON.parse(text);
+          if (Array.isArray(list)) {
+            const updated = list.map((ord: any) =>
+              ord.orderNumber === orderNumber
+                ? {
+                    ...ord,
+                    stage,
+                    ...(cargoCompany ? { cargoCompany } : {}),
+                    ...(trackingCode !== undefined ? { trackingCode, cargoTrackingNo: trackingCode } : {}),
+                  }
+                : ord
+            );
+            await supabaseAdmin.storage.from(BUCKET_NAME).upload(
+              allPath,
+              Buffer.from(JSON.stringify(updated, null, 2), 'utf-8'),
+              { contentType: 'application/json', upsert: true }
+            );
+          }
+        }
+      } catch {}
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: `Sipariş #${orderNumber} aşaması "${stage}" olarak güncellendi.`,
+    });
+  } catch (err: any) {
+    return NextResponse.json(
+      { success: false, error: err?.message || 'Sipariş güncellenirken hata oluştu.' },
+      { status: 500 }
+    );
+  }
+}
+

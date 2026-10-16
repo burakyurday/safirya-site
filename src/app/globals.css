@@ -135,3 +135,67 @@ h1, h2, h3, .font-serif {
 .safir-card:hover {
   border-color: #C85A32;
 }
+
+/* ==========================================================================
+   RESMİ YAZDIRMA VE A4 FORMATI KURALLARI (PRINT STYLES)
+   Site genelinde gereksiz tüm menü, buton ve arka planları gizler;
+   sadece resmi A4 dökümanı (fatura, sözleşme, etiket tabakası vb.) yazdırır.
+   ========================================================================== */
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 10mm;
+  }
+
+  html, body {
+    background: #ffffff !important;
+    background-color: #ffffff !important;
+    color: #111827 !important;
+    font-size: 10pt !important;
+    line-height: 1.4 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Yazdırılmaması gereken tüm genel arayüz bileşenleri */
+  .no-print,
+  aside,
+  header.no-print,
+  footer.no-print,
+  nav.no-print,
+  button.no-print,
+  [role="dialog"] .no-print,
+  .print-hidden {
+    display: none !important;
+  }
+
+  /* Linklerin yanına tarayıcının eklediği URL'leri gizle */
+  a[href]:after {
+    content: "" !important;
+  }
+
+  /* Gölge ve süslemeleri kaldır, temiz baskı sağla */
+  * {
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+
+  /* Sayfa sonu kontrolleri */
+  .page-break-after,
+  .break-after-page {
+    page-break-after: always !important;
+    break-after: page !important;
+  }
+
+  .avoid-page-break,
+  .break-inside-avoid {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+}

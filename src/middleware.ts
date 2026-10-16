@@ -4,7 +4,16 @@ import { jwtVerify } from 'jose';
 const ADMIN_COOKIE_NAME = 'safirya_admin_token';
 
 const getJwtSecret = () => {
-  const secret = process.env.ADMIN_JWT_SECRET || 'safirya_craft_super_secret_production_key_2026_xyz987';
+  const secret = process.env.ADMIN_JWT_SECRET;
+  if (!secret) {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('ADMIN_JWT_SECRET environment variable is missing. It is required in production.');
+    }
+    console.warn(
+      '⚠️ [DEV ONLY] ADMIN_JWT_SECRET environment variable is missing. Using fallback development secret key.'
+    );
+    return new TextEncoder().encode('safirya_craft_super_secret_production_key_2026_xyz987');
+  }
   return new TextEncoder().encode(secret);
 };
 

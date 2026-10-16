@@ -1,16 +1,10 @@
 import { NextResponse } from 'next/server';
-import nodemailer from 'nodemailer';
 import {
   createVerificationCode,
   checkCodeRequestRateLimit,
 } from '@/lib/auth/verificationStore';
 import { generateAuthVerificationEmailHtml } from '@/lib/auth/authEmailTemplate';
-
-function getResendApiKey(): string | undefined {
-  if (process.env.RESEND_API_KEY) return process.env.RESEND_API_KEY;
-  if (process.env.SMTP_PASS?.startsWith('re_')) return process.env.SMTP_PASS;
-  return undefined;
-}
+import { sendEmail } from '@/lib/email/sender';
 
 export async function POST(req: Request) {
   try {
@@ -67,99 +61,24 @@ export async function POST(req: Request) {
         : 'Üyelik kaydınızı tamamlamak için 6 haneli doğrulama kodunuz:'
     }\n\n👉  ${code}  👈\n\nBu kod 10 dakika boyunca geçerlidir.\nEğer bu işlemi siz başlatmadıysanız bu e-postayı dikkate almayınız.\n\nSafirya Zanaat & Tasarım Atölyesi - İzmir / Karşıyaka`;
 
-    const resendApiKey = getResendApiKey();
-    const smtpHost = process.env.SMTP_HOST;
-    const smtpPort = Number(process.env.SMTP_PORT || 465);
-    const smtpUser = process.env.SMTP_USER;
-    const smtpPass = process.env.SMTP_PASS;
-    const rawFrom = process.env.SMTP_FROM || 'Safirya Atölyesi <bildirim@safirya.tr>';
-    const cleanFrom = rawFrom.replace(/[\r\n\t]+/g, ' ').replace(/\s+/g, ' ').trim();
+    const emailResult = await sendEmail({
+      to: cleanEmail,
+      subject: emailSubject,
+      html: htmlContent,
+      text: plainTextContent,
+      replyTo: 'destek@safirya.tr',
+      senderName: 'Safirya Atölyesi',
+      from: process.env.SMTP_FROM || 'Safirya Atölyesi <bildirim@safirya.tr>',
+      smtpSettings: {
+        host: process.env.SMTP_HOST,
+        port: Number(process.env.SMTP_PORT || 465),
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
+      },
+    });
 
-    let emailSent = false;
-    let lastError = '';
-
-    // 1. Resend API Entegrasyonu (Öncelikli)
-    if (resendApiKey) {
-      try {
-        const sendToResend = async (fromAddress: string) => {
-          return await fetch('https://api.resend.com/emails', {
-            method: 'POST',
-            headers: {
-              Authorization: `Bearer ${resendApiKey}`,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              from: fromAddress,
-              to: cleanEmail,
-              subject: emailSubject,
-              html: htmlContent,
-              text: plainTextContent,
-              reply_to: 'destek@safirya.tr',
-            }),
-          });
-        };
-
-        // İlk deneme: Ayarlı veya varsayılan bildirim adresi
-        let resendRes = await sendToResend(
-          cleanFrom.includes('@') ? cleanFrom : 'Safirya Atölyesi <bildirim@safirya.tr>'
-        );
-        let resendData = await resendRes.json();
-
-        // Eğer ilk deneme başarısız olursa Resend test göndericisiyle dene
-        if (!resendRes.ok) {
-          lastError = resendData?.message || resendRes.statusText;
-          console.warn('[Resend İlk Deneme]', lastError);
-
-          // Alternatif: doğrulanmış domain veya test adresi
-          const fallbackRes = await sendToResend('Safirya Atölyesi <onboarding@resend.dev>');
-          const fallbackData = await fallbackRes.json();
-          if (fallbackRes.ok && fallbackData.id) {
-            resendRes = fallbackRes;
-            resendData = fallbackData;
-          }
-        }
-
-        if (resendRes.ok && resendData?.id) {
-          console.log(`[Doğrulama Kodu] ${cleanEmail} adresine Resend (${resendData.id}) ile iletildi.`);
-          emailSent = true;
-        }
-      } catch (err: any) {
-        lastError = err.message || 'Resend bağlantı hatası';
-        console.warn('Resend API doğrulama kodu hatası:', lastError);
-      }
-    }
-
-    // 2. SMTP Nodemailer Gönderimi (Yedek)
-    if (!emailSent && smtpHost && smtpUser && smtpPass) {
-      try {
-        const transporter = nodemailer.createTransport({
-          host: smtpHost,
-          port: smtpPort,
-          secure: smtpPort === 465,
-          auth: {
-            user: smtpUser,
-            pass: smtpPass,
-          },
-        });
-
-        await transporter.sendMail({
-          from: cleanFrom,
-          to: cleanEmail,
-          subject: emailSubject,
-          html: htmlContent,
-          text: plainTextContent,
-        });
-
-        console.log(`[Doğrulama Kodu] ${cleanEmail} adresine SMTP ile iletildi.`);
-        emailSent = true;
-      } catch (err: any) {
-        lastError = err.message || 'SMTP bağlantı hatası';
-        console.warn('SMTP gönderim hatası:', lastError);
-      }
-    }
-
-    if (!emailSent) {
-      console.error(`[Safirya Auth Hatası] ${cleanEmail} için e-posta gönderilemedi. Hata: ${lastError}`);
+    if (!emailResult.success) {
+      console.error(`[Safirya Auth Hatası] ${cleanEmail} için e-posta gönderilemedi. Hata: ${emailResult.error}`);
       return NextResponse.json(
         {
           success: false,

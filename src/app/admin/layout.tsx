@@ -142,10 +142,10 @@ function AdminShell({ children }: { children: React.ReactNode }) {
   const activeTitle = navItems.find((item) => isItemActive(item.href))?.title || 'Yönetim';
 
   return (
-    <div className="min-h-screen bg-[#F6F3EC] text-[#231B18] flex flex-col lg:flex-row font-sans selection:bg-[#C85A32]/20">
+    <div className="min-h-screen bg-[#F6F3EC] text-[#231B18] flex flex-col lg:flex-row font-sans selection:bg-[#C85A32]/20 print:bg-white print:block">
       
       {/* 1. MASAÜSTÜ SOL MENÜ (Derin Espresso #231B18) */}
-      <aside className="hidden lg:flex lg:flex-col w-64 bg-[#231B18] text-white shrink-0 border-r border-[#2C221E] shadow-xl">
+      <aside className="no-print hidden lg:flex lg:flex-col w-64 bg-[#231B18] text-white shrink-0 border-r border-[#2C221E] shadow-xl">
         
         {/* Logo & Marka */}
         <div className="p-6 border-b border-white/5">
@@ -255,7 +255,7 @@ function AdminShell({ children }: { children: React.ReactNode }) {
       </aside>
 
       {/* 2. MOBİL ÜST BAR */}
-      <div className="lg:hidden bg-[#231B18] text-white p-4 flex items-center justify-between border-b border-[#2C221E] sticky top-0 z-40">
+      <div className="no-print lg:hidden bg-[#231B18] text-white p-4 flex items-center justify-between border-b border-[#2C221E] sticky top-0 z-40">
         <Link href="/admin" className="flex items-center gap-2">
           {settings?.logoUrl ? (
             <img
@@ -290,7 +290,7 @@ function AdminShell({ children }: { children: React.ReactNode }) {
 
       {/* Mobil Açılır Menü */}
       {isMobileMenuOpen && (
-        <div className="lg:hidden bg-[#231B18] text-white border-b border-[#2C221E] px-4 py-3 space-y-1 z-40">
+        <div className="no-print lg:hidden bg-[#231B18] text-white border-b border-[#2C221E] px-4 py-3 space-y-1 z-40">
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = isItemActive(item.href);
@@ -342,10 +342,10 @@ function AdminShell({ children }: { children: React.ReactNode }) {
       )}
 
       {/* 3. ANA İÇERİK ALANI */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-y-auto">
+      <div className="flex-1 flex flex-col min-w-0 overflow-y-auto print:overflow-visible print:block print:w-full print:m-0 print:p-0">
         
         {/* Üst Bar (Masaüstü Breadcrumb & Hızlı Eylemler) */}
-        <header className="hidden lg:flex items-center justify-between h-16 px-8 bg-white border-b border-[#E2DCD3] sticky top-0 z-30 shadow-2xs">
+        <header className="no-print hidden lg:flex items-center justify-between h-16 px-8 bg-white border-b border-[#E2DCD3] sticky top-0 z-30 shadow-2xs">
           <div className="flex items-center gap-2 text-xs text-stone-500 font-medium">
             <Link href="/admin" className="hover:text-[#C85A32] transition">
               Safirya Panel

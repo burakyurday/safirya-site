@@ -22,9 +22,42 @@ export function generateSafiryaEmailHtml({ customerName, orderNumber, stageName,
 
 export async function sendStageNotificationEmail(payload: StageEmailPayload): Promise<EmailDispatchResult> {
   try {
-    const baseUrl = typeof window !== 'undefined' ? '' : process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
-    const res = await fetch(`${baseUrl}/api/notifications/stage`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ orderNumber: payload.orderNumber, customerName: payload.customerName, customerEmail: payload.to, stageName: payload.stageName, photoUrl: payload.photoUrl, caption: payload.caption, settings: payload.settings }) });
-    if (res.ok) { const data = await res.json(); return { success: data.success ?? true, message: data.message || 'E-posta bildirimi iletildi.', simulated: data.simulated ?? false }; }
-  } catch (err: unknown) { console.warn('[Safirya Bildirim Servisi] API çağrısı simülasyona yönlendirildi:', err); }
-  return { success: true, message: `${payload.to} adresine e-posta bildirimi iletildi (Simülasyon).`, simulated: true };
+    const baseUrl =
+      typeof window !== 'undefined'
+        ? ''
+        : process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+    const res = await fetch(`${baseUrl}/api/notifications/stage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        orderNumber: payload.orderNumber,
+        customerName: payload.customerName,
+        customerEmail: payload.to,
+        stageName: payload.stageName,
+        photoUrl: payload.photoUrl,
+        caption: payload.caption,
+        settings: payload.settings,
+      }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (res.ok && data.success !== false) {
+      return {
+        success: true,
+        message: data.message || 'E-posta bildirimi iletildi.',
+        simulated: data.simulated ?? false,
+      };
+    }
+    return {
+      success: false,
+      message: data.error || `E-posta gönderilemedi (${res.status})`,
+      simulated: false,
+    };
+  } catch (err: unknown) {
+    console.warn('[Safirya Bildirim Servisi] API çağrısı başarısız:', err);
+    return {
+      success: false,
+      message: err instanceof Error ? err.message : 'Bağlantı hatası',
+      simulated: false,
+    };
+  }
 }

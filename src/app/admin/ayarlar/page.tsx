@@ -118,8 +118,13 @@ export default function AyarlarPage() {
   const [smtpUser, setSmtpUser] = useState(settings.smtpUser || 'resend');
   const [smtpPass, setSmtpPass] = useState(settings.smtpPass || '');
   const [smtpFrom, setSmtpFrom] = useState(
-    settings.smtpFrom || 'Safirya Atölyesi <bildirim@safirya.com>'
+    settings.smtpFrom
+      ? settings.smtpFrom.replace(/@safirya\.com/gi, '@safirya.tr')
+      : 'Safirya Atölyesi <bildirim@safirya.tr>'
   );
+  const [isTestingEmail, setIsTestingEmail] = useState(false);
+  const [emailTestStatus, setEmailTestStatus] = useState<string | null>(null);
+  const [testEmailRecipient, setTestEmailRecipient] = useState('');
 
   // Sipariş Hareketleri ve Bildirim Tercihleri State'leri
   const [notifyOnOrderReceived, setNotifyOnOrderReceived] = useState<boolean>(
@@ -204,6 +209,31 @@ export default function AyarlarPage() {
       }
     } finally {
       setIsTestingWebhook(false);
+    }
+  };
+
+  const handleTestEmailConnection = async () => {
+    setIsTestingEmail(true);
+    setEmailTestStatus(null);
+    try {
+      const target = testEmailRecipient.trim() || 'destek@safirya.tr';
+      const res = await fetch('/api/admin/email/test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ targetEmail: target }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setEmailTestStatus(`✅ Başarılı! ${target} adresine test e-postası Resend (${data.messageId || 'OK'}) ile iletildi.`);
+        showToast('Resend bağlantısı başarılı! Test e-postası gönderildi.');
+      } else {
+        setEmailTestStatus(`❌ Başarısız: ${data.error || 'Resend ile bağlantı kurulamadı.'}`);
+        showToast(`E-posta testi başarısız: ${data.error || 'Bilinmeyen hata'}`);
+      }
+    } catch (err: any) {
+      setEmailTestStatus(`❌ Ağ Hatası: ${err.message}`);
+    } finally {
+      setIsTestingEmail(false);
     }
   };
 
@@ -871,7 +901,7 @@ export default function AyarlarPage() {
                     </label>
                     <input
                       type="text"
-                      placeholder="Safirya Atölyesi <bildirim@safirya.com>"
+                      placeholder="Safirya Atölyesi <bildirim@safirya.tr>"
                       value={smtpFrom}
                       onChange={(e) => setSmtpFrom(e.target.value.replace(/[\r\n]+/g, ' '))}
                       className="w-full px-3 py-1.5 rounded-md border border-[#E2DCD3] bg-white text-xs"
@@ -884,7 +914,7 @@ export default function AyarlarPage() {
                     </label>
                     <input
                       type="password"
-                      placeholder="re_••••••••••••"
+                      placeholder="re_•••••••••••• (Varsayılan Safirya Anahtarı Aktif)"
                       value={smtpPass}
                       onChange={(e) => setSmtpPass(e.target.value)}
                       className="w-full px-3 py-1.5 rounded-md border border-[#E2DCD3] bg-white font-mono text-xs"
@@ -918,6 +948,49 @@ export default function AyarlarPage() {
                       </div>
                     </div>
                   </details>
+
+                  {/* Resend Altyapı Durumu & Canlı Test Bölümü */}
+                  <div className="pt-2 border-t border-[#E2DCD3] space-y-2">
+                    <div className="flex items-center justify-between text-[11px]">
+                      <span className="font-semibold text-stone-700 flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                        Resend Altyapısı Aktif
+                      </span>
+                      <span className="text-stone-500 font-mono text-[10px]">
+                        safirya.tr (Doğrulanmış)
+                      </span>
+                    </div>
+
+                    <div className="flex gap-1.5 items-center">
+                      <input
+                        type="email"
+                        placeholder="test@ornek.com (Test alıcısı)"
+                        value={testEmailRecipient}
+                        onChange={(e) => setTestEmailRecipient(e.target.value)}
+                        className="flex-1 px-2.5 py-1.5 rounded-md border border-[#E2DCD3] bg-white text-xs placeholder:text-stone-400"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleTestEmailConnection}
+                        disabled={isTestingEmail}
+                        className="px-3 py-1.5 rounded-md bg-[#231B18] text-white hover:bg-[#3E342F] disabled:opacity-50 text-xs font-medium whitespace-nowrap cursor-pointer transition-colors"
+                      >
+                        {isTestingEmail ? 'Gönderiliyor...' : 'Test E-Postası Gönder'}
+                      </button>
+                    </div>
+
+                    {emailTestStatus && (
+                      <div
+                        className={`p-2 rounded-md text-[11px] font-medium leading-relaxed ${
+                          emailTestStatus.includes('✅')
+                            ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                            : 'bg-red-50 text-red-800 border border-red-200'
+                        }`}
+                      >
+                        {emailTestStatus}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
 

@@ -79,7 +79,7 @@ export function generateCampaignEmailHtml(props: CampaignEmailProps): string {
     brandTagline = 'El Yapımı Tasarım & Zanaat Atölyesi',
     storeName = 'Safirya Atölyesi',
     contactEmail = 'destek@safirya.tr',
-    instagramHandle = '@safirya35353535',
+    instagramHandle = '@safirya.tr',
     address = 'Karşıyaka / İzmir (Online Zanaat Atölyesi)',
     products = DEFAULT_PRODUCTS,
   } = props;

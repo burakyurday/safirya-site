@@ -209,7 +209,7 @@ export function getLocalBusinessSchema() {
       ],
     },
     sameAs: [
-      'https://instagram.com/safirya35353535',
+      'https://instagram.com/safirya.tr',
       'https://pinterest.com/safiryacraft',
       'https://maps.google.com/?q=Safirya+Atolye+Kadikoy',
     ],

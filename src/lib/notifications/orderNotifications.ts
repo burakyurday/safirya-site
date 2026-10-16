@@ -126,7 +126,7 @@ export async function triggerOrderStageNotification({
   const isEmailChannelEnabled = settings.notifyChannelEmail ?? true;
   if (isEmailChannelEnabled && order.customerEmail) {
     try {
-      await dispatchStageNotification({
+      const dispatchRes = await dispatchStageNotification({
         orderNumber: order.orderNumber,
         customerName: order.customerName,
         customerEmail: order.customerEmail,
@@ -137,7 +137,7 @@ export async function triggerOrderStageNotification({
         trackingUrl: `https://safirya.tr/siparis-takip?orderNumber=${encodeURIComponent(order.orderNumber)}&email=${encodeURIComponent(order.customerEmail)}`,
         settings,
       });
-      emailSent = true;
+      emailSent = dispatchRes.email.success && !dispatchRes.email.simulated;
     } catch (err) {
       console.error('[Safirya Bildirim] E-posta gönderim hatası:', err);
     }

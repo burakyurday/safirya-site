@@ -258,6 +258,8 @@ export interface AdminOrder {
   contractStatus?: 'ONAYLANDI' | 'BEKLIYOR' | 'GEREKLI_DEGIL';
   contractId?: string;
   contractSignedAt?: string;
+  contractSignedBy?: string;
+  signatureDataUrl?: string;
   contractVerificationCode?: string;
   createdAt: string;
   items: AdminOrderItem[];
@@ -427,6 +429,15 @@ export interface AdminSettings {
   notifyChannelSite?: boolean;
   notifyChannelEmail?: boolean;
 
+  // Kurumsal & Fatura Bilgileri (E-Arşiv / Sözleşme)
+  companyName?: string;
+  companyAddress?: string;
+  companyPhone?: string;
+  companyEmail?: string;
+  taxOffice?: string;
+  taxNumber?: string;
+  mersisNo?: string;
+
   // Webhook Entegrasyonu (Kanban & Bildirimler)
   webhookEnabled?: boolean;
   webhookUrl?: string;
@@ -552,6 +563,18 @@ export interface MoldCastLog {
   createdAt: string;
 }
 
+export interface CustomContractItem {
+  productName: string;
+  quantity: number;
+  unitPrice?: number;
+  totalAmount?: number;
+  customText?: string;
+  scentNote?: string;
+  colorPalette?: string;
+  tagDesignType?: string;
+  extraNote?: string;
+}
+
 // 2. Dijital Onaylı Özel Üretim Sözleşmesi Modeli
 export interface CustomContract {
   id: string;
@@ -561,6 +584,10 @@ export interface CustomContract {
   customerName: string;
   customerEmail: string;
   customerPhone?: string;
+  customerAddress?: string;
+  customerCity?: string;
+  customerDistrict?: string;
+  customerTckn?: string;
   productName: string;
   quantity: number;
   totalAmount: number;
@@ -577,9 +604,10 @@ export interface CustomContract {
   signatureDataUrl?: string; // Dokunmatik el imzası (base64 PNG)
   ipAddress?: string;
   userAgent?: string;
-  verificationCode?: string; // örn: "SOZ-SFR-2026-9812"
+  verificationCode?: string; // örn: "SOZ-SFR-2026-9812-OK"
   legalConsentChecked: boolean;
   createdAt: string;
+  items?: CustomContractItem[];
 }
 
 // 3. Webhook Entegrasyonu & Loglama Modeli

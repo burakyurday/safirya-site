@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { useAdmin } from '@/context/AdminContext';
 import { CustomContract } from '@/types/admin';
+import { printContractA4, downloadContractPdf } from '@/lib/contractPdf';
 
 export default function SozlesmeOnayPage() {
   const params = useParams();
@@ -49,6 +50,34 @@ export default function SozlesmeOnayPage() {
   const [checkLegalApproved, setCheckLegalApproved] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [signedSuccess, setSignedSuccess] = useState(false);
+  const [isPrinting, setIsPrinting] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
+
+  const handlePrintA4 = async () => {
+    if (!contract) return;
+    setIsPrinting(true);
+    try {
+      await printContractA4(contract, settings);
+    } catch (e) {
+      console.error(e);
+      alert('Yazdırma işlemi başlatılamadı.');
+    } finally {
+      setIsPrinting(false);
+    }
+  };
+
+  const handleDownloadPdf = async () => {
+    if (!contract) return;
+    setIsDownloading(true);
+    try {
+      await downloadContractPdf(contract, settings);
+    } catch (e) {
+      console.error(e);
+      alert('PDF oluşturulamadı.');
+    } finally {
+      setIsDownloading(false);
+    }
+  };
 
   // Sözleşmeyi ve Siparişi bul veya oluştur
   useEffect(() => {
@@ -208,11 +237,11 @@ export default function SozlesmeOnayPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#FAF8F5] py-8 sm:py-12 px-4 sm:px-6 text-[#231B18] font-sans">
-      <div className="max-w-3xl mx-auto space-y-6">
+    <div className="min-h-screen bg-[#FAF8F5] py-8 sm:py-12 px-4 sm:px-6 text-[#231B18] font-sans print:bg-white print:p-0">
+      <div className="max-w-3xl mx-auto space-y-6 print:max-w-none print:w-full print:m-0 print:p-0">
         
         {/* ÜST ATÖLYE LOGO & BAŞLIK */}
-        <div className="text-center space-y-2">
+        <div className="no-print text-center space-y-2">
           <Link href="/" className="inline-block">
             <span className="font-serif text-2xl font-bold tracking-widest text-[#1B2A4A]">
               {settings.logoText || 'SAFİRYA'}
@@ -225,11 +254,11 @@ export default function SozlesmeOnayPage() {
         </div>
 
         {/* SÖZLEŞME BELGESİ KARTI */}
-        <div className="bg-white rounded-3xl border border-[#E8E2D9] p-6 sm:p-10 shadow-lg space-y-8 relative">
+        <div id="contract-document-card" className="bg-white rounded-3xl border border-[#E8E2D9] p-6 sm:p-10 shadow-lg space-y-8 relative print:border-none print:shadow-none print:p-0 print:m-0">
           
           {/* Başarı Durumu Rozeti */}
           {signedSuccess && (
-            <div className="bg-emerald-50 border-2 border-emerald-500 p-4 sm:p-6 rounded-2xl text-center space-y-2">
+            <div className="no-print bg-emerald-50 border-2 border-emerald-500 p-4 sm:p-6 rounded-2xl text-center space-y-2">
               <div className="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto shadow-xs">
                 <CheckCircle2 className="w-7 h-7" />
               </div>
@@ -263,6 +292,29 @@ export default function SozlesmeOnayPage() {
               <span className="bg-gray-100 px-2.5 py-1 rounded-md">
                 Tarih: <strong>{contract.createdAt.slice(0, 10)}</strong>
               </span>
+            </div>
+          </div>
+
+          {/* MADDE 1: TARAFLAR */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+            <div className="p-3.5 rounded-xl border border-stone-200 bg-[#FAF8F5] space-y-1">
+              <span className="text-[10px] font-bold text-[#1B2A4A] uppercase tracking-wider block border-b border-stone-200 pb-1 mb-1">
+                SATICI (Hizmet / Mal Sağlayıcı)
+              </span>
+              <div><strong>Ünvan:</strong> Safirya El Yapımı Tasarım Ltd. Şti.</div>
+              <div><strong>Adres:</strong> Karşıyaka / İzmir</div>
+              <div><strong>Vergi Dairesi:</strong> Karşıyaka V.D. - 1820448192</div>
+              <div><strong>İletişim:</strong> +90 (532) 555 72 34 • atolye@safirya.com</div>
+            </div>
+
+            <div className="p-3.5 rounded-xl border border-stone-200 bg-[#FAF8F5] space-y-1">
+              <span className="text-[10px] font-bold text-[#1B2A4A] uppercase tracking-wider block border-b border-stone-200 pb-1 mb-1">
+                ALICI (Tüketici)
+              </span>
+              <div><strong>Ad Soyad:</strong> {contract.customerName || 'Müşteri'}</div>
+              <div><strong>Telefon:</strong> {contract.customerPhone || 'Kayıtlı Telefon'}</div>
+              <div><strong>E-Posta:</strong> {contract.customerEmail}</div>
+              <div><strong>Teslimat:</strong> {contract.customerAddress || 'Sipariş Kayıtlı Teslimat Adresi'}</div>
             </div>
           </div>
 
@@ -350,13 +402,25 @@ export default function SozlesmeOnayPage() {
                 )}
               </div>
 
-              <div className="flex items-center justify-center gap-3">
+              <div className="no-print flex flex-wrap items-center justify-center gap-3 pt-2">
                 <button
-                  onClick={() => window.print()}
-                  className="flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-300 bg-white hover:bg-gray-50 text-xs font-bold text-gray-700 shadow-xs transition"
+                  type="button"
+                  onClick={handleDownloadPdf}
+                  disabled={isDownloading}
+                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#1B2A4A] hover:bg-[#283d6a] text-xs font-bold text-white shadow-sm transition cursor-pointer disabled:opacity-50"
                 >
-                  <Printer className="w-4 h-4" />
-                  <span>Sözleşmeyi Yazdır / PDF</span>
+                  <Download className="w-4 h-4" />
+                  <span>{isDownloading ? 'PDF Hazırlanıyor...' : 'Sözleşmeyi İndir (PDF)'}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handlePrintA4}
+                  disabled={isPrinting}
+                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl border border-gray-300 bg-white hover:bg-gray-50 text-xs font-bold text-gray-700 shadow-xs transition cursor-pointer disabled:opacity-50"
+                >
+                  <Printer className="w-4 h-4 text-stone-600" />
+                  <span>{isPrinting ? 'Yazıcı Açılıyor...' : 'Yalnızca Sözleşmeyi Yazdır (A4)'}</span>
                 </button>
               </div>
             </div>
@@ -469,11 +533,48 @@ export default function SozlesmeOnayPage() {
         </div>
 
         {/* ALT GÜVENLİK BİLGİSİ */}
-        <div className="text-center text-xs text-gray-400 space-y-1">
+        <div className="no-print text-center text-xs text-gray-400 space-y-1">
           <p>Safirya El Yapımı Tasarım Atölyesi — Karşıyaka / İzmir</p>
           <p className="text-[10px]">Tüm dijital onay kayıtları 256-bit SSL ve zaman damgası ile güvence altındadır.</p>
         </div>
       </div>
+
+      {/* A4 Formatında Yalnızca Sözleşmeyi Yazdırma Stilleri */}
+      <style
+        dangerouslySetInnerHTML={{
+          __html: `
+            @media print {
+              @page {
+                size: A4 portrait;
+                margin: 10mm 15mm;
+              }
+              body * {
+                visibility: hidden;
+              }
+              #contract-document-card,
+              #contract-document-card * {
+                visibility: visible;
+              }
+              #contract-document-card {
+                position: absolute !important;
+                left: 0 !important;
+                top: 0 !important;
+                width: 100% !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                border: none !important;
+                box-shadow: none !important;
+                background: white !important;
+              }
+              .no-print,
+              .no-print * {
+                display: none !important;
+                visibility: hidden !important;
+              }
+            }
+          `,
+        }}
+      />
     </div>
   );
 }

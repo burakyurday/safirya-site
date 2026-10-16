@@ -20,6 +20,7 @@ import {
   Lock,
 } from 'lucide-react';
 import { useStore, CartItem } from '@/context/StoreContext';
+import PersonalizedContractSection from '@/components/checkout/PersonalizedContractSection';
 
 const TURKISH_CITIES = [
   'İstanbul',
@@ -240,6 +241,7 @@ export default function CheckoutPage() {
     // Yerel depolamaya sözleşme kaydını yaz (Admin & Sipariş Takip ekranları için)
     if (typeof window !== 'undefined') {
       try {
+        const fullAddr = `${formData.neighborhood ? formData.neighborhood + ' ' : ''}${formData.address} ${formData.district} / ${formData.city}`;
         const contractPayload = {
           id: `cnt-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
           orderNumber: targetOrderNumber,
@@ -247,6 +249,10 @@ export default function CheckoutPage() {
           customerName: finalSigner,
           customerEmail: formData.email,
           customerPhone: formData.phone,
+          customerAddress: fullAddr,
+          customerCity: formData.city,
+          customerDistrict: formData.district,
+          customerTckn: formData.tckn || undefined,
           productName: personalizedItems.map((i) => `${i.name} (${i.quantity} Adet)`).join(', '),
           quantity: personalizedItems.reduce((acc, i) => acc + i.quantity, 0),
           totalAmount: grandTotal,
@@ -260,6 +266,16 @@ export default function CheckoutPage() {
           signatureDataUrl: sigUrl,
           legalConsentChecked: true,
           createdAt: new Date().toISOString(),
+          agreedDeliveryDate: '3-4 İş Günü',
+          items: personalizedItems.map((i) => ({
+            productName: i.name,
+            quantity: i.quantity,
+            unitPrice: i.price,
+            totalAmount: i.price * i.quantity,
+            customText: i.customText,
+            scentNote: i.scentNote,
+            colorPalette: i.colorPalette,
+          })),
         };
 
         const existingRaw = localStorage.getItem('safirya_custom_contracts');
@@ -392,6 +408,12 @@ export default function CheckoutPage() {
           couponCode: appliedCoupon?.code,
           isGiftWrapped,
           giftNote: isGiftWrapped ? giftNote : undefined,
+          contractId: contractVerificationCode ? `cnt-${confirmedOrderNumber}` : undefined,
+          contractStatus: hasPersonalizedItems ? 'ONAYLANDI' : undefined,
+          contractVerificationCode: contractVerificationCode || undefined,
+          contractSignedAt: contractSignedAt || undefined,
+          contractSignedBy: signerName || formData.fullName,
+          signatureDataUrl: signatureDataUrl || undefined,
         }),
       });
 
@@ -406,13 +428,36 @@ export default function CheckoutPage() {
       console.warn('Sunucuya sipariş iletilirken uyarı (yerel yedek devrede):', apiErr);
     }
 
+    const formattedShippingAddress = `${formData.neighborhood ? formData.neighborhood + ' ' : ''}${formData.address} ${formData.district} / ${formData.city}`;
+
     const orderPayload = {
+      id: `ord-${confirmedOrderNumber}`,
       orderNumber: confirmedOrderNumber,
+      channel: 'WEB',
       email: formData.email,
+      customerEmail: formData.email,
       customerName: formData.fullName,
       phone: formData.phone,
+      customerPhone: formData.phone,
       totalAmount: finalTotal,
-      items: [...cartItems],
+      subtotal: cartTotal,
+      discountTotal: couponDiscount,
+      shippingFee: shippingFee,
+      items: cartItems.map((ci) => ({
+        productId: ci.id,
+        productName: ci.name,
+        name: ci.name,
+        quantity: ci.quantity,
+        unitPrice: ci.price,
+        price: ci.price,
+        totalAmount: ci.price * ci.quantity,
+        variantTitle: ci.variantTitle,
+        customization: ci.customText || ci.scentNote || ci.colorPalette ? {
+          customText: ci.customText,
+          selectedScent: ci.scentNote,
+          selectedColor: ci.colorPalette,
+        } : undefined,
+      })),
       date: new Date().toLocaleDateString('tr-TR', {
         day: 'numeric',
         month: 'long',
@@ -420,19 +465,35 @@ export default function CheckoutPage() {
         hour: '2-digit',
         minute: '2-digit',
       }),
-      shippingAddress: `${formData.neighborhood} ${formData.address} ${formData.district} / ${formData.city}`,
+      shippingAddress: {
+        fullName: formData.fullName,
+        phone: formData.phone,
+        address: `${formData.neighborhood ? formData.neighborhood + ' ' : ''}${formData.address}`,
+        district: formData.district,
+        city: formData.city,
+        fullAddress: formattedShippingAddress,
+      },
       isGiftWrapped,
       giftNote: isGiftWrapped ? giftNote : undefined,
       stage: 'SIPARIS_ALINDI',
       paymentMethod: method,
       paymentStatus: method === 'HAVALE_EFT' ? 'BEKLIYOR' : 'ODENDI',
+      contractId: contractVerificationCode ? `cnt-${confirmedOrderNumber}` : undefined,
+      contractStatus: hasPersonalizedItems ? 'ONAYLANDI' : undefined,
+      contractVerificationCode: contractVerificationCode || undefined,
+      contractSignedAt: contractSignedAt || undefined,
+      contractSignedBy: signerName || formData.fullName,
+      signatureDataUrl: signatureDataUrl || undefined,
     };
 
     try {
       const existingRaw = localStorage.getItem('safirya_orders');
       const existingList = existingRaw ? JSON.parse(existingRaw) : [];
-      existingList.unshift(orderPayload);
-      localStorage.setItem('safirya_orders', JSON.stringify(existingList));
+      // Aynı sipariş numaralı varsa güncelle, yoksa başa ekle
+      const filtered = existingList.filter((o: any) => o.orderNumber !== confirmedOrderNumber);
+      filtered.unshift(orderPayload);
+      localStorage.setItem('safirya_orders', JSON.stringify(filtered));
+      localStorage.setItem('safirya_admin_orders', JSON.stringify(filtered));
     } catch (err) {
       console.error('Sipariş kaydedilirken hata:', err);
     }
@@ -443,7 +504,7 @@ export default function CheckoutPage() {
       totalAmount: finalTotal,
       items: [...cartItems],
       date: orderPayload.date,
-      shippingAddress: orderPayload.shippingAddress,
+      shippingAddress: formattedShippingAddress,
       giftNote: isGiftWrapped ? giftNote : undefined,
       paymentMethod: method,
     });
@@ -467,6 +528,21 @@ export default function CheckoutPage() {
     // Benzersiz Sipariş Numarası Üret (Örn: SFR-2026-8921)
     const randomSuffix = Math.floor(1000 + Math.random() * 9000);
     const orderNumber = `SFR-2026-${randomSuffix}`;
+
+    // 0. Kişiye Özel Üretim Sözleşmesi Kontrolü (Yasal Zorunluluk)
+    if (hasPersonalizedItems) {
+      if (!isContractApproved) {
+        const sealed = handleSealContract(orderNumber);
+        if (!sealed) {
+          setIsSubmitting(false);
+          const el = document.getElementById('personalized-contract-section');
+          if (el) {
+            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+          return;
+        }
+      }
+    }
 
     // 1. Kredi Kartı (PayTR 3D Secure Akışı)
     if (formData.paymentMethod === 'CREDIT_CARD') {
@@ -497,6 +573,12 @@ export default function CheckoutPage() {
             companyName: formData.companyName,
             taxOffice: formData.taxOffice,
             vkn: formData.vkn,
+            contractId: contractVerificationCode ? `cnt-${orderNumber}` : undefined,
+            contractStatus: hasPersonalizedItems ? 'ONAYLANDI' : undefined,
+            contractVerificationCode: contractVerificationCode || undefined,
+            contractSignedAt: contractSignedAt || undefined,
+            contractSignedBy: signerName || formData.fullName,
+            signatureDataUrl: signatureDataUrl || undefined,
           }),
         });
 
@@ -960,20 +1042,6 @@ export default function CheckoutPage() {
                       className="w-full px-3.5 py-2.5 rounded-xs border border-stone-300 bg-white text-sm text-[#231B18] focus:outline-none focus:border-[#231B18]"
                     />
                   </div>
-
-                  <div>
-                    <label className="block text-[11px] uppercase tracking-wider font-medium text-[#231B18] mb-1.5">
-                      Kurye İçin Sipariş Notu (Opsiyonel)
-                    </label>
-                    <input
-                      type="text"
-                      name="orderNote"
-                      placeholder="Örn: Zili çalmayınız, bebek uyuyor."
-                      value={formData.orderNote}
-                      onChange={handleInputChange}
-                      className="w-full px-3.5 py-2.5 rounded-xs border border-stone-300 bg-white text-sm text-[#231B18] focus:outline-none focus:border-[#231B18]"
-                    />
-                  </div>
                 </div>
               </div>
 
@@ -1101,11 +1169,46 @@ export default function CheckoutPage() {
                 )}
               </div>
 
-              {/* ADIM 3: ÖDEME YÖNTEMİ */}
+              {/* ADIM 3: YALNIZCA KİŞİSELLEŞTİRİLEN ÜRÜNLER İÇİN RESMİ SÖZLEŞME ONAYI */}
+              {hasPersonalizedItems && (
+                <PersonalizedContractSection
+                  personalizedItems={personalizedItems}
+                  customerName={formData.fullName}
+                  customerEmail={formData.email}
+                  customerPhone={formData.phone}
+                  customerAddress={`${formData.neighborhood ? formData.neighborhood + ' ' : ''}${formData.address} ${formData.district} / ${formData.city}`}
+                  orderNumber={orderNumber}
+                  grandTotal={grandTotal}
+                  contractCanvasRef={contractCanvasRef}
+                  hasSignature={hasSignature}
+                  signatureDataUrl={signatureDataUrl}
+                  signerName={signerName}
+                  setSignerName={setSignerName}
+                  checkTextApproved={checkTextApproved}
+                  setCheckTextApproved={setCheckTextApproved}
+                  checkLegalApproved={checkLegalApproved}
+                  setCheckLegalApproved={setCheckLegalApproved}
+                  isContractApproved={isContractApproved}
+                  contractVerificationCode={contractVerificationCode}
+                  contractSignedAt={contractSignedAt}
+                  contractError={contractError}
+                  startDrawing={startDrawing}
+                  drawSignature={drawSignature}
+                  stopDrawing={stopDrawing}
+                  clearSignature={clearSignature}
+                  onSealContract={() => handleSealContract(orderNumber)}
+                  onReopenSignature={() => {
+                    setIsContractApproved(false);
+                    clearSignature();
+                  }}
+                />
+              )}
+
+              {/* ADIM 3 veya 4: ÖDEME YÖNTEMİ */}
               <div className="bg-white rounded-xs border border-stone-200 p-6 sm:p-8 space-y-5">
                 <div className="flex items-center gap-3 pb-3 border-b border-stone-200">
                   <span className="w-6 h-6 rounded-xs bg-[#231B18] text-white text-xs font-medium flex items-center justify-center">
-                    3
+                    {hasPersonalizedItems ? 4 : 3}
                   </span>
                   <div>
                     <h3 className="font-serif text-lg font-normal text-[#231B18]">
@@ -1473,6 +1576,15 @@ export default function CheckoutPage() {
                     </span>
                   )}
                 </button>
+
+                {hasPersonalizedItems && !isContractApproved && (
+                  <div className="p-2.5 rounded-xs bg-amber-50 border border-amber-300 text-amber-900 text-[11px] flex items-center gap-2 leading-snug">
+                    <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+                    <span>
+                      Siparişinizde kişiye özel üretim ürünü bulunmaktadır. Sipariş öncesi sözleşme onayı zorunludur.
+                    </span>
+                  </div>
+                )}
 
                 <div className="pt-2 text-center text-[10px] text-stone-400">
                   <p>Siparişi tamamlayarak Mesafeli Satış Sözleşmesi&apos;ni kabul etmiş olursunuz.</p>

@@ -28,7 +28,7 @@ export const defaultSettings: SystemSettingsData = {
   contactEmail: 'destek@safirya.tr',
   contactPhone: '+90 (212) 555 7234',
   whatsappNumber: '+90 532 555 7234',
-  instagramHandle: '@safirya35353535',
+  instagramHandle: '@safirya.tr',
   atelierAddress: 'Karşıyaka / İzmir (Yalnızca Online E-Ticaret Hizmeti)',
   exitIntentTitle: 'Atölyemizden Ayrılmadan Önce %10 Tanışma İndirimi!',
   exitIntentCouponCode: 'SAFIRYA10',

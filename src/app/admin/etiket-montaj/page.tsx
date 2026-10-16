@@ -2379,8 +2379,14 @@ function EtiketMontajContent() {
                   // Tüm Sayfaları Alt Alta Göster
                   Array.from({ length: totalSheetsNeeded }).map((_, idx) => renderSheetGrid(idx))
                 ) : (
-                  // Sadece Seçili Sayfayı Göster
-                  renderSheetGrid(currentPageIndex)
+                  <>
+                    <div className="print:hidden w-full flex flex-col items-center">
+                      {renderSheetGrid(currentPageIndex)}
+                    </div>
+                    <div className="hidden print:block w-full">
+                      {Array.from({ length: totalSheetsNeeded }).map((_, idx) => renderSheetGrid(idx))}
+                    </div>
+                  </>
                 )}
               </div>
             )}
@@ -2478,37 +2484,60 @@ function EtiketMontajContent() {
       )}
 
       {/* 4. YAZDIRMA CSS STİLLERİ (Strict 1:1 Scale Print) */}
-      <style jsx global>{`
-        @media print {
-          @page {
-            size: ${paperSize === 'Roll' ? `${selectedTemplate.widthMm}mm ${selectedTemplate.heightMm}mm` : `${paperSize} ${orientation}`};
-            margin: 0mm !important;
-          }
-          html, body {
-            background: white !important;
-            margin: 0mm !important;
-            padding: 0mm !important;
-            width: 100% !important;
-            height: 100% !important;
-          }
-          .no-print {
-            display: none !important;
-          }
-          #print-sheet-container {
-            transform: none !important;
-            margin: 0 !important;
-            padding: 0 !important;
-            box-shadow: none !important;
-            width: 100% !important;
-          }
-          .print-sheet-page {
-            box-shadow: none !important;
-            margin: 0 !important;
-            page-break-after: always !important;
-            break-after: page !important;
-          }
-        }
-      `}</style>
+      <style
+        dangerouslySetInnerHTML={{
+          __html: `
+            @media print {
+              @page {
+                size: ${paperSize === 'Roll' ? `${selectedTemplate.widthMm}mm ${selectedTemplate.heightMm}mm` : `${paperSize} ${orientation}`};
+                margin: 0mm !important;
+              }
+              html, body {
+                background: #ffffff !important;
+                background-color: #ffffff !important;
+                margin: 0mm !important;
+                padding: 0mm !important;
+                width: 100% !important;
+                height: auto !important;
+                overflow: visible !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+              }
+              body * {
+                visibility: hidden;
+              }
+              #print-sheet-container,
+              #print-sheet-container * {
+                visibility: visible;
+              }
+              #print-sheet-container {
+                position: absolute !important;
+                left: 0 !important;
+                top: 0 !important;
+                width: 100% !important;
+                margin: 0 !important;
+                margin-bottom: 0 !important;
+                padding: 0 !important;
+                transform: none !important;
+                box-shadow: none !important;
+                display: block !important;
+              }
+              .print-sheet-page {
+                box-shadow: none !important;
+                border: none !important;
+                margin: 0 auto !important;
+                page-break-after: always !important;
+                break-after: page !important;
+              }
+              .no-print,
+              .no-print * {
+                display: none !important;
+                visibility: hidden !important;
+              }
+            }
+          `,
+        }}
+      />
     </div>
   );
 }
