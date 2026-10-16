@@ -8,6 +8,7 @@ import {
 } from '@/lib/orderVerification';
 import { generateSafiryaEmailHtml } from '@/lib/notifications/email';
 import { sendEmail } from '@/lib/email/sender';
+import { verifyUserSessionToken, USER_COOKIE_NAME } from '@/lib/auth/userAuth';
 
 export const dynamic = 'force-dynamic';
 
@@ -82,6 +83,21 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // 2.5. Kullanıcı Oturumunu Çözümle (Oturum açmış kullanıcı sipariş bağlantısı)
+    const userCookie = req.cookies.get(USER_COOKIE_NAME)?.value;
+    let resolvedUserId: string | undefined = undefined;
+    if (userCookie) {
+      try {
+        const userPayload = await verifyUserSessionToken(userCookie);
+        if (userPayload?.id) {
+          resolvedUserId = userPayload.id;
+        }
+      } catch {}
+    }
+    if (!resolvedUserId && body.userId) {
+      resolvedUserId = String(body.userId);
+    }
+
     // 3. Benzersiz Güvenli Sipariş Numarası Üret
     const orderNumber = generateSafeOrderNumber();
     const cleanCustomerName = String(fullName).trim();
@@ -93,6 +109,7 @@ export async function POST(req: NextRequest) {
 
     const orderRecord = {
       orderNumber,
+      userId: resolvedUserId,
       customerName: cleanCustomerName,
       email: cleanEmail,
       customerEmail: cleanEmail,
@@ -141,6 +158,7 @@ export async function POST(req: NextRequest) {
       await prisma.order.create({
         data: {
           orderNumber,
+          userId: resolvedUserId || null,
           guestName: cleanCustomerName,
           guestEmail: cleanEmail,
           guestPhone: cleanPhone,

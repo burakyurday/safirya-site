@@ -185,7 +185,6 @@ export async function POST(req: Request) {
           if (orderEmail && orderEmail === cleanEmail) {
             return NextResponse.json({ success: true, order: savedOrder });
           } else {
-            // E-posta uyuşmazsa güvenli hata
             return NextResponse.json(
               {
                 success: false,
@@ -193,6 +192,42 @@ export async function POST(req: Request) {
               },
               { status: 404 }
             );
+          }
+        }
+
+        // orders/all.json toplu sipariş listesinde ara
+        const { data: allData } = await supabaseAdmin.storage
+          .from('safirya-media')
+          .download('orders/all.json');
+        if (allData) {
+          const allText = await allData.text();
+          const allOrders = JSON.parse(allText);
+          if (Array.isArray(allOrders)) {
+            const matched = allOrders.find(
+              (o: any) => o.orderNumber && o.orderNumber.toUpperCase() === cleanOrderNumber
+            );
+            if (matched) {
+              const orderEmail = (
+                matched.email ||
+                matched.customerEmail ||
+                matched.guestEmail ||
+                ''
+              )
+                .trim()
+                .toLowerCase();
+
+              if (orderEmail && orderEmail === cleanEmail) {
+                return NextResponse.json({ success: true, order: matched });
+              } else {
+                return NextResponse.json(
+                  {
+                    success: false,
+                    error: 'Girdiğiniz sipariş numarası ve e-posta adresiyle eşleşen bir sipariş bulunamadı. Lütfen bilgilerinizi kontrol ediniz.',
+                  },
+                  { status: 404 }
+                );
+              }
+            }
           }
         }
       } catch {

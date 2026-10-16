@@ -21,6 +21,7 @@ import {
   ShieldCheck,
   AlertCircle,
   ArrowRight,
+  Package,
 } from 'lucide-react';
 import { useStore } from '@/context/StoreContext';
 
@@ -132,6 +133,8 @@ function OrderTrackingContent() {
   const [searchError, setSearchError] = useState<string | null>(null);
   const [selectedPhoto, setSelectedPhoto] = useState<StagePhoto | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [userCloudOrders, setUserCloudOrders] = useState<any[]>([]);
+  const [loadingUserOrders, setLoadingUserOrders] = useState(false);
 
   const performLookup = async (queryNo: string, contactEmail: string) => {
     setSearchError(null);
@@ -437,6 +440,24 @@ function OrderTrackingContent() {
     }
   }, [paramOrderNumber, paramEmail, currentUser?.email]);
 
+  // Giriş yapmış kullanıcının Supabase bulutundaki siparişlerini çek
+  useEffect(() => {
+    if (currentUser?.email) {
+      setLoadingUserOrders(true);
+      fetch('/api/orders/me')
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          if (data?.success && Array.isArray(data.orders)) {
+            setUserCloudOrders(data.orders);
+          }
+        })
+        .catch(() => {})
+        .finally(() => setLoadingUserOrders(false));
+    } else {
+      setUserCloudOrders([]);
+    }
+  }, [currentUser?.email]);
+
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     performLookup(orderQuery, emailInput);
@@ -462,6 +483,59 @@ function OrderTrackingContent() {
 
         {/* 1. SORGULAMA ALANI */}
         <div className="bg-white p-6 sm:p-8 rounded-xs border border-stone-200 mb-8 shadow-xs">
+          {/* Giriş Yapmış Kullanıcı İçin Bulut Siparişleri Hızlı Seçici */}
+          {currentUser && userCloudOrders.length > 0 && (
+            <div className="mb-6 pb-5 border-b border-stone-200">
+              <div className="flex items-center justify-between mb-2.5">
+                <span className="text-[11px] uppercase tracking-wider font-semibold text-[#231B18] flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-[#C85A32]" />
+                  <span>Hesabınıza Kayıtlı Siparişleriniz ({userCloudOrders.length}):</span>
+                </span>
+                <Link
+                  href="/hesabim/siparislerim"
+                  className="text-xs text-[#C85A32] hover:underline font-medium inline-flex items-center gap-1"
+                >
+                  <span>Tümünü Gör</span>
+                  <ArrowRight className="w-3 h-3" />
+                </Link>
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                {userCloudOrders.map((ord) => {
+                  const isSelected = activeOrder?.orderNumber === ord.orderNumber;
+                  return (
+                    <button
+                      key={ord.orderNumber}
+                      type="button"
+                      onClick={() => {
+                        setOrderQuery(ord.orderNumber);
+                        setEmailInput(currentUser.email);
+                        performLookup(ord.orderNumber, currentUser.email);
+                      }}
+                      className={`px-3 py-2 rounded-xs border text-xs font-mono font-medium flex items-center gap-2 transition cursor-pointer shadow-2xs ${
+                        isSelected
+                          ? 'bg-[#231B18] text-white border-[#231B18]'
+                          : 'bg-[#FAF8F5] hover:bg-stone-100 text-[#231B18] border-stone-200'
+                      }`}
+                    >
+                      <Package className="w-3.5 h-3.5 text-[#C85A32]" />
+                      <span>#{ord.orderNumber}</span>
+                      <span
+                        className={`text-[10px] px-1.5 py-0.5 rounded font-sans font-medium ${
+                          isSelected
+                            ? 'bg-white/20 text-white'
+                            : 'bg-stone-200 text-stone-800'
+                        }`}
+                      >
+                        {ord.stageLabel || ord.stage}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           <form onSubmit={handleSearchSubmit} className="grid grid-cols-1 sm:grid-cols-12 gap-4">
             <div className="sm:col-span-6">
               <label className="block text-[11px] uppercase tracking-wider font-medium text-[#231B18] mb-1.5">
