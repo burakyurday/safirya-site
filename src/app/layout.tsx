@@ -10,6 +10,7 @@ import {
   getLocalBusinessSchema,
   getWebSiteSchema,
 } from '@/components/seo/JsonLd';
+import { PwaManager } from '@/components/pwa/PwaManager';
 
 const cormorant = Cormorant_Garamond({
   subsets: ['latin'],
@@ -108,9 +109,18 @@ export const metadata: Metadata = {
     icon: [
       { url: '/icon.svg', type: 'image/svg+xml' },
       { url: '/favicon.ico', sizes: 'any' },
+      { url: '/icons/icon-192x192.svg', sizes: '192x192', type: 'image/svg+xml' },
     ],
-    apple: [{ url: '/apple-icon.svg', type: 'image/svg+xml' }],
+    apple: [
+      { url: '/icons/icon-192x192.svg', sizes: '192x192', type: 'image/svg+xml' },
+      { url: '/apple-icon.svg', type: 'image/svg+xml' },
+    ],
     shortcut: ['/icon.svg'],
+  },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'Safirya',
   },
   robots: {
     index: true,
@@ -164,6 +174,7 @@ export default async function RootLayout({
           <StorefrontShell settings={settings} categories={categories}>
             {children}
           </StorefrontShell>
+          <PwaManager />
         </StoreProvider>
       </body>
 

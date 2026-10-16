@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="safirGradient512" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#D96B27" />
+      <stop offset="100%" stop-color="#C2581A" />
+    </linearGradient>
+    <linearGradient id="bgGradient512" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#231B18" />
+      <stop offset="100%" stop-color="#140E0C" />
+    </linearGradient>
+  </defs>
+  <!-- Background Rounded Shield -->
+  <rect width="512" height="512" rx="120" fill="url(#bgGradient512)" />
+  
+  <!-- Outer Artisan Ring Accent -->
+  <circle cx="256" cy="256" r="192" fill="none" stroke="#FAF8F5" stroke-opacity="0.12" stroke-width="10" stroke-dasharray="20 20" />
+  
+  <!-- Stylized "S" / Flame Craft Emblem -->
+  <path d="M256 96 C200 144 160 184 160 232 C160 280 200 304 248 320 C296 336 328 360 328 400 C328 448 280 480 216 464 C208 460 200 452 192 444" 
+        fill="none" 
+        stroke="url(#safirGradient512)" 
+        stroke-width="36" 
+        stroke-linecap="round" />
+  
+  <!-- Top Artisan Sparkle Gem -->
+  <polygon points="336,128 352,168 392,184 352,200 336,240 320,200 280,184 320,168" fill="#D96B27" />
+  
+  <!-- Subtle center glow bead -->
+  <circle cx="256" cy="256" r="18" fill="#FAF8F5" opacity="0.9" />
+</svg>
