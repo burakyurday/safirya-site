@@ -45,18 +45,12 @@ export function Header({ categories }: HeaderProps) {
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
 
-  const [brandLogo, setBrandLogo] = useState<string | null>(null);
-  const [brandText, setBrandText] = useState('SAFİRYA');
-
   const userMenuRef = useRef<HTMLDivElement>(null);
 
-  // Logo yükleme
+  // Eski local test logo kalıntılarını temizle
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const logo = localStorage.getItem('safirya_brand_logo');
-      const text = localStorage.getItem('safirya_brand_logo_text');
-      if (logo) setBrandLogo(logo);
-      if (text) setBrandText(text);
+      localStorage.removeItem('safirya_brand_logo');
     }
   }, []);
 
@@ -87,22 +81,12 @@ export function Header({ categories }: HeaderProps) {
             </button>
           </div>
 
-          {/* Logo */}
+          {/* Logo (safirya.tr Canlı Sürümüyle Birebir Tipografik Logo) */}
           <div className="flex-shrink-0 flex items-center">
             <Link href="/" className="group flex items-center gap-2">
-              {brandLogo ? (
-                <Image
-                  src={brandLogo}
-                  alt={brandText}
-                  width={190}
-                  height={40}
-                  className="h-8 sm:h-10 w-auto object-contain transition-transform group-hover:scale-102"
-                />
-              ) : (
-                <span className="font-serif text-2xl sm:text-[1.85rem] font-medium tracking-[0.25em] text-[#231B18] group-hover:text-[#C85A32] transition-colors uppercase">
-                  {brandText}
-                </span>
-              )}
+              <span className="font-serif text-2xl sm:text-[1.85rem] font-medium tracking-[0.25em] text-[#231B18] group-hover:text-[#C85A32] transition-colors uppercase">
+                SAFİRYA
+              </span>
             </Link>
           </div>
 
