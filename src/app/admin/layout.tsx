@@ -23,6 +23,7 @@ import {
   Printer,
   Boxes,
   BarChart3,
+  Crown,
 } from 'lucide-react';
 
 import { AdminProvider, useAdmin } from '@/context/AdminContext';
@@ -124,6 +125,13 @@ function AdminShell({ children }: { children: React.ReactNode }) {
       icon: Megaphone,
       badge: activeAbandonedCarts > 0 ? `${activeAbandonedCarts} Sepet` : null,
       badgeColor: 'bg-rose-600 text-white',
+    },
+    {
+      title: 'Sadakat & Atölye Kulübü',
+      href: '/admin/sadakat',
+      icon: Crown,
+      badge: 'VIP',
+      badgeColor: 'bg-amber-600 text-white',
     },
     {
       title: 'Vitrin & Konsept Tasarımı',

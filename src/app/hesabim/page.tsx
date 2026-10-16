@@ -4,11 +4,11 @@ import React, { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useStore } from '@/context/StoreContext';
 import Link from 'next/link';
-import { User, Package, Heart, LogOut, ArrowRight, ShieldCheck, Mail } from 'lucide-react';
+import { User, Package, Heart, LogOut, ArrowRight, ShieldCheck, Mail, Sparkles } from 'lucide-react';
 
 export default function HesabimIndexPage() {
   const router = useRouter();
-  const { currentUser, logoutUser, setAuthModalView, setIsAuthModalOpen, favoritesCount } = useStore();
+  const { currentUser, logoutUser, setAuthModalView, setIsAuthModalOpen, favoritesCount, loyaltyAccount } = useStore();
 
   return (
     <div className="bg-white min-h-[70vh] py-12 text-[#231B18]">
@@ -47,14 +47,42 @@ export default function HesabimIndexPage() {
               </div>
             </div>
 
+            {/* Atölye Kulübü Rozeti & Puan Özeti */}
+            <Link
+              href="/hesabim/sadakat"
+              className="bg-gradient-to-r from-amber-50/80 via-stone-50 to-[#FAF8F5] border border-amber-200/80 p-4 rounded-xl flex items-center justify-between gap-4 hover:border-[#C85A32] transition group shadow-2xs"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-[#C85A32]/10 text-[#C85A32] flex items-center justify-center shrink-0">
+                  <Sparkles className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-[#231B18]">Safirya Atölye Kulübü</span>
+                    <span className="text-[10px] font-semibold bg-[#C85A32] text-white px-2 py-0.5 rounded-full">
+                      {loyaltyAccount?.currentTier || 'BRONZ'} Seviye
+                    </span>
+                  </div>
+                  <p className="text-xs text-stone-600 mt-0.5">
+                    Mevcut Bakiye: <strong className="text-[#C85A32]">{loyaltyAccount?.pointsBalance || 100} Safir Puan</strong> (₺{((loyaltyAccount?.pointsBalance || 100) * 0.5).toFixed(2)} İndirim)
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-1 text-xs font-semibold text-[#C85A32] group-hover:translate-x-1 transition shrink-0">
+                <span>Puan Detayı</span>
+                <ArrowRight className="w-4 h-4" />
+              </div>
+            </Link>
+
             {/* Menü Kartları */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <Link
                 href="/hesabim/siparislerim"
-                className="p-5 rounded-xs border border-stone-200 bg-white hover:border-[#231B18] transition group space-y-2"
+                className="p-5 rounded-xl border border-stone-200 bg-white hover:border-[#231B18] transition group space-y-2"
               >
                 <div className="flex items-center justify-between">
-                  <div className="w-10 h-10 rounded-xs bg-[#FAF8F5] border border-stone-200 flex items-center justify-center text-[#C85A32]">
+                  <div className="w-10 h-10 rounded-lg bg-[#FAF8F5] border border-stone-200 flex items-center justify-center text-[#C85A32]">
                     <Package className="w-5 h-5" />
                   </div>
                   <ArrowRight className="w-4 h-4 text-stone-400 group-hover:text-[#231B18] group-hover:translate-x-1 transition" />
@@ -63,16 +91,34 @@ export default function HesabimIndexPage() {
                   Siparişlerim
                 </h3>
                 <p className="text-xs text-[#7A7067]">
-                  Atölyeden verdiğiniz tüm el yapımı siparişlerinizi ve canlı üretim aşamalarını inceleyin.
+                  Atölyeden verdiğiniz tüm siparişleri ve canlı üretim aşamalarını inceleyin.
+                </p>
+              </Link>
+
+              <Link
+                href="/hesabim/sadakat"
+                className="p-5 rounded-xl border border-stone-200 bg-white hover:border-[#231B18] transition group space-y-2"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="w-10 h-10 rounded-lg bg-[#FAF8F5] border border-stone-200 flex items-center justify-center text-[#C85A32]">
+                    <Sparkles className="w-5 h-5" />
+                  </div>
+                  <ArrowRight className="w-4 h-4 text-stone-400 group-hover:text-[#231B18] group-hover:translate-x-1 transition" />
+                </div>
+                <h3 className="font-serif text-base font-normal text-[#231B18]">
+                  Atölye Kulübü
+                </h3>
+                <p className="text-xs text-[#7A7067]">
+                  Safir Puan bakiyeniz, seviye ayrıcalıklarınız ve arkadaş davet kodunuz.
                 </p>
               </Link>
 
               <Link
                 href="/favoriler"
-                className="p-5 rounded-xs border border-stone-200 bg-white hover:border-[#231B18] transition group space-y-2"
+                className="p-5 rounded-xl border border-stone-200 bg-white hover:border-[#231B18] transition group space-y-2"
               >
                 <div className="flex items-center justify-between">
-                  <div className="w-10 h-10 rounded-xs bg-[#FAF8F5] border border-stone-200 flex items-center justify-center text-[#C85A32]">
+                  <div className="w-10 h-10 rounded-lg bg-[#FAF8F5] border border-stone-200 flex items-center justify-center text-[#C85A32]">
                     <Heart className="w-5 h-5" />
                   </div>
                   <ArrowRight className="w-4 h-4 text-stone-400 group-hover:text-[#231B18] group-hover:translate-x-1 transition" />
@@ -81,7 +127,7 @@ export default function HesabimIndexPage() {
                   Favorilerim ({favoritesCount})
                 </h3>
                 <p className="text-xs text-[#7A7067]">
-                  Beğendiğiniz mumları, Miyuki takıları ve epoksi sunumlukları tek bir yerde saklayın.
+                  Beğendiğiniz mumları, takıları ve epoksi sunumlukları tek bir yerde saklayın.
                 </p>
               </Link>
             </div>

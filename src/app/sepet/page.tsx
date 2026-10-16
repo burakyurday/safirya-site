@@ -94,10 +94,25 @@ export default function CartPage() {
     appliedCoupon,
     applyCoupon,
     removeCoupon,
+    currentUser,
+    loyaltyAccount,
+    appliedPoints,
+    pointsDiscount,
+    pointsToEarn,
+    applyPoints,
+    removePoints,
+    setIsAuthModalOpen,
+    setAuthModalView,
   } = useStore();
 
   const [couponInput, setCouponInput] = useState('');
   const [couponFeedback, setCouponFeedback] = useState<{
+    type: 'success' | 'error';
+    message: string;
+  } | null>(null);
+
+  const [pointsInput, setPointsInput] = useState('');
+  const [pointsFeedback, setPointsFeedback] = useState<{
     type: 'success' | 'error';
     message: string;
   } | null>(null);
@@ -122,10 +137,41 @@ export default function CartPage() {
   const shippingFee = isFreeShipping || cartItems.length === 0 ? 0 : 45.0;
   const giftWrapCost = isGiftWrapped ? giftWrapFee : 0;
   const discountedSubtotal = Math.max(0, cartTotal - couponDiscount);
-  const grandTotal = discountedSubtotal + giftWrapCost + shippingFee;
+  const payableSubtotal = Math.max(0, discountedSubtotal - pointsDiscount);
+  const grandTotal = payableSubtotal + giftWrapCost + shippingFee;
 
   const shippingSavings = isFreeShipping && cartItems.length > 0 ? 45.0 : 0;
-  const totalSavings = bulkSavings + couponDiscount + shippingSavings;
+  const totalSavings = bulkSavings + couponDiscount + pointsDiscount + shippingSavings;
+
+  const handleApplyPoints = (e: React.FormEvent) => {
+    e.preventDefault();
+    const pts = parseInt(pointsInput.trim(), 10);
+    if (isNaN(pts) || pts <= 0) return;
+    const res = applyPoints(pts);
+    if (res.success) {
+      setPointsFeedback({ type: 'success', message: res.message });
+      setPointsInput('');
+    } else {
+      setPointsFeedback({ type: 'error', message: res.message });
+    }
+  };
+
+  const handleQuickUseAllPoints = () => {
+    if (!loyaltyAccount) return;
+    const maxDiscountAllowed = discountedSubtotal * 0.5;
+    const maxPoints = Math.floor(maxDiscountAllowed / 0.5);
+    const pts = Math.min(loyaltyAccount.pointsBalance, maxPoints);
+    if (pts < 50) {
+      setPointsFeedback({ type: 'error', message: 'Kullanmak için en az 50 Safir Puan gereklidir.' });
+      return;
+    }
+    const res = applyPoints(pts);
+    if (res.success) {
+      setPointsFeedback({ type: 'success', message: res.message });
+    } else {
+      setPointsFeedback({ type: 'error', message: res.message });
+    }
+  };
 
   const handleApplyCoupon = (e: React.FormEvent) => {
     e.preventDefault();
@@ -656,6 +702,97 @@ export default function CartPage() {
                   )}
                 </div>
 
+                {/* Safir Puan Kullanımı */}
+                <div className="space-y-2 pt-2 border-t border-stone-200">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-semibold uppercase tracking-wider text-[#231B18] flex items-center gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5 text-[#C85A32]" />
+                      <span>Safir Puan Kullan</span>
+                    </label>
+                    {currentUser && loyaltyAccount && (
+                      <span className="text-[10px] text-stone-500">
+                        Bakiye: <strong className="text-[#C85A32]">{loyaltyAccount.pointsBalance}</strong> Puan
+                      </span>
+                    )}
+                  </div>
+
+                  {appliedPoints > 0 ? (
+                    <div className="p-3 bg-white border border-emerald-200 rounded-xs flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
+                        <div>
+                          <span className="text-xs font-semibold text-emerald-800 block">
+                            {appliedPoints} Puan Uygulandı
+                          </span>
+                          <span className="text-[10px] text-emerald-700">
+                            -₺{pointsDiscount.toFixed(2)} indirim uygulandı
+                          </span>
+                        </div>
+                      </div>
+                      <button onClick={removePoints} className="p-1 text-stone-400 hover:text-red-500">
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ) : currentUser ? (
+                    loyaltyAccount && loyaltyAccount.pointsBalance >= 50 ? (
+                      <div className="space-y-2">
+                        <form onSubmit={handleApplyPoints} className="flex gap-2">
+                          <input
+                            type="number"
+                            min="50"
+                            max={loyaltyAccount.pointsBalance}
+                            step="10"
+                            placeholder="Örn: 100"
+                            value={pointsInput}
+                            onChange={(e) => setPointsInput(e.target.value)}
+                            className="flex-1 px-3 py-2 bg-white border border-stone-300 rounded-xs text-xs text-[#231B18] focus:outline-none focus:border-[#231B18]"
+                          />
+                          <button
+                            type="submit"
+                            className="px-4 py-2 bg-[#C85A32] hover:bg-[#B34E2A] text-white text-xs uppercase tracking-wider font-medium rounded-xs"
+                          >
+                            Kullan
+                          </button>
+                        </form>
+                        <button
+                          type="button"
+                          onClick={handleQuickUseAllPoints}
+                          className="text-[11px] text-[#C85A32] hover:underline block text-left"
+                        >
+                          ⚡ Tüm kullanılabilir puanları kullan ({Math.min(loyaltyAccount.pointsBalance, Math.floor(discountedSubtotal * 0.5 / 0.5))} Puan = ₺{((Math.min(loyaltyAccount.pointsBalance, Math.floor(discountedSubtotal * 0.5 / 0.5))) * 0.5).toFixed(2)})
+                        </button>
+                        {pointsFeedback && (
+                          <div
+                            className={`text-[10px] p-2 rounded ${
+                              pointsFeedback.type === 'success' ? 'bg-emerald-50 text-emerald-800' : 'bg-rose-50 text-rose-800'
+                            }`}
+                          >
+                            {pointsFeedback.message}
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="text-[11px] text-stone-500 bg-stone-50 p-2.5 rounded border border-stone-100">
+                        Puan kullanmak için en az 50 Safir Puan gereklidir. Mevcut: {loyaltyAccount?.pointsBalance || 0} Puan.
+                      </div>
+                    )
+                  ) : (
+                    <div className="text-[11px] text-stone-600 bg-amber-50/70 p-2.5 rounded border border-amber-200/60 flex items-center justify-between">
+                      <span>100 Puan (₺50) hoş geldin hediyeni kullan</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setAuthModalView('login');
+                          setIsAuthModalOpen(true);
+                        }}
+                        className="text-[10px] font-bold text-[#C85A32] underline ml-2 shrink-0"
+                      >
+                        Giriş Yap
+                      </button>
+                    </div>
+                  )}
+                </div>
+
                 {/* Fiyat Kırılımı */}
                 <div className="space-y-2.5 text-xs text-[#554D46] pt-2 border-t border-stone-200">
                   <div className="flex justify-between">
@@ -667,6 +804,13 @@ export default function CartPage() {
                     <div className="flex justify-between text-[#C85A32]">
                       <span>Kupon İndirimi ({appliedCoupon?.code})</span>
                       <span className="font-semibold">-₺{couponDiscount.toFixed(2)}</span>
+                    </div>
+                  )}
+
+                  {pointsDiscount > 0 && (
+                    <div className="flex justify-between text-[#C85A32]">
+                      <span>Safir Puan İndirimi ({appliedPoints} Puan)</span>
+                      <span className="font-semibold">-₺{pointsDiscount.toFixed(2)}</span>
                     </div>
                   )}
 
@@ -688,6 +832,17 @@ export default function CartPage() {
                     )}
                   </div>
                 </div>
+
+                {/* Kazanılacak Safir Puan Rozeti */}
+                {pointsToEarn > 0 && (
+                  <div className="p-2.5 bg-amber-50/80 border border-amber-200/70 rounded-lg flex items-center justify-between text-xs text-amber-950">
+                    <div className="flex items-center gap-1.5 font-medium">
+                      <Sparkles className="w-3.5 h-3.5 text-[#C85A32]" />
+                      <span>Kazanılacak Puan:</span>
+                    </div>
+                    <strong className="text-[#C85A32] font-semibold">+{pointsToEarn} Safir Puan</strong>
+                  </div>
+                )}
 
                 {/* Toplam Tutar */}
                 <div className="pt-3 border-t border-stone-200 flex justify-between items-baseline">

@@ -37,6 +37,7 @@ model User {
   favorites     Favorite[]
   reviews       ProductReview[]
   quotes        CustomQuoteRequest[]
+  loyaltyAccount LoyaltyAccount?
 
   @@map("users")
 }
@@ -586,3 +587,57 @@ model ProductReview {
 
   @@map("product_reviews")
 }
+
+// ==========================================
+// 12. MÜŞTERİ SADAKAT VE ATÖLYE KULÜBÜ MODÜLÜ
+// ==========================================
+
+enum LoyaltyTier {
+  BRONZ   // Zanaat Meraklısı (0 - 2.499 TL)
+  GUMUS   // Atölye Dostu (2.500 - 7.499 TL)
+  ALTIN   // Safirya İntisap (7.500 - 14.999 TL)
+  PLATIN  // Koleksiyoner (15.000+ TL)
+}
+
+enum LoyaltyTransactionType {
+  ORDER_EARN       // Siparişten kazanılan puan
+  ORDER_REDEEM     // Siparişte harcanan puan
+  WELCOME_BONUS    // Kayıt hoş geldin bonusu
+  REVIEW_BONUS     // Fotoğraflı yorum bonusu
+  BIRTHDAY_BONUS   // Doğum günü hediyesi
+  REFERRAL_BONUS   // Arkadaş davet bonusu
+  ADMIN_ADJUSTMENT // Manuel yönetici düzeltmesi
+}
+
+model LoyaltyAccount {
+  id              String               @id @default(cuid())
+  userId          String               @unique
+  user            User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pointsBalance   Int                  @default(100) // 100 Hoş geldin puanı
+  lifetimePoints  Int                  @default(100)
+  totalSpent      Decimal              @default(0) @db.Decimal(10, 2)
+  currentTier     LoyaltyTier          @default(BRONZ)
+  referralCode    String               @unique
+  referredByCode  String?
+  birthday        DateTime?
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+  
+  transactions    LoyaltyTransaction[]
+
+  @@map("loyalty_accounts")
+}
+
+model LoyaltyTransaction {
+  id               String                 @id @default(cuid())
+  accountId        String
+  account          LoyaltyAccount         @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  type             LoyaltyTransactionType
+  points           Int                    // Pozitif (kazanç) veya negatif (harcama)
+  description      String
+  orderNumber      String?
+  createdAt        DateTime               @default(now())
+
+  @@map("loyalty_transactions")
+}
+
