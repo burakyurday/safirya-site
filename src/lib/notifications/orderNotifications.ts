@@ -79,6 +79,7 @@ export async function triggerOrderStageNotification({
   settings,
   photoUrl,
   caption,
+  skipEmail = false,
 }: {
   order: AdminOrder;
   newStage: OrderStage;
@@ -86,6 +87,7 @@ export async function triggerOrderStageNotification({
   settings: AdminSettings;
   photoUrl?: string;
   caption?: string;
+  skipEmail?: boolean;
 }): Promise<{ siteNotified: boolean; emailSent: boolean }> {
   const meta = STAGE_META[newStage];
   if (!meta) return { siteNotified: false, emailSent: false };
@@ -122,9 +124,9 @@ export async function triggerOrderStageNotification({
     siteNotified = true;
   }
 
-  // 2. Müşteriye E-Posta Gönderimi
+  // 2. Müşteriye E-Posta Gönderimi (Eğer sunucu tarafında zaten gönderilmediyse)
   const isEmailChannelEnabled = settings.notifyChannelEmail ?? true;
-  if (isEmailChannelEnabled && order.customerEmail) {
+  if (!skipEmail && isEmailChannelEnabled && order.customerEmail) {
     try {
       const dispatchRes = await dispatchStageNotification({
         orderNumber: order.orderNumber,

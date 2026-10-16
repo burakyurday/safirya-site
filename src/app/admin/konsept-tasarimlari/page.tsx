@@ -18,7 +18,7 @@ import {
   HelpCircle,
 } from 'lucide-react';
 import { useAdmin } from '@/context/AdminContext';
-import { ConceptSlotKey, ConceptBannerItem } from '@/types/admin';
+import { ConceptSlotKey, ConceptBannerItem, ConceptBannersMap } from '@/types/admin';
 
 export default function KonseptTasarimlariPage() {
   const {
@@ -38,7 +38,17 @@ export default function KonseptTasarimlariPage() {
   const handleSaveToCloud = async () => {
     setIsSavingCloud(true);
     try {
-      const res = await saveConceptBannersToCloud();
+      let latestBanners: ConceptBannersMap = conceptBanners;
+      if (typeof window !== 'undefined') {
+        const saved = localStorage.getItem('safirya_concept_banners');
+        if (saved) {
+          try {
+            latestBanners = { ...conceptBanners, ...JSON.parse(saved) };
+          } catch {}
+        }
+      }
+
+      const res = await saveConceptBannersToCloud(latestBanners);
       if (res.success) {
         showToast('✓ Tüm vitrin tasarımları buluta kaydedildi (Masaüstü ve Mobil anında aktif).');
         setSavedAt(new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }));
@@ -176,18 +186,42 @@ export default function KonseptTasarimlariPage() {
 
       const data = await res.json();
       if (res.ok && data.url) {
-        if (target === 'desktop') {
-          updateConceptBanner(slotKey, { imageUrl: data.url });
-        } else {
-          updateConceptBanner(slotKey, { mobileImageUrl: data.url });
+        const updateField = target === 'desktop' ? { imageUrl: data.url } : { mobileImageUrl: data.url };
+
+        // 1. En güncel yerel veriyi al
+        let baseBanners: ConceptBannersMap = conceptBanners;
+        if (typeof window !== 'undefined') {
+          const saved = localStorage.getItem('safirya_concept_banners');
+          if (saved) {
+            try {
+              baseBanners = { ...conceptBanners, ...JSON.parse(saved) };
+            } catch {}
+          }
         }
-        await saveConceptBannersToCloud();
+
+        const existingSlot = baseBanners[slotKey] || conceptBanners[slotKey] || { slotKey, ...updateField };
+        const updatedSlot = { ...existingSlot, ...updateField };
+        const updatedAll: ConceptBannersMap = {
+          ...baseBanners,
+          [slotKey]: updatedSlot,
+        };
+
+        // 2. React state ve localStorage güncelle
+        updateConceptBanner(slotKey, updateField);
+
+        // 3. Buluta KESİNLİKLE güncel nesneyle kaydet
+        const cloudRes = await saveConceptBannersToCloud(updatedAll);
         setSavedAt(new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }));
-        showToast(
-          target === 'desktop'
-            ? '✓ Masaüstü (Web) görseli başarıyla yüklendi ve anında yayına alındı.'
-            : '✓ Mobil (Telefon) görseli başarıyla yüklendi ve anında yayına alındı.'
-        );
+
+        if (cloudRes.success) {
+          showToast(
+            target === 'desktop'
+              ? '✓ Masaüstü (Web) görseli başarıyla yüklendi ve anında yayına alındı.'
+              : '✓ Mobil (Telefon) görseli başarıyla yüklendi ve anında yayına alındı.'
+          );
+        } else {
+          showToast(`✓ Görsel tarayıcıya kaydedildi. Bulut eşitleme: ${cloudRes.error || 'Kaydedilemedi'}`);
+        }
       } else {
         alert(data.error || 'Görsel yüklenirken bir hata oluştu.');
       }

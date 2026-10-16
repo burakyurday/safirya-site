@@ -2,6 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
 import { verifyCode } from '@/lib/auth/verificationStore';
 import { createUserSessionToken, USER_COOKIE_NAME } from '@/lib/auth/userAuth';
+import {
+  isAuthorizedAdminEmail,
+  createAdminToken,
+  ADMIN_COOKIE_NAME,
+} from '@/lib/adminAuth';
 import { UserProfile } from '@/types/user';
 
 export const dynamic = 'force-dynamic';
@@ -96,24 +101,32 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // 4. Yönetici Yetki Kontrolü
+    const isAdmin = await isAuthorizedAdminEmail(cleanEmail);
+
     const profile: UserProfile = {
       id: authUser.id,
       name: cleanName,
       email: cleanEmail,
+      role: isAdmin ? 'ADMIN' : 'CUSTOMER',
+      isAdmin: isAdmin,
       isVerified: true,
       createdAt: authUser.created_at || new Date().toISOString(),
     };
 
-    // 4. Güvenli Oturum Token'ı Üret ve HTTP-Only Cookie Olarak Kaydet
+    // 5. Güvenli Oturum Token'ı Üret ve HTTP-Only Cookie Olarak Kaydet
     const sessionToken = await createUserSessionToken({
       id: profile.id,
       email: profile.email,
       name: profile.name,
+      role: profile.role,
+      isAdmin: profile.isAdmin,
     });
 
     const response = NextResponse.json({
       success: true,
       user: profile,
+      isAdmin,
       message: 'Hesabınız başarıyla oluşturuldu ve doğrulandı.',
     });
 
@@ -124,6 +137,23 @@ export async function POST(req: NextRequest) {
       path: '/',
       maxAge: 30 * 24 * 60 * 60, // 30 gün
     });
+
+    // Eğer yetkili bir yönetici ise admin çerezini de ayarla
+    if (isAdmin) {
+      const adminToken = await createAdminToken({
+        username: cleanEmail,
+        role: 'ADMIN',
+        name: profile.name,
+      });
+
+      response.cookies.set(ADMIN_COOKIE_NAME, adminToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        path: '/',
+        maxAge: 60 * 60 * 24 * 7,
+      });
+    }
 
     return response;
   } catch (error: any) {

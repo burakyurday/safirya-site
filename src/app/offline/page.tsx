@@ -66,7 +66,7 @@ export default function OfflinePage() {
         <div className="pt-4 border-t border-stone-100 text-xs text-stone-500">
           <span>Acil sipariş veya özel üretim talebi için: </span>
           <a
-            href="tel:+905325557234"
+            href="tel:+905438981639"
             className="font-semibold text-[#231B18] hover:text-[#C85A32] inline-flex items-center gap-1 ml-1"
           >
             <Phone className="w-3 h-3 text-[#C85A32]" />

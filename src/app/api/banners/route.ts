@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { revalidatePath } from 'next/cache';
 import { supabaseAdmin, isSupabaseConfigured } from '@/lib/supabase';
 import { getAdminSessionServer } from '@/lib/adminAuth';
 import { ConceptBannersMap } from '@/types/admin';
@@ -16,8 +17,8 @@ let memoryCache: { data: ConceptBannersMap | null; timestamp: number } = {
 
 export async function GET() {
   try {
-    // 1. Önbellek kontrolü (10 saniye geçerli)
-    if (memoryCache.data && Date.now() - memoryCache.timestamp < 10000) {
+    // 1. Önbellek kontrolü (5 saniye geçerli)
+    if (memoryCache.data && Date.now() - memoryCache.timestamp < 5000) {
       return NextResponse.json({
         success: true,
         banners: memoryCache.data,
@@ -109,6 +110,15 @@ export async function POST(req: NextRequest) {
 
     // 3. Bellek önbelleğini güncelle
     memoryCache = { data: banners, timestamp: Date.now() };
+
+    // 4. Next.js App Router sayfalarını anında yenile (SSG/ISR cache temizleme)
+    try {
+      revalidatePath('/', 'page');
+      revalidatePath('/', 'layout');
+      revalidatePath('/kategoriler');
+    } catch (revErr) {
+      console.warn('revalidatePath uyarısı:', revErr);
+    }
 
     return NextResponse.json({
       success: true,

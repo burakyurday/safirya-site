@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { ShoppingBag, MessageCircle, Layers, Heart, Home } from 'lucide-react';
+import { ShoppingBag, MessageCircle, Layers, Heart, Home, ShieldCheck } from 'lucide-react';
 import { useStore } from '@/context/StoreContext';
 import { SystemSettingsData } from '@/lib/settings';
 
@@ -13,7 +13,7 @@ interface Props {
 
 export function StickyMobileBar({ settings }: Props) {
   const pathname = usePathname();
-  const { cartCount, favoritesCount, setIsCartOpen } = useStore();
+  const { cartCount, favoritesCount, setIsCartOpen, currentUser } = useStore();
 
   // Admin sayfalarında veya ödeme sayfasında alt çubuğu gizle
   if (pathname?.startsWith('/admin') || pathname === '/odeme' || pathname === '/tesekkurler') {
@@ -28,7 +28,7 @@ export function StickyMobileBar({ settings }: Props) {
     return null;
   }
 
-  const whatsappCleanNumber = (settings.whatsappNumber || '+905325557234').replace(/[^0-9]/g, '');
+  const whatsappCleanNumber = (settings.whatsappNumber || '+905438981639').replace(/[^0-9]/g, '');
   const whatsappUrl = `https://wa.me/${whatsappCleanNumber}?text=${encodeURIComponent(
     'Merhaba, Safirya atölyenizden ürünler ve kişiye özel sipariş hakkında bilgi almak istiyorum.'
   )}`;
@@ -113,6 +113,22 @@ export function StickyMobileBar({ settings }: Props) {
           </div>
           <span className="text-[9px] font-medium uppercase tracking-wider text-[#231B18] mt-1">Sepet</span>
         </button>
+
+        {/* Yönetim Paneli Hızlı Geçiş Butonu - Sadece Yönetici Girişi Varsa */}
+        {currentUser && Boolean(currentUser.isAdmin || currentUser.role === 'ADMIN') && (
+          <a
+            href="/api/admin/auth/switch"
+            className="flex flex-col items-center justify-center p-1.5 text-[#C85A32] hover:text-[#231B18] transition relative"
+            title="Yönetim Paneline Geçiş Yap"
+            aria-label="Yönetim Paneli"
+          >
+            <div className="relative">
+              <ShieldCheck className="w-4.5 h-4.5 stroke-[1.6] text-[#C85A32]" />
+              <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-[#C85A32]" />
+            </div>
+            <span className="text-[9px] font-bold uppercase tracking-wider text-[#C85A32] mt-1">Panel</span>
+          </a>
+        )}
       </div>
     </div>
   );

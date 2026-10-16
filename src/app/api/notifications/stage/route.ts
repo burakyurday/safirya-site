@@ -46,9 +46,13 @@ export async function POST(req: Request) {
       .toLowerCase()
       .replace(/[\u200B-\u200D\uFEFF\s]/g, '');
 
+    const subjectText = (stageName || '').startsWith('Sipariş')
+      ? `🎨 ${stageName}! (#${orderNumber}) - Safirya Atölyesi`
+      : `🎨 Siparişiniz ${stageName} Aşamasında! (#${orderNumber}) - Safirya Atölyesi`;
+
     const emailResult = await sendEmail({
       to: cleanCustomerEmail,
-      subject: `🎨 Siparişiniz ${stageName} Aşamasında! (#${orderNumber}) - Safirya Atölyesi`,
+      subject: subjectText,
       html: htmlContent,
       from: settings?.smtpFrom || process.env.SMTP_FROM || 'Safirya Atölyesi <bildirim@safirya.tr>',
       apiKey: settings?.smtpPass || process.env.RESEND_API_KEY || process.env.SMTP_PASS,

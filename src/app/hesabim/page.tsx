@@ -74,13 +74,13 @@ export default function HesabimIndexPage() {
                   </div>
                 </div>
 
-                <Link
-                  href="/admin"
-                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-md bg-[#C85A32] hover:bg-[#B34E2A] text-white text-xs font-semibold uppercase tracking-wider transition shadow-sm shrink-0"
+                <a
+                  href="/api/admin/auth/switch"
+                  className="inline-flex items-center gap-2 px-5 py-3 rounded-md bg-[#C85A32] hover:bg-[#B34E2A] text-white text-xs font-semibold uppercase tracking-wider transition shadow-sm hover:shadow-md shrink-0 cursor-pointer"
                 >
-                  <span>Yönetim Paneline Geç</span>
+                  <span>Yönetim Paneline Geçiş Yap</span>
                   <ArrowRight className="w-4 h-4" />
-                </Link>
+                </a>
               </div>
             )}
 

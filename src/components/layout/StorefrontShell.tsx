@@ -11,6 +11,7 @@ import { ExitIntentModal } from '@/components/marketing/ExitIntentModal';
 import { AuthModal } from '@/components/auth/AuthModal';
 import { StickyMobileBar } from '@/components/layout/StickyMobileBar';
 import { CookieBanner } from '@/components/layout/CookieBanner';
+import { AdminQuickBar } from '@/components/layout/AdminQuickBar';
 import { GoogleAnalytics } from '@/components/analytics/GoogleAnalytics';
 import { SystemSettingsData } from '@/lib/settings';
 import { CategoryItem } from '@/lib/catalog';
@@ -34,6 +35,9 @@ export function StorefrontShell({ children, settings, categories }: Props) {
     <>
       {/* 0. Analytics Entegrasyonu */}
       <GoogleAnalytics />
+
+      {/* 0. Yönetici Hızlı Geçiş Bandı (Yetkili Girişinde Aktif) */}
+      <AdminQuickBar />
 
       {/* 1. Üst Duyuru Bandı */}
       <TopBar settings={settings} />

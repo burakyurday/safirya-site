@@ -17,6 +17,9 @@ import { getConceptBannersServer } from '@/lib/banners';
 import { FeaturedProductsCarousel } from '@/components/home/FeaturedProductsCarousel';
 import { HomeClientBannerSync } from '@/components/home/HomeClientBannerSync';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export const metadata: Metadata = {
   title: 'Safirya | El Yapımı Tasarım Atölyesi',
   description:

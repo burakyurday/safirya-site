@@ -615,7 +615,7 @@ const pagesContent: Record<
               <br />
               WhatsApp Hızlı Sipariş:{' '}
               <a
-                href="https://wa.me/905325557234"
+                href="https://wa.me/905438981639"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="font-medium text-[#15803D] hover:underline"
@@ -624,7 +624,7 @@ const pagesContent: Record<
               </a>
             </p>
             <a
-              href="https://wa.me/905325557234"
+              href="https://wa.me/905438981639"
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xs bg-[#231B18] text-white text-[11px] uppercase tracking-wider font-medium hover:bg-[#3A2E29] transition mt-1"

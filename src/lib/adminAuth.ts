@@ -293,4 +293,14 @@ async function syncUserAdminRole(email: string, makeAdmin: boolean, displayName?
       console.warn('Supabase rol senkronizasyon uyarısı:', sbErr);
     }
   }
+
+  // 2. Prisma DB Güncellemesi (varsa)
+  try {
+    await prisma.user.updateMany({
+      where: { email: { equals: email, mode: 'insensitive' } },
+      data: { role: makeAdmin ? 'ADMIN' : 'CUSTOMER' },
+    });
+  } catch (dbErr) {
+    // Veritabanı bağlantısı yoksa veya model eşleşmiyorsa sessizce devam et
+  }
 }

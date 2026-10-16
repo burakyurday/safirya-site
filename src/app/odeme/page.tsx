@@ -93,6 +93,7 @@ export default function CheckoutPage() {
   }, [currentUser]);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const isSubmittingRef = useRef(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   // Benzersiz Sipariş Numarası (Sözleşme ve sipariş entegrasyonu için sabitlenir)
   const [orderNumber] = useState(() => `SFR-2026-${Math.floor(1000 + Math.random() * 9000)}`);
@@ -381,6 +382,7 @@ export default function CheckoutPage() {
   };
 
   const placeDirectOrder = async (orderNum: string, method: string = formData.paymentMethod) => {
+    isSubmittingRef.current = true;
     setIsSubmitting(true);
     let confirmedOrderNumber = orderNum;
     let finalTotal = grandTotal;
@@ -510,17 +512,21 @@ export default function CheckoutPage() {
     });
 
     clearCart();
+    isSubmittingRef.current = false;
     setIsSubmitting(false);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleCompleteOrder = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmittingRef.current || isSubmitting) return;
+
     if (!validateCheckout()) {
       window.scrollTo({ top: 220, behavior: 'smooth' });
       return;
     }
 
+    isSubmittingRef.current = true;
     setIsSubmitting(true);
     setPaytrError(null);
     setPaytrNotConfiguredNotice(false);
@@ -534,6 +540,7 @@ export default function CheckoutPage() {
       if (!isContractApproved) {
         const sealed = handleSealContract(orderNumber);
         if (!sealed) {
+          isSubmittingRef.current = false;
           setIsSubmitting(false);
           const el = document.getElementById('personalized-contract-section');
           if (el) {
@@ -587,6 +594,7 @@ export default function CheckoutPage() {
         if (data.isConfigured === false) {
           // PayTR bilgileri henüz .env'de tanımlanmamış
           setPaytrNotConfiguredNotice(true);
+          isSubmittingRef.current = false;
           setIsSubmitting(false);
           return;
         }
@@ -613,14 +621,17 @@ export default function CheckoutPage() {
             }, 300);
           }
 
+          isSubmittingRef.current = false;
           setIsSubmitting(false);
           return;
         } else {
           setPaytrError(data.error || 'PayTR ödeme oturumu başlatılamadı. Lütfen tekrar deneyiniz.');
+          isSubmittingRef.current = false;
           setIsSubmitting(false);
         }
       } catch (err: any) {
         setPaytrError('Ödeme servisine bağlanırken bir hata oluştu: ' + (err?.message || ''));
+        isSubmittingRef.current = false;
         setIsSubmitting(false);
       }
       return;
@@ -710,7 +721,7 @@ export default function CheckoutPage() {
                   </p>
                 </div>
                 <a
-                  href={`https://wa.me/905325557234?text=${encodeURIComponent(
+                  href={`https://wa.me/905438981639?text=${encodeURIComponent(
                     `Merhaba, #${placedOrder.orderNumber} nolu siparişimin havale/EFT dekontunu iletiyorum. Tutar: ₺${placedOrder.totalAmount.toFixed(2)}`
                   )}`}
                   target="_blank"
@@ -1420,7 +1431,7 @@ export default function CheckoutPage() {
                         Havale/EFT ile ödemelerde banka açıklama alanına <strong>Sipariş Numaranızı</strong> yazmanız ve ödeme sonrası <strong>dekontunuzu WhatsApp hattımıza iletmeniz</strong> gerekmektedir. Dekontunuz teyit edildiği anda siparişiniz atölyemizde üretime alınacaktır.
                       </p>
                       <a
-                        href="https://wa.me/905325557234?text=Merhaba,%20havale%20ile%20sipari%C5%9F%20verdim.%20Dekontumu%20ve%20sipari%C5%9F%20numaram%C4%B1%20iletmek%20istiyorum."
+                        href="https://wa.me/905438981639?text=Merhaba,%20havale%20ile%20sipari%C5%9F%20verdim.%20Dekontumu%20ve%20sipari%C5%9F%20numaram%C4%B1%20iletmek%20istiyorum."
                         target="_blank"
                         rel="noopener noreferrer"
                         className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#231B18] hover:text-[#C85A32] underline pt-0.5"

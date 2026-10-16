@@ -7,7 +7,13 @@ import {
   addAuthorizedAdmin,
   removeAuthorizedAdmin,
   listAuthorizedAdmins,
+  createAdminToken,
+  ADMIN_COOKIE_NAME,
+  verifyAdminToken,
 } from '@/lib/adminAuth';
+import { NextRequest } from 'next/server';
+import { GET, POST } from '@/app/api/admin/auth/switch/route';
+import { createUserSessionToken, USER_COOKIE_NAME } from '@/lib/auth/userAuth';
 
 const TEST_ADMIN_FILE = path.join(process.cwd(), 'data', 'authorized-admins.json');
 
@@ -107,5 +113,66 @@ describe('Admin Authorities & Yetkilendirme Sistemi', () => {
     expect(removeResult.success).toBe(true);
 
     expect(await isAuthorizedAdminEmail(testEmail)).toBe(false);
+  });
+
+  it('admin yetkisi verilen kullanıcı normal sitede oturum açtığında /api/admin/auth/switch ile panele geçiş yapabilmelidir', async () => {
+    const adminEmail = `gecis.yonetici.${Date.now()}@safirya.tr`;
+
+    // 1. Admin yetkisi tanımla
+    await addAuthorizedAdmin(adminEmail, { name: 'Geçiş Yöneticisi' });
+
+    // 2. Normal site kullanıcısı olarak oturum açmış kullanıcı JWT'si
+    const userToken = await createUserSessionToken({
+      id: 'usr-switch-test',
+      email: adminEmail,
+      name: 'Geçiş Yöneticisi',
+    });
+
+    // 3. GET /api/admin/auth/switch isteği (Tuşa tıklama simülasyonu)
+    const req = new NextRequest('http://localhost:3000/api/admin/auth/switch', {
+      headers: {
+        cookie: `${USER_COOKIE_NAME}=${userToken}`,
+      },
+    });
+
+    const res = await GET(req);
+
+    // /admin sayfasına yönlendirmeli
+    expect(res.status).toBe(307);
+    const location = res.headers.get('location');
+    expect(location).toContain('/admin');
+
+    // Admin çerezi üretilmiş olmalı
+    const setCookie = res.headers.get('set-cookie');
+    expect(setCookie).toContain(ADMIN_COOKIE_NAME);
+
+    // Çerezin doğrulanabilir admin oturumu içerdiğini kontrol et
+    const tokenMatch = setCookie?.match(new RegExp(`${ADMIN_COOKIE_NAME}=([^;]+)`));
+    expect(tokenMatch).not.toBeNull();
+    const tokenValue = tokenMatch![1];
+
+    const adminSession = await verifyAdminToken(tokenValue);
+    expect(adminSession?.username).toBe(adminEmail);
+    expect(adminSession?.role).toBe('ADMIN');
+  });
+
+  it('yetkisi olmayan normal müşteri switch tuşunu çağırırsa yetkisiz uyarısı ile yönlendirilmelidir', async () => {
+    const userToken = await createUserSessionToken({
+      id: 'usr-customer-test',
+      email: 'sade.musteri@safirya.tr',
+      name: 'Sade Müşteri',
+    });
+
+    const req = new NextRequest('http://localhost:3000/api/admin/auth/switch', {
+      headers: {
+        cookie: `${USER_COOKIE_NAME}=${userToken}`,
+      },
+    });
+
+    const res = await GET(req);
+    expect(res.status).toBe(307);
+    const location = res.headers.get('location');
+    expect(location).toContain('/hesabim');
+    expect(location).toContain('error=unauthorized_admin');
   });
 });

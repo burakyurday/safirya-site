@@ -14,6 +14,18 @@ export const dynamic = 'force-dynamic';
 
 const BUCKET_NAME = 'safirya-media';
 
+// 15 saniye içinde aynı müşteri ve sepetle gelen mükerrer sipariş isteklerini önleme hafızası
+const recentOrderDeduplicationCache = new Map<string, { orderNumber: string; orderRecord: any; timestamp: number }>();
+
+function cleanupRecentOrdersCache() {
+  const now = Date.now();
+  for (const [key, value] of recentOrderDeduplicationCache.entries()) {
+    if (now - value.timestamp > 15000) {
+      recentOrderDeduplicationCache.delete(key);
+    }
+  }
+}
+
 // POST /api/orders - Güvenli Sipariş Oluşturma
 export async function POST(req: NextRequest) {
   try {
@@ -98,11 +110,31 @@ export async function POST(req: NextRequest) {
       resolvedUserId = String(body.userId);
     }
 
-    // 3. Benzersiz Güvenli Sipariş Numarası Üret
-    const orderNumber = generateSafeOrderNumber();
     const cleanCustomerName = String(fullName).trim();
     const cleanEmail = String(email).trim().toLowerCase();
     const fullShippingAddress = `${neighborhood ? neighborhood + ' ' : ''}${address} ${district} / ${city} ${postalCode || ''}`.trim();
+
+    // Mükerrer istek kontrolü: son 15 saniyede aynı e-posta, telefon ve sepet tutarıyla gelen çift istekler
+    cleanupRecentOrdersCache();
+    const cartFingerprint = verification.verifiedItems
+      .map((it) => `${it.productId}:${it.quantity}`)
+      .sort()
+      .join('|');
+    const dedupKey = `${cleanEmail}:${cleanPhone}:${verification.grandTotal.toFixed(2)}:${cartFingerprint}`;
+    const recentCached = recentOrderDeduplicationCache.get(dedupKey);
+    if (recentCached && Date.now() - recentCached.timestamp < 15000) {
+      console.log(`[Safirya Orders] Mükerrer sipariş isteği engellendi (#${recentCached.orderNumber}). İkinci e-posta ve çift kayıt önlendi.`);
+      return NextResponse.json({
+        success: true,
+        orderNumber: recentCached.orderNumber,
+        order: recentCached.orderRecord,
+        prismaSaved: true,
+        duplicatePrevented: true,
+      });
+    }
+
+    // 3. Benzersiz Güvenli Sipariş Numarası Üret
+    const orderNumber = generateSafeOrderNumber();
 
     const isPaid = paymentMethod === 'PAYTR_TEST';
     const paymentStatus = isPaid ? 'ODENDI' : 'BEKLIYOR';
@@ -151,6 +183,13 @@ export async function POST(req: NextRequest) {
       signatureDataUrl: signatureDataUrl || undefined,
       createdAt: new Date().toISOString(),
     };
+
+    // İlerideki mükerrer istekleri engellemek için önbelleğe al
+    recentOrderDeduplicationCache.set(dedupKey, {
+      orderNumber,
+      orderRecord,
+      timestamp: Date.now(),
+    });
 
     // 4. Prisma Veritabanına Kayıt Denemesi
     let prismaSaved = false;
@@ -349,23 +388,28 @@ export async function PATCH(req: NextRequest) {
 
     let customerEmail = reqEmail;
     let customerName = reqName;
+    let previousStage: string | undefined = undefined;
 
     // 1. Prisma Veritabanında Güncelle
     try {
-      const updatedDbOrder = await prisma.order.update({
+      const existingDbOrder = await prisma.order.findUnique({
+        where: { orderNumber },
+        select: { stage: true, guestEmail: true, guestName: true, user: true },
+      });
+      if (existingDbOrder) {
+        previousStage = existingDbOrder.stage;
+        customerEmail = customerEmail || existingDbOrder.guestEmail || existingDbOrder.user?.email;
+        customerName = customerName || existingDbOrder.guestName || existingDbOrder.user?.name;
+      }
+
+      await prisma.order.update({
         where: { orderNumber },
         data: {
           stage,
           cargoCompany: cargoCompany || undefined,
           trackingCode: trackingCode || undefined,
         },
-        include: { user: true },
       });
-
-      if (updatedDbOrder) {
-        customerEmail = customerEmail || updatedDbOrder.guestEmail || updatedDbOrder.user?.email;
-        customerName = customerName || updatedDbOrder.guestName || updatedDbOrder.user?.name;
-      }
     } catch {}
 
     // 2. Supabase Storage orders/all.json dosyasını güncelle
@@ -379,6 +423,7 @@ export async function PATCH(req: NextRequest) {
           if (Array.isArray(list)) {
             const updated = list.map((ord: any) => {
               if (ord.orderNumber === orderNumber) {
+                if (!previousStage) previousStage = ord.stage;
                 customerEmail = customerEmail || ord.customerEmail || ord.guestEmail || ord.email;
                 customerName = customerName || ord.customerName || ord.guestName;
                 return {
@@ -403,30 +448,35 @@ export async function PATCH(req: NextRequest) {
     // 3. Müşteriye Aşama Bildirim E-Postası Gönder (Sunucu Garantili)
     let emailStatus = 'skipped';
     if (notifyCustomer && customerEmail && !String(customerEmail).includes('example.com')) {
-      try {
-        const STAGE_LABELS: Record<string, string> = {
-          SIPARIS_ALINDI: 'Siparişiniz Başarıyla Alındı',
-          ATOLYEDE_URETIMDE: 'Siparişiniz Atölyede Üretimde',
-          KALITE_KONTROL_PAKETLEME: 'Kalite Kontrol ve Paketleme Aşamasında',
-          KARGOYA_VERILDI: 'Siparişiniz Kargoya Verildi',
-          TESLIM_EDILDI: 'Siparişiniz Teslim Edildi',
-        };
+      if (previousStage && previousStage === stage && !cargoCompany && !trackingCode) {
+        console.log(`[Safirya PATCH Order] Sipariş #${orderNumber} zaten "${stage}" aşamasında. Mükerrer bildirim e-postası atlandı.`);
+        emailStatus = 'already_at_stage';
+      } else {
+        try {
+          const STAGE_LABELS: Record<string, string> = {
+            SIPARIS_ALINDI: 'Siparişiniz Başarıyla Alındı',
+            ATOLYEDE_URETIMDE: 'Siparişiniz Atölyede Üretimde',
+            KALITE_KONTROL_PAKETLEME: 'Kalite Kontrol ve Paketleme Aşamasında',
+            KARGOYA_VERILDI: 'Siparişiniz Kargoya Verildi',
+            TESLIM_EDILDI: 'Siparişiniz Teslim Edildi',
+          };
 
-        const effectiveStageName = stageTitle || STAGE_LABELS[stage] || stage;
+          const effectiveStageName = stageTitle || STAGE_LABELS[stage] || stage;
 
-        const { sendStageNotificationEmail } = await import('@/lib/notifications/email');
-        const emailRes = await sendStageNotificationEmail({
-          to: customerEmail,
-          customerName: customerName || 'Değerli Müşterimiz',
-          orderNumber,
-          stageName: effectiveStageName,
-          settings,
-        });
+          const { sendStageNotificationEmail } = await import('@/lib/notifications/email');
+          const emailRes = await sendStageNotificationEmail({
+            to: customerEmail,
+            customerName: customerName || 'Değerli Müşterimiz',
+            orderNumber,
+            stageName: effectiveStageName,
+            settings,
+          });
 
-        emailStatus = emailRes.success ? 'sent' : `failed: ${emailRes.message}`;
-      } catch (emailErr: any) {
-        console.warn(`[Safirya PATCH Order] Müşteri bildirim e-postası uyarısı:`, emailErr?.message);
-        emailStatus = `error: ${emailErr?.message}`;
+          emailStatus = emailRes.success ? 'sent' : `failed: ${emailRes.message}`;
+        } catch (emailErr: any) {
+          console.warn(`[Safirya PATCH Order] Müşteri bildirim e-postası uyarısı:`, emailErr?.message);
+          emailStatus = `error: ${emailErr?.message}`;
+        }
       }
     }
 

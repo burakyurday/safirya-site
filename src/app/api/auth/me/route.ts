@@ -1,8 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { verifyUserSessionToken, USER_COOKIE_NAME } from '@/lib/auth/userAuth';
+import {
+  verifyUserSessionToken,
+  createUserSessionToken,
+  USER_COOKIE_NAME,
+} from '@/lib/auth/userAuth';
 import {
   isAuthorizedAdminEmail,
   createAdminToken,
+  verifyAdminToken,
   ADMIN_COOKIE_NAME,
 } from '@/lib/adminAuth';
 import { UserProfile } from '@/types/user';
@@ -42,9 +47,11 @@ export async function GET(req: NextRequest) {
       isAdmin,
     });
 
-    // Eğer kullanıcı bir admin ise ve henüz admin token çerezi yoksa çerezi ayarla
+    // Kullanıcı admin ise ve admin çerezi yoksa veya süresi geçmişse çerezi ayarla
     const currentAdminToken = req.cookies.get(ADMIN_COOKIE_NAME)?.value;
-    if (isAdmin && !currentAdminToken) {
+    const isCurrentAdminValid = currentAdminToken ? Boolean(await verifyAdminToken(currentAdminToken)) : false;
+
+    if (isAdmin && !isCurrentAdminValid) {
       const adminToken = await createAdminToken({
         username: payload.email,
         role: 'ADMIN',
@@ -57,6 +64,22 @@ export async function GET(req: NextRequest) {
         sameSite: 'lax',
         path: '/',
         maxAge: 60 * 60 * 24 * 7,
+      });
+    }
+
+    // Kullanıcı JWT'sinde rol henüz ADMIN olarak güncellenmemişse kullanıcı çerezini de yenile
+    if (isAdmin && (!payload.isAdmin || payload.role !== 'ADMIN')) {
+      const updatedUserToken = await createUserSessionToken({
+        ...payload,
+        isAdmin: true,
+        role: 'ADMIN',
+      });
+      response.cookies.set(USER_COOKIE_NAME, updatedUserToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        path: '/',
+        maxAge: 30 * 24 * 60 * 60,
       });
     }
 

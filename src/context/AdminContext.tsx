@@ -1469,7 +1469,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  // Buluttaki (Supabase Storage) Konsept Bannerlarını Çek ve İki Yönlü Eşitle
+  // Buluttaki (Supabase Storage) Konsept Bannerlarını Çek ve Akıllıca İki Yönlü Eşitle
   useEffect(() => {
     let isMounted = true;
 
@@ -1479,32 +1479,72 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
         if (!res.ok) return;
         const data = await res.json();
 
-        if (data.success && data.banners && Object.keys(data.banners).length > 0) {
-          if (isMounted) {
-            setConceptBanners((prev) => {
-              const merged = { ...prev, ...data.banners };
-              if (typeof window !== 'undefined') {
-                localStorage.setItem('safirya_concept_banners', JSON.stringify(merged));
-              }
-              return merged;
-            });
-          }
-        } else if (data.source === 'empty' && typeof window !== 'undefined') {
-          // Bulutta henüz banner yoksa, bu tarayıcıda önceden eklenmiş görseller varsa buluta otomatik yedekle
-          const localSaved = localStorage.getItem('safirya_concept_banners');
-          if (localSaved) {
+        // Yerel depodaki (localStorage) en güncel banner verisi
+        let localData: ConceptBannersMap = initialConceptBanners;
+        if (typeof window !== 'undefined') {
+          const saved = localStorage.getItem('safirya_concept_banners');
+          if (saved) {
             try {
-              const parsed = JSON.parse(localSaved);
-              const hasImages = Object.values(parsed).some((b: any) => Boolean(b?.imageUrl));
-              if (hasImages) {
-                await fetch('/api/banners', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ banners: parsed }),
-                });
-              }
+              localData = { ...initialConceptBanners, ...JSON.parse(saved) };
             } catch {}
           }
+        }
+
+        const cloudBanners: ConceptBannersMap = data.banners || {};
+        const hasCloudData = data.success && cloudBanners && Object.keys(cloudBanners).length > 0;
+
+        // Akıllı harmanlama: Buluttaki boş değerler yereldeki dolu görseli ASLA ezemez!
+        const merged: ConceptBannersMap = { ...initialConceptBanners };
+        const allKeys = Array.from(
+          new Set([...Object.keys(localData), ...Object.keys(cloudBanners)])
+        ) as ConceptSlotKey[];
+
+        let hasLocalImagesNotInCloud = false;
+
+        for (const k of allKeys) {
+          const loc = localData[k] || initialConceptBanners[k] || {};
+          const cld = cloudBanners[k] || initialConceptBanners[k] || {};
+
+          // Görseller: Bulutta varsa al, yoksa yereldeki görseli koru
+          const finalImageUrl = cld.imageUrl || loc.imageUrl || '';
+          const finalMobileImageUrl = cld.mobileImageUrl || loc.mobileImageUrl || '';
+
+          if ((!cld.imageUrl && loc.imageUrl) || (!cld.mobileImageUrl && loc.mobileImageUrl)) {
+            hasLocalImagesNotInCloud = true;
+          }
+
+          merged[k] = {
+            ...initialConceptBanners[k],
+            ...loc,
+            ...cld,
+            imageUrl: finalImageUrl,
+            mobileImageUrl: finalMobileImageUrl,
+            title: cld.title || loc.title || initialConceptBanners[k]?.title || '',
+            subtitle: cld.subtitle !== undefined ? cld.subtitle : loc.subtitle,
+            tag: cld.tag !== undefined ? cld.tag : loc.tag,
+            buttonText: cld.buttonText || loc.buttonText || 'KEŞFEDİN',
+            buttonLink: cld.buttonLink || loc.buttonLink || '/kategoriler',
+            categorySlug: cld.categorySlug || loc.categorySlug,
+            isActive: cld.isActive ?? loc.isActive ?? true,
+          };
+        }
+
+        if (isMounted) {
+          setConceptBanners(merged);
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('safirya_concept_banners', JSON.stringify(merged));
+          }
+        }
+
+        // Eğer yerelde görsel var ama bulutta eksik kalmışsa, buluta da otomatik yedekle
+        if (hasLocalImagesNotInCloud || data.source === 'empty') {
+          try {
+            await fetch('/api/banners', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ banners: merged }),
+            });
+          } catch {}
         }
       } catch (err) {
         console.warn('Bulut banner senkronizasyon uyarısı:', err);
@@ -2017,7 +2057,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
     showToast(`Sipariş aşaması güncellendi.`);
 
     if (orderToUpdate) {
-      // Sunucuya PATCH isteği gönder
+      // Sunucuya PATCH isteği gönder (E-posta gönderimi sunucuda garantili yapılır)
       fetch('/api/orders', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -2032,8 +2072,16 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
           notifyCustomer: true,
           settings,
         }),
-      }).catch((err) => console.warn('Sunucu sipariş güncelleme uyarısı:', err));
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          if (data?.notification === 'sent') {
+            showToast(`🔔 Müşteriye (${orderToUpdate.customerEmail}) e-posta bildirimi başarıyla iletildi.`);
+          }
+        })
+        .catch((err) => console.warn('Sunucu sipariş güncelleme uyarısı:', err));
 
+      // Tarayıcı içi çan bildirimi (skipEmail: true ile mükerrer e-posta engellendi)
       triggerOrderStageNotification({
         order: {
           ...orderToUpdate,
@@ -2043,11 +2091,10 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
         },
         newStage: stage,
         settings,
-      }).then(({ siteNotified, emailSent }) => {
-        if (emailSent) {
-          showToast(`🔔 Müşteriye (${orderToUpdate.customerEmail}) e-posta bildirimi başarıyla iletildi.`);
-        } else if (siteNotified) {
-          showToast(`🔔 Site içi bildirim eklendi${orderToUpdate.customerEmail ? ' (E-posta iletimi bekleniyor)' : ''}`);
+        skipEmail: true,
+      }).then(({ siteNotified }) => {
+        if (siteNotified) {
+          showToast(`🔔 Site içi bildirim eklendi`);
         }
       });
     }
@@ -2238,18 +2285,24 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
           notifyCustomer: true,
           settings,
         }),
-      }).catch((err) => console.warn('Sunucu sipariş güncelleme uyarısı:', err));
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          if (data?.notification === 'sent') {
+            showToast(`Sipariş "${targetTitle}" aşamasına taşındı ve müşteriye (${orderToMove.customerEmail}) e-posta iletildi.`);
+          }
+        })
+        .catch((err) => console.warn('Sunucu sipariş güncelleme uyarısı:', err));
 
-      // 2. Tarayıcı içi çan bildirimi ve e-posta kontrolü
+      // 2. Tarayıcı içi çan bildirimi (skipEmail: true ile mükerrer e-posta engellendi)
       triggerOrderStageNotification({
         order: { ...orderToMove, stage: stageMapping, kanbanColumnId: targetColumnId },
         newStage: stageMapping,
         stageTitle: targetTitle,
         settings,
-      }).then(({ siteNotified, emailSent }) => {
-        if (emailSent) {
-          showToast(`Sipariş "${targetTitle}" aşamasına taşındı ve müşteriye (${orderToMove.customerEmail}) e-posta iletildi.`);
-        } else if (siteNotified) {
+        skipEmail: true,
+      }).then(({ siteNotified }) => {
+        if (siteNotified) {
           showToast(`Sipariş "${targetTitle}" aşamasına taşındı (Bildirim oluşturuldu).`);
         }
       });
@@ -2695,7 +2748,19 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
   // 9. Konsept Tasarımları & Vitrin Bannerları (Bulut ve Yerel Eşitlemeli)
   const saveConceptBannersToCloud = async (customBanners?: ConceptBannersMap) => {
     try {
-      const payload = customBanners || conceptBanners;
+      let payload = customBanners;
+      if (!payload && typeof window !== 'undefined') {
+        const saved = localStorage.getItem('safirya_concept_banners');
+        if (saved) {
+          try {
+            payload = JSON.parse(saved);
+          } catch {}
+        }
+      }
+      if (!payload) {
+        payload = conceptBanners;
+      }
+
       const res = await fetch('/api/banners', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

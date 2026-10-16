@@ -36,9 +36,13 @@ export async function sendStageNotificationEmail(payload: StageEmailPayload): Pr
       });
 
       const s = (payload.settings as any) || {};
+      const subjectText = (payload.stageName || '').startsWith('Sipariş')
+        ? `🎨 ${payload.stageName}! (#${payload.orderNumber}) - Safirya Atölyesi`
+        : `🎨 Siparişiniz ${payload.stageName} Aşamasında! (#${payload.orderNumber}) - Safirya Atölyesi`;
+
       const result = await sendEmail({
         to: payload.to,
-        subject: `🎨 Siparişiniz ${payload.stageName} Aşamasında! (#${payload.orderNumber}) - Safirya Atölyesi`,
+        subject: subjectText,
         html: htmlContent,
         from: s?.smtpFrom || process.env.SMTP_FROM || 'Safirya Atölyesi <bildirim@safirya.tr>',
         apiKey: s?.smtpPass || process.env.RESEND_API_KEY || process.env.SMTP_PASS,

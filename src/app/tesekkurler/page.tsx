@@ -146,7 +146,7 @@ function ThankYouContent() {
                 </div>
               )}
               <a
-                href={`https://wa.me/905325557234?text=${encodeURIComponent(
+                href={`https://wa.me/905438981639?text=${encodeURIComponent(
                   `Merhaba, #${displayOrderNumber} nolu siparişimin havale/EFT dekontunu iletiyorum.`
                 )}`}
                 target="_blank"
@@ -242,7 +242,7 @@ function ThankYouContent() {
             </span>
             <span>•</span>
             <a
-              href="https://wa.me/905325557234"
+              href="https://wa.me/905438981639"
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-1 text-[#231B18] hover:text-[#C85A32] font-medium transition"

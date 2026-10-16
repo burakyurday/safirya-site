@@ -16,6 +16,7 @@ export async function getConceptBannersServer(): Promise<ConceptBannersMap> {
   }
 
   try {
+    // 1. Supabase Storage SDK ile çek
     if (supabaseAdmin) {
       const { data, error } = await supabaseAdmin.storage
         .from(BUCKET_NAME)
@@ -27,6 +28,17 @@ export async function getConceptBannersServer(): Promise<ConceptBannersMap> {
         if (parsed && typeof parsed === 'object') {
           return { ...initialConceptBanners, ...parsed };
         }
+      }
+    }
+
+    // 2. Fallback: Supabase Public Storage URL üzerinden çek
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://surzgnggpubyiiqwuxvu.supabase.co';
+    const publicUrl = `${supabaseUrl}/storage/v1/object/public/${BUCKET_NAME}/${CONFIG_PATH}`;
+    const res = await fetch(publicUrl, { cache: 'no-store' });
+    if (res.ok) {
+      const parsed = (await res.json()) as ConceptBannersMap;
+      if (parsed && typeof parsed === 'object') {
+        return { ...initialConceptBanners, ...parsed };
       }
     }
   } catch (err) {

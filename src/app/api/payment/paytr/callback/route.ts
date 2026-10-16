@@ -51,6 +51,21 @@ export async function POST(req: NextRequest) {
         } catch (downloadErr) {
           console.warn('Pending order download error:', downloadErr);
         }
+
+        // Mükerrer PayTR çağrısını kontrol et: sipariş zaten tamamlandıysa e-posta göndermeden hemen OK dön
+        try {
+          const completedPath = `orders/completed/${orderNumber}.json`;
+          const { data: alreadyDone } = await supabaseAdmin.storage
+            .from(BUCKET_NAME)
+            .download(completedPath);
+          if (alreadyDone || orderData?.paymentStatus === 'ODENDI') {
+            console.log(`[PayTR Callback] #${orderNumber} nolu sipariş zaten önceden işlenmiş. Mükerrer e-posta engellendi.`);
+            return new NextResponse('OK', {
+              status: 200,
+              headers: { 'Content-Type': 'text/plain' },
+            });
+          }
+        } catch {}
       }
 
       // Sipariş verisini tamamlandı olarak güncelle

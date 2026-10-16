@@ -229,14 +229,28 @@ export function Header({ categories }: HeaderProps) {
 
             {/* 3. Kullanıcı Hesabı & Dropdown */}
             {currentUser && Boolean(currentUser.isAdmin || currentUser.role === 'ADMIN') && (
-              <Link
-                href="/admin"
-                className="hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#231B18] text-white hover:bg-[#C85A32] text-xs font-semibold uppercase tracking-wider transition shadow-2xs mr-1 group"
-                title="Yönetim Paneline Geçiş Yap"
-              >
-                <ShieldCheck className="w-3.5 h-3.5 text-[#C85A32] group-hover:text-white transition" />
-                <span>Yönetim Paneli</span>
-              </Link>
+              <>
+                {/* Masaüstü Yönetim Paneli Geçiş Butonu */}
+                <a
+                  href="/api/admin/auth/switch"
+                  className="hidden md:inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#231B18] text-white hover:bg-[#C85A32] text-xs font-semibold uppercase tracking-wider transition shadow-2xs mr-1 group border border-[#3E342F] cursor-pointer"
+                  title="Yönetim Paneline Geçiş Yap"
+                >
+                  <ShieldCheck className="w-3.5 h-3.5 text-[#C85A32] group-hover:text-white transition" />
+                  <span>Yönetim Paneli</span>
+                  <ArrowRight className="w-3 h-3 text-stone-400 group-hover:text-white group-hover:translate-x-0.5 transition" />
+                </a>
+
+                {/* Mobil Header Hızlı Panel Butonu */}
+                <a
+                  href="/api/admin/auth/switch"
+                  className="md:hidden inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#231B18] text-white hover:bg-[#C85A32] text-[10px] font-bold uppercase tracking-wider transition shadow-xs mr-0.5 group border border-[#3E342F] cursor-pointer"
+                  title="Yönetim Paneline Geçiş Yap"
+                >
+                  <ShieldCheck className="w-3 h-3 text-[#C85A32] group-hover:text-white transition" />
+                  <span>Panel</span>
+                </a>
+              </>
             )}
 
             <div className="relative" ref={userMenuRef}>
@@ -284,17 +298,17 @@ export function Header({ categories }: HeaderProps) {
                       {/* Admin Geçiş Butonu - Sadece Yönetici İse Görünür */}
                       {Boolean(currentUser.isAdmin || currentUser.role === 'ADMIN') && (
                         <div className="p-2 bg-gradient-to-r from-amber-50 to-stone-50 border-b border-amber-200/60">
-                          <Link
-                            href="/admin"
+                          <a
+                            href="/api/admin/auth/switch"
                             onClick={() => setIsUserMenuOpen(false)}
-                            className="flex items-center justify-between px-3 py-2 rounded-xs bg-[#231B18] text-white hover:bg-[#C85A32] transition text-xs font-semibold uppercase tracking-wider shadow-2xs group"
+                            className="flex items-center justify-between px-3 py-2 rounded-xs bg-[#231B18] text-white hover:bg-[#C85A32] transition text-xs font-semibold uppercase tracking-wider shadow-2xs group cursor-pointer"
                           >
                             <div className="flex items-center gap-2">
                               <ShieldCheck className="w-4 h-4 text-[#C85A32] group-hover:text-white transition" />
                               <span>Yönetim Paneli</span>
                             </div>
                             <ArrowRight className="w-3.5 h-3.5 text-stone-300 group-hover:translate-x-0.5 transition" />
-                          </Link>
+                          </a>
                         </div>
                       )}
 
@@ -496,17 +510,17 @@ export function Header({ categories }: HeaderProps) {
 
           {/* Mobil Yönetici Geçiş Butonu */}
           {currentUser && Boolean(currentUser.isAdmin || currentUser.role === 'ADMIN') && (
-            <Link
-              href="/admin"
+            <a
+              href="/api/admin/auth/switch"
               onClick={() => setIsMobileMenuOpen(false)}
-              className="w-full flex items-center justify-between p-3 rounded-xs bg-[#231B18] text-white hover:bg-[#C85A32] text-xs font-semibold uppercase tracking-wider transition shadow-xs group"
+              className="w-full flex items-center justify-between p-3 rounded-xs bg-[#231B18] text-white hover:bg-[#C85A32] text-xs font-semibold uppercase tracking-wider transition shadow-xs group cursor-pointer"
             >
               <div className="flex items-center gap-2">
                 <ShieldCheck className="w-4 h-4 text-[#C85A32] group-hover:text-white transition" />
-                <span>Yönetim Paneline Geç</span>
+                <span>Yönetim Paneline Geçiş Yap</span>
               </div>
               <ArrowRight className="w-4 h-4 text-stone-300 group-hover:translate-x-0.5 transition" />
-            </Link>
+            </a>
           )}
 
           <div className="space-y-1">

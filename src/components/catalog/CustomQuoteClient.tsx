@@ -288,7 +288,7 @@ export function CustomQuoteClient() {
                 Atölye Şefi WhatsApp Destek:
               </span>
               <a
-                href="https://wa.me/905325557234"
+                href="https://wa.me/905438981639"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-xs font-semibold text-[#231B18] hover:text-[#C85A32] flex items-center gap-1.5 transition"
