@@ -567,15 +567,22 @@ model Favorite {
 }
 
 model ProductReview {
-  id        String   @id @default(cuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  productId String
-  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
-  rating    Int      @default(5) // 1-5 arası yıldız
-  comment   String?  @db.Text
-  isApproved Boolean @default(true)
-  createdAt DateTime @default(now())
+  id                 String   @id @default(cuid())
+  userId             String?
+  user               User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  userName           String   @default("Safirya Müşterisi")
+  userAvatar         String?
+  productId          String
+  product            Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  rating             Int      @default(5) // 1-5 arası yıldız
+  title              String?  // Yorum Başlığı (örn: "Nişan masamıza çok yakıştı!")
+  comment            String?  @db.Text
+  images             String[] @default([]) // Müşteri fotoğrafları (Atölye/Ev/Etkinlik sunumu)
+  variantName        String?  // Satın alınan varyant/koku
+  isVerifiedPurchase Boolean  @default(true) // Doğrulanmış Alıcı rozeti
+  helpfulCount       Int      @default(0)
+  isApproved         Boolean  @default(true)
+  createdAt          DateTime @default(now())
 
   @@map("product_reviews")
 }

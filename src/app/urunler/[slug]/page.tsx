@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { useStore } from '@/context/StoreContext';
 import { ALL_CATALOG_PRODUCTS } from '@/lib/catalog';
+import { ProductReviewsSection } from '@/components/reviews/ProductReviewsSection';
 
 interface BulkTier {
   quantityLabel: string;
@@ -468,6 +469,12 @@ export default function ProductDetailPage() {
           </div>
 
         </div>
+
+        {/* ── MÜŞTERİ DEĞERLENDİRMELERİ & FOTOĞRAFLI YORUMLAR ── */}
+        <ProductReviewsSection
+          productId={product.id || (typeof params.slug === 'string' ? params.slug : '')}
+          productName={product.name}
+        />
 
         {/* ── ZOOM MODALI ── */}
         {isZoomed && (
